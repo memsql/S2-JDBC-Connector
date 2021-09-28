@@ -52,6 +52,7 @@ jobs:
             - ~/.m2
           key: singlestore-jdbc-client-{{ checksum "pom.xml" }}
       - run: mvn package -P bench -Dmaven.test.skip -Dmaven.javadoc.skip=true # run the actual tests
+      - run: java -DTEST_PORT=3306 -DTEST_PASSWORD=${SINGLESTORE_PASSWORD} -Duser.country=US -Duser.language=en -jar target/benchmarks.jar # run the actual tests
       - store_test_results: # uploads the test metadata from the `target/surefire-reports` directory so that it can show up in the CircleCI dashboard.
           # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
           path: target/surefire-reports
