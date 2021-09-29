@@ -40,9 +40,9 @@ public class Test_SingleStore
                     , "GRANT ALL ON test1.* TO 'test'"
                     , "GRANT CLUSTER ON *.* TO 'test'"
                     , "USE test1"
-                    , "CREATE TABLE x (id int primary key auto_increment, a int default 0)"
+                    , "CREATE ROWSTORE TABLE x (id int primary key auto_increment, a int default 0)"
                     , "INSERT INTO x (id) VALUES (1), (2), (3)"
-                    , "CREATE TABLE y (id int, a char(5), b as substr(a, 4, 1) persisted char(4))"
+                    , "CREATE ROWSTORE TABLE y (id int, a char(5), b as substr(a, 4, 1) persisted char(4))"
             })
             {
                 Statement stmt = conn.createStatement();
