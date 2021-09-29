@@ -94,26 +94,14 @@ workflows:
           matrix:
             parameters:
               machine_class:
-                - medium
-              singlestore_password:
-                - ""
-              singlestore_image:
-                - memsql/cluster-in-a-box:centos-7.0.15-619d118712-1.9.5-1.5.0
-                - memsql/cluster-in-a-box:centos-6.8.15-029542cbf3-1.9.3-1.4.1
-                - memsql/cluster-in-a-box:6.7.18-db1caffe94-1.6.1-1.1.1
-      - test:
-          filters:
-            tags:
-              only: /^v.*/
-          matrix:
-            parameters:
-              machine_class:
                 - large
               singlestore_password:
-                - ""
+                - password
               singlestore_image:
-                - memsql/cluster-in-a-box:centos-7.3.2-a364d4b31f-3.0.0-1.9.3
                 - memsql/cluster-in-a-box:centos-7.1.13-11ddea2a3a-3.0.0-1.9.3
+                - memsql/cluster-in-a-box:centos-7.3.2-a364d4b31f-3.0.0-1.9.3
+                - singlestore/cluster-in-a-box:centos-7.3.13-761e3259b3-3.2.11-1.11.9
+                - singlestore/cluster-in-a-box:centos-7.5.10-d6401ae628-4.0.0-1.12.2
   publish:
     jobs:
       - approve-publish:

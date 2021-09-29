@@ -13,6 +13,7 @@ public class Test_SingleStore
     // by adding (say) ?user=paulr&password=paulr. Not recommended!
 
     private static final String CONNECTION = "jdbc:singlestore://127.0.0.1:5506/";
+    private static final String ROOT_PASSWORD = "password";
 
     public static void ASSERT(boolean cond)
     {
@@ -27,7 +28,7 @@ public class Test_SingleStore
         {
             Properties p = new Properties();
             p.put("user", "root");
-            p.put("password", "");
+            p.put("password", ROOT_PASSWORD);
 
             Connection conn = DriverManager.getConnection(CONNECTION, p);
 
@@ -36,8 +37,8 @@ public class Test_SingleStore
                     , "DROP DATABASE IF EXISTS test2"
                     , "CREATE DATABASE test1"
                     , "CREATE DATABASE test2"
-                    , "GRANT ALL ON test1.* TO 'test'@'localhost' IDENTIFIED BY 'password'"
-                    , "GRANT CLUSTER ON *.* TO 'test'@'localhost' IDENTIFIED BY 'password'"
+                    , "GRANT ALL ON test1.* TO 'test'"
+                    , "GRANT CLUSTER ON *.* TO 'test'"
                     , "USE test1"
                     , "CREATE TABLE x (id int primary key auto_increment, a int default 0)"
                     , "INSERT INTO x (id) VALUES (1), (2), (3)"
@@ -293,10 +294,10 @@ public class Test_SingleStore
         ResetEnvironment();
         for (String contextDb : new String[]{"", "test", "test1", "test2"})
         {
-            RunTest(contextDb, "root", "", true);
-            RunTest(contextDb, "root", "password", false);
-            RunTest(contextDb, "test", "", false);
-            RunTest(contextDb, "test", "password", true);
+            RunTest(contextDb, "root", "", false);
+            RunTest(contextDb, "root", ROOT_PASSWORD, true);
+            RunTest(contextDb, "test", "", true);
+            RunTest(contextDb, "test", "test_pass", false);
         }
         ResetEnvironment();
     }
