@@ -23,6 +23,7 @@ if [[ "${EXISTS}" -eq 0 ]]; then
     docker run -i --init \
         --name ${CONTAINER_NAME} \
         -v ${PWD}/scripts/ssl:/test-ssl \
+        -e ROOT_PASSWORD="" \
         -e LICENSE_KEY=${LICENSE_KEY} \
         -p 5506:3306 -p 5507:3307 -p 5508:3308 \
         ${IMAGE_NAME}
