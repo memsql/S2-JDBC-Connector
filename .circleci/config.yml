@@ -36,13 +36,7 @@ jobs:
       - checkout
       - run:
           name: Setup test cluster
-          command: |
-            if [ "$SINGLESTORE_PASSWORD" = "" ]
-            then
-              ./scripts/ensure-test-singlestore-cluster.sh
-            else
-              ./scripts/ensure-test-singlestore-cluster-password.sh
-            fi
+          command: ./scripts/ensure-test-singlestore-cluster-password.sh
       - restore_cache: # restore the saved cache after the first run or if `pom.xml` has changed
           # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
           key: singlestore-jdbc-client-{{ checksum "pom.xml" }}
