@@ -377,9 +377,7 @@ public class ClientImpl implements Client, AutoCloseable {
       }
     }
 
-    sb.append(",transaction_isolation='")
-        .append(conf.transactionIsolation().getValue())
-        .append("'");
+    sb.append(",tx_isolation='").append(conf.transactionIsolation().getValue()).append("'");
 
     return "set " + sb;
   }
