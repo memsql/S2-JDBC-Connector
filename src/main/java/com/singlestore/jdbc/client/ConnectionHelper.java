@@ -194,7 +194,8 @@ public final class ConnectionHelper {
         || (serverLanguage >= 224 && serverLanguage <= 247)) {
       return (byte) serverLanguage;
     }
-    return (byte) 224; // UTF8MB4_UNICODE_CI;
+
+    return (byte) 33; // utf8_general_ci;
   }
 
   public static void authenticationHandler(

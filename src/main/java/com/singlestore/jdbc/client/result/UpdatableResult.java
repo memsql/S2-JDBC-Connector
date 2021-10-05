@@ -408,7 +408,6 @@ public class UpdatableResult extends CompleteResult {
           }
         }
         insertPreparedStatement.executeQuery();
-        // Not sure about this one
         if (isAutoincrementPk) {
           // primary is auto_increment (only one field)
           ResultSet rsKey = insertPreparedStatement.getGeneratedKeys();

@@ -777,7 +777,12 @@ public class Connection implements java.sql.Connection {
    * @throws SQLException if resetting operation failed
    */
   public void reset() throws SQLException {
-    client.execute(ResetPacket.INSTANCE);
+    boolean useComReset =
+        conf.useResetConnection() && getMetaData().getVersion().versionGreaterOrEqual(7, 5, 2);
+
+    if (useComReset) {
+      client.execute(ResetPacket.INSTANCE);
+    }
 
     // in transaction => rollback
     if ((client.getContext().getServerStatus() & ServerStatus.IN_TRANSACTION) > 0) {
@@ -798,6 +803,9 @@ public class Connection implements java.sql.Connection {
         }
         if ((stateFlag & ConnectionState.STATE_READ_ONLY) != 0) {
           setReadOnly(false); // default to master connection
+        }
+        if (!useComReset && (stateFlag & ConnectionState.STATE_TRANSACTION_ISOLATION) != 0) {
+          setTransactionIsolation(conf.transactionIsolation().getLevel());
         }
       } catch (SQLException sqle) {
         throw exceptionFactory.create("error resetting connection");
