@@ -63,7 +63,6 @@ public class Configuration {
   private Properties nonMappedOptions = null;
 
   // various
-  private String timezone = null;
   private boolean autocommit = true;
   private TransactionIsolation transactionIsolation = TransactionIsolation.REPEATABLE_READ;
   private int defaultFetchSize = 0;
@@ -152,7 +151,6 @@ public class Configuration {
       List<HostAddress> addresses,
       HaMode haMode,
       Properties nonMappedOptions,
-      String timezone,
       boolean autocommit,
       TransactionIsolation transactionIsolation,
       int defaultFetchSize,
@@ -216,7 +214,6 @@ public class Configuration {
     this.addresses = addresses;
     this.haMode = haMode;
     this.nonMappedOptions = nonMappedOptions;
-    this.timezone = timezone;
     this.autocommit = autocommit;
     this.transactionIsolation = transactionIsolation;
     this.defaultFetchSize = defaultFetchSize;
@@ -306,7 +303,6 @@ public class Configuration {
       String sessionVariables,
       Boolean tinyInt1isBit,
       Boolean yearIsDateType,
-      String timezone,
       Boolean dumpQueriesOnException,
       Integer prepStmtCacheSize,
       Boolean useAffectedRows,
@@ -379,7 +375,6 @@ public class Configuration {
     this.sessionVariables = sessionVariables;
     if (tinyInt1isBit != null) this.tinyInt1isBit = tinyInt1isBit;
     if (yearIsDateType != null) this.yearIsDateType = yearIsDateType;
-    this.timezone = timezone;
     if (dumpQueriesOnException != null) this.dumpQueriesOnException = dumpQueriesOnException;
     if (prepStmtCacheSize != null) this.prepStmtCacheSize = prepStmtCacheSize;
     if (useAffectedRows != null) this.useAffectedRows = useAffectedRows;
@@ -666,7 +661,6 @@ public class Configuration {
         this.addresses,
         this.haMode,
         this.nonMappedOptions,
-        this.timezone,
         this.autocommit,
         this.transactionIsolation,
         this.defaultFetchSize,
@@ -861,10 +855,6 @@ public class Configuration {
 
   public boolean yearIsDateType() {
     return yearIsDateType;
-  }
-
-  public String timezone() {
-    return timezone;
   }
 
   public boolean dumpQueriesOnException() {
@@ -1156,7 +1146,6 @@ public class Configuration {
     private String database;
 
     // various
-    private String timezone;
     private Boolean autocommit;
     private Integer defaultFetchSize;
     private Integer maxQuerySizeToLog;
@@ -1538,11 +1527,6 @@ public class Configuration {
       return this;
     }
 
-    public Builder timezone(String timezone) {
-      this.timezone = nullOrEmpty(timezone);
-      return this;
-    }
-
     public Builder dumpQueriesOnException(Boolean dumpQueriesOnException) {
       this.dumpQueriesOnException = dumpQueriesOnException;
       return this;
@@ -1716,7 +1700,6 @@ public class Configuration {
               this.sessionVariables,
               this.tinyInt1isBit,
               this.yearIsDateType,
-              this.timezone,
               this.dumpQueriesOnException,
               this.prepStmtCacheSize,
               this.useAffectedRows,

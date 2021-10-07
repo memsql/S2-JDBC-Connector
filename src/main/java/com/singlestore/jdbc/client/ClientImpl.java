@@ -230,53 +230,8 @@ public class ClientImpl implements Client, AutoCloseable {
     }
   }
 
-  /**
-   * load server timezone and ensure this correspond to client timezone
-   *
-   * @throws SQLException if any socket error.
-   */
-  private String handleTimezone() throws SQLException {
-    if (!"disable".equalsIgnoreCase(conf.timezone())) {
-      String timeZone = null;
-      try {
-        Result res =
-            (Result) execute(new QueryPacket("SELECT @@time_zone, @@system_time_zone")).get(0);
-        res.next();
-        timeZone = res.getString(1);
-        if ("SYSTEM".equals(timeZone)) {
-          timeZone = res.getString(2);
-        }
-      } catch (SQLException sqle) {
-        Result res =
-            (Result)
-                execute(
-                        new QueryPacket(
-                            "SHOW VARIABLES WHERE Variable_name in ("
-                                + "'system_time_zone',"
-                                + "'time_zone')"))
-                    .get(0);
-        String systemTimeZone = null;
-        while (res.next()) {
-          if ("system_time_zone".equals(res.getString(1))) {
-            systemTimeZone = res.getString(2);
-          } else {
-            timeZone = res.getString(2);
-          }
-        }
-        if ("SYSTEM".equals(timeZone)) {
-          timeZone = systemTimeZone;
-        }
-      }
-      return timeZone;
-    }
-    return null;
-  }
-
   private void postConnectionQueries() throws SQLException {
     List<String> commands = new ArrayList<>();
-    String serverTz = conf.timezone() != null ? handleTimezone() : null;
-
-    commands.add(createSessionVariableQuery(serverTz));
     commands.add("SELECT @@max_allowed_packet, @@wait_timeout");
 
     List<String> galeraAllowedStates =
@@ -319,68 +274,8 @@ public class ClientImpl implements Client, AutoCloseable {
       }
 
     } catch (SQLException sqlException) {
-
-      if (conf.timezone() != null && !"disable".equalsIgnoreCase(conf.timezone())) {
-        // timezone is not valid
-        throw exceptionFactory.create(
-            String.format(
-                "Setting configured timezone '%s' fail on server.\nLook at https://mariadb.com/kb/en/mysql_tzinfo_to_sql/ to load tz data on server, or set timezone=disable to disable setting client timezone.",
-                conf.timezone()));
-      }
       throw exceptionFactory.create("Initialization command fail", "08000", sqlException);
     }
-  }
-
-  public String createSessionVariableQuery(String serverTz) {
-    // In JDBC, connection must start in autocommit mode
-    // [CONJ-269] we cannot rely on serverStatus & ServerStatus.AUTOCOMMIT before this command to
-    // avoid this command.
-    // if autocommit=0 is set on server configuration, DB always send Autocommit on serverStatus
-    // flag
-    // after setting autocommit, we can rely on serverStatus value
-    StringBuilder sb = new StringBuilder();
-    sb.append("autocommit=")
-        .append(conf.autocommit() ? "1" : "0")
-        .append(", sql_mode = concat(@@sql_mode,',STRICT_TRANS_TABLES')");
-
-    // force schema tracking if available
-    if ((context.getServerCapabilities() & Capabilities.CLIENT_SESSION_TRACK) != 0) {
-      sb.append(", session_track_schema=1");
-    }
-
-    // add configured session variable if configured
-    if (conf.sessionVariables() != null) {
-      sb.append(",").append(Security.parseSessionVariables(conf.sessionVariables()));
-    }
-
-    // force client timezone to connection to ensure result of now(), ...
-    if (conf.timezone() != null && !"disable".equalsIgnoreCase(conf.timezone())) {
-      boolean mustSetTimezone = true;
-      ZoneId clientZoneId = ZoneId.of(conf.timezone()).normalized();
-
-      // try to avoid timezone consideration if server use the same one
-      try {
-        if (ZoneId.of(serverTz).normalized().equals(clientZoneId)
-            || ZoneId.of(serverTz, ZoneId.SHORT_IDS).equals(clientZoneId)) {
-          mustSetTimezone = false;
-        }
-      } catch (ZoneRulesException e) {
-        // eat
-      }
-
-      if (mustSetTimezone) {
-        if (clientZoneId.getRules().isFixedOffset()) {
-          ZoneOffset zoneOffset = clientZoneId.getRules().getOffset(Instant.now());
-          sb.append(",time_zone='").append(zoneOffset.getId()).append("'");
-        } else {
-          sb.append(",time_zone='").append(conf.timezone()).append("'");
-        }
-      }
-    }
-
-    sb.append(",tx_isolation='").append(conf.transactionIsolation().getValue()).append("'");
-
-    return "set " + sb;
   }
 
   public void setReadOnly(boolean readOnly) throws SQLException {

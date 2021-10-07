@@ -131,10 +131,10 @@ public class LoggingTest extends Common {
 
       Assertions.assertTrue(
           contents.contains(
-              "pool MariaDB-pool new physical connection created (total:1, active:0, pending:0)"),
+              "pool SingleStore-pool new physical connection created (total:1, active:0, pending:0)"),
           contents);
       Assertions.assertTrue(
-          contents.contains("pool MariaDB-pool connection removed due to inactivity"), contents);
+          contents.contains("pool SingleStore-pool connection removed due to inactivity"), contents);
 
       logger.setLevel(initialLevel);
       logger.detachAppender(fa);
