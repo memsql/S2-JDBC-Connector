@@ -193,8 +193,8 @@ public class CredentialPluginTest extends Common {
             && !"skysql-ha".equals(System.getenv("srv")));
     Assumptions.assumeTrue(isMariaDBServer() && haveSsl());
     Map<String, String> tmpEnv = new HashMap<>();
-    tmpEnv.put("MARIADB2_USER", "identityUser");
-    tmpEnv.put("MARIADB2_PWD", "!Passw0rd3Works");
+    tmpEnv.put("SINGLESTORE2_USER", "identityUser");
+    tmpEnv.put("SINGLESTORE2_PWD", "!Passw0rd3Works");
     setEnv(tmpEnv);
 
     assertThrows(SQLException.class, () -> createCon("credentialType=ENVTEST&sslMode=DISABLE"));

@@ -36,6 +36,6 @@ public class Env2CredentialPlugin implements CredentialPlugin {
 
   @Override
   public Credential get() {
-    return new Credential(System.getenv("MARIADB2_USER"), System.getenv("MARIADB2_PWD"));
+    return new Credential(System.getenv("SINGLESTORE2_USER"), System.getenv("SINGLESTORE2_PWD"));
   }
 }

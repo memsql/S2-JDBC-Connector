@@ -134,7 +134,8 @@ public class LoggingTest extends Common {
               "pool SingleStore-pool new physical connection created (total:1, active:0, pending:0)"),
           contents);
       Assertions.assertTrue(
-          contents.contains("pool SingleStore-pool connection removed due to inactivity"), contents);
+          contents.contains("pool SingleStore-pool connection removed due to inactivity"),
+          contents);
 
       logger.setLevel(initialLevel);
       logger.detachAppender(fa);
@@ -200,7 +201,7 @@ public class LoggingTest extends Common {
         (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certString.getBytes()));
 
     assertEquals(
-        new X500Principal("CN=*.mariadb.org, O=\"Acme,Inc.\", L=SZ, ST=GD, C=CN"),
+        new X500Principal("CN=*.singlestore.com, O=\"Acme,Inc.\", L=SZ, ST=GD, C=CN"),
         cert.getSubjectX500Principal());
     HostnameVerifier.verify("localhost", cert, -1);
     HostnameVerifier.verify("localhost.localdomain", cert, -1);
@@ -208,21 +209,21 @@ public class LoggingTest extends Common {
         "local.host",
         cert,
         "DNS host \"local.host\" doesn't correspond to certificate "
-            + "CN \"*.mariadb.org\" and SAN[{DNS:\"localhost.localdomain\"},{DNS:\"localhost\"},{IP:\"127.0.0.1\"},{IP:\"2001:db8:3902:3468:0:0:0:443\"}]");
+            + "CN \"*.singlestore.com\" and SAN[{DNS:\"localhost.localdomain\"},{DNS:\"localhost\"},{IP:\"127.0.0.1\"},{IP:\"2001:db8:3902:3468:0:0:0:443\"}]");
 
     HostnameVerifier.verify("127.0.0.1", cert, -1);
     verifyExceptionEqual(
         "127.0.0.2",
         cert,
         "IPv4 host \"127.0.0.2\" doesn't correspond to certificate "
-            + "CN \"*.mariadb.org\" and SAN[{DNS:\"localhost.localdomain\"},{DNS:\"localhost\"},{IP:\"127.0.0.1\"},{IP:\"2001:db8:3902:3468:0:0:0:443\"}]");
+            + "CN \"*.singlestore.com\" and SAN[{DNS:\"localhost.localdomain\"},{DNS:\"localhost\"},{IP:\"127.0.0.1\"},{IP:\"2001:db8:3902:3468:0:0:0:443\"}]");
 
     HostnameVerifier.verify("2001:db8:3902:3468:0:0:0:443", cert, -1);
     verifyExceptionEqual(
         "2001:db8:1::",
         cert,
         "IPv6 host \"2001:db8:1::\" doesn't correspond to certificate "
-            + "CN \"*.mariadb.org\" and SAN[{DNS:\"localhost.localdomain\"},{DNS:\"localhost\"},{IP:\"127.0.0.1\"},{IP:\"2001:db8:3902:3468:0:0:0:443\"}]");
+            + "CN \"*.singlestore.com\" and SAN[{DNS:\"localhost.localdomain\"},{DNS:\"localhost\"},{IP:\"127.0.0.1\"},{IP:\"2001:db8:3902:3468:0:0:0:443\"}]");
     try {
       String contents = new String(Files.readAllBytes(Paths.get(tempFile.getPath())));
 

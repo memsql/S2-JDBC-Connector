@@ -104,11 +104,11 @@ public class HostnameVerifierTest {
                 + "LzGv9zUUe1SdqqVASKJAAhzqGyu9eLkGYIKTHU7WdrPSyAhammdeq7C7AYLpMrPc\n"
                 + "CAM=\n"
                 + "-----END CERTIFICATE-----\n");
-    HostnameVerifier.verify("test.mariadb.org", cert, -1);
+    HostnameVerifier.verify("test.singlestore.com", cert, -1);
     verifyExceptionEqual(
         "test.org",
         cert,
-        "DNS host \"test.org\" doesn't correspond to certificate CN \"*.mariadb.org\"");
+        "DNS host \"test.org\" doesn't correspond to certificate CN \"*.singlestore.com\"");
   }
 
   @Test
@@ -180,22 +180,22 @@ public class HostnameVerifierTest {
                 + "-----END CERTIFICATE-----\n");
 
     verifyExceptionEqual(
-        "mariadb.org",
+        "singlestore.com",
         cert,
-        "DNS host \"mariadb.org\" doesn't correspond to certificate "
-            + "CN \"*.mariadb.org\" and SAN[{DNS:\"other.org\"},{DNS:\"www.other.org\"}]");
-    HostnameVerifier.verify("a.mariadb.org", cert, -1);
+        "DNS host \"singlestore.com\" doesn't correspond to certificate "
+            + "CN \"*.singlestore.com\" and SAN[{DNS:\"other.org\"},{DNS:\"www.other.org\"}]");
+    HostnameVerifier.verify("a.singlestore.com", cert, -1);
     verifyExceptionEqual(
         "a.other2.org",
         cert,
         "DNS host \"a.other2.org\" doesn't correspond to certificate "
-            + "CN \"*.mariadb.org\" and SAN[{DNS:\"other.org\"},{DNS:\"www.other.org\"}]");
+            + "CN \"*.singlestore.com\" and SAN[{DNS:\"other.org\"},{DNS:\"www.other.org\"}]");
     HostnameVerifier.verify("other.org", cert, -1);
     verifyExceptionEqual(
         "a.other.org",
         cert,
         "DNS host \"a.other.org\" doesn't correspond to certificate "
-            + "CN \"*.mariadb.org\" and SAN[{DNS:\"other.org\"},{DNS:\"www.other.org\"}]");
+            + "CN \"*.singlestore.com\" and SAN[{DNS:\"other.org\"},{DNS:\"www.other.org\"}]");
     HostnameVerifier.verify("www.other.org", cert, -1);
   }
 
@@ -411,7 +411,7 @@ public class HostnameVerifierTest {
                 + "8e1eYtofjTsqWHZ1s2LhtT0HvXdL6BnWP9GWc/zxiKM=\n"
                 + "-----END CERTIFICATE-----\n");
     assertEquals(
-        new X500Principal("CN=*.mariadb.org, O=\"Acme,Inc.\", L=SZ, ST=GD, C=CN"),
+        new X500Principal("CN=*.singlestore.com, O=\"Acme,Inc.\", L=SZ, ST=GD, C=CN"),
         cert.getSubjectX500Principal());
 
     HostnameVerifier.verify("localhost", cert, -1);
@@ -420,21 +420,21 @@ public class HostnameVerifierTest {
         "local.host",
         cert,
         "DNS host \"local.host\" doesn't correspond to certificate "
-            + "CN \"*.mariadb.org\" and SAN[{DNS:\"localhost.localdomain\"},{DNS:\"localhost\"},{IP:\"127.0.0.1\"},{IP:\"2001:db8:3902:3468:0:0:0:443\"}]");
+            + "CN \"*.singlestore.com\" and SAN[{DNS:\"localhost.localdomain\"},{DNS:\"localhost\"},{IP:\"127.0.0.1\"},{IP:\"2001:db8:3902:3468:0:0:0:443\"}]");
 
     HostnameVerifier.verify("127.0.0.1", cert, -1);
     verifyExceptionEqual(
         "127.0.0.2",
         cert,
         "IPv4 host \"127.0.0.2\" doesn't correspond to certificate "
-            + "CN \"*.mariadb.org\" and SAN[{DNS:\"localhost.localdomain\"},{DNS:\"localhost\"},{IP:\"127.0.0.1\"},{IP:\"2001:db8:3902:3468:0:0:0:443\"}]");
+            + "CN \"*.singlestore.com\" and SAN[{DNS:\"localhost.localdomain\"},{DNS:\"localhost\"},{IP:\"127.0.0.1\"},{IP:\"2001:db8:3902:3468:0:0:0:443\"}]");
 
     HostnameVerifier.verify("2001:db8:3902:3468:0:0:0:443", cert, -1);
     verifyExceptionEqual(
         "2001:db8:1::",
         cert,
         "IPv6 host \"2001:db8:1::\" doesn't correspond to certificate "
-            + "CN \"*.mariadb.org\" and SAN[{DNS:\"localhost.localdomain\"},{DNS:\"localhost\"},{IP:\"127.0.0.1\"},{IP:\"2001:db8:3902:3468:0:0:0:443\"}]");
+            + "CN \"*.singlestore.com\" and SAN[{DNS:\"localhost.localdomain\"},{DNS:\"localhost\"},{IP:\"127.0.0.1\"},{IP:\"2001:db8:3902:3468:0:0:0:443\"}]");
   }
 
   @Test
@@ -501,34 +501,34 @@ public class HostnameVerifierTest {
         "other.org",
         cert,
         "DNS host \"other.org\" doesn't correspond "
-            + "to certificate CN \"*.mariadb.org\" and SAN[{DNS:\"*.other.org\"},{DNS:\"a*b.other2.com\"}]");
+            + "to certificate CN \"*.singlestore.com\" and SAN[{DNS:\"*.other.org\"},{DNS:\"a*b.other2.com\"}]");
     HostnameVerifier.verify("www.other.org", cert, -1);
     verifyExceptionEqual(
         "other2.org",
         cert,
         "DNS host \"other2.org\" doesn't correspond "
-            + "to certificate CN \"*.mariadb.org\" and SAN[{DNS:\"*.other.org\"},{DNS:\"a*b.other2.com\"}]");
+            + "to certificate CN \"*.singlestore.com\" and SAN[{DNS:\"*.other.org\"},{DNS:\"a*b.other2.com\"}]");
     verifyExceptionEqual(
         "www.other2.org",
         cert,
         "DNS host \"www.other2.org\" doesn't correspond "
-            + "to certificate CN \"*.mariadb.org\" and SAN[{DNS:\"*.other.org\"},{DNS:\"a*b.other2.com\"}]");
+            + "to certificate CN \"*.singlestore.com\" and SAN[{DNS:\"*.other.org\"},{DNS:\"a*b.other2.com\"}]");
     HostnameVerifier.verify("ab.other2.com", cert, -1);
     HostnameVerifier.verify("axxxxb.other2.com", cert, -1);
     verifyExceptionEqual(
         "axxxxbc.other2.org",
         cert,
         "DNS host \"axxxxbc.other2.org\" doesn't "
-            + "correspond to certificate CN \"*.mariadb.org\" and SAN[{DNS:\"*.other.org\"},{DNS:\"a*b.other2.com\"}]");
+            + "correspond to certificate CN \"*.singlestore.com\" and SAN[{DNS:\"*.other.org\"},{DNS:\"a*b.other2.com\"}]");
     verifyExceptionEqual(
         "caxxxxb.other2.org",
         cert,
         "DNS host \"caxxxxb.other2.org\" doesn't "
-            + "correspond to certificate CN \"*.mariadb.org\" and SAN[{DNS:\"*.other.org\"},{DNS:\"a*b.other2.com\"}]");
+            + "correspond to certificate CN \"*.singlestore.com\" and SAN[{DNS:\"*.other.org\"},{DNS:\"a*b.other2.com\"}]");
     verifyExceptionEqual(
         "a.axxxxb.other2.org",
         cert,
         "DNS host \"a.axxxxb.other2.org\" doesn't "
-            + "correspond to certificate CN \"*.mariadb.org\" and SAN[{DNS:\"*.other.org\"},{DNS:\"a*b.other2.com\"}]");
+            + "correspond to certificate CN \"*.singlestore.com\" and SAN[{DNS:\"*.other.org\"},{DNS:\"a*b.other2.com\"}]");
   }
 }

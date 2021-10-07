@@ -100,7 +100,6 @@ public class Configuration {
   private boolean allowLocalInfile = false;
   private boolean useCompression = false;
   private boolean useAffectedRows = false;
-  private boolean useBulkStmts = true;
 
   // prepare
   private boolean cachePrepStmts = true;
@@ -181,7 +180,6 @@ public class Configuration {
       boolean allowLocalInfile,
       boolean useCompression,
       boolean useAffectedRows,
-      boolean useBulkStmts,
       boolean cachePrepStmts,
       int prepStmtCacheSize,
       boolean useServerPrepStmts,
@@ -244,7 +242,6 @@ public class Configuration {
     this.allowLocalInfile = allowLocalInfile;
     this.useCompression = useCompression;
     this.useAffectedRows = useAffectedRows;
-    this.useBulkStmts = useBulkStmts;
     this.cachePrepStmts = cachePrepStmts;
     this.prepStmtCacheSize = prepStmtCacheSize;
     this.useServerPrepStmts = useServerPrepStmts;
@@ -308,7 +305,6 @@ public class Configuration {
       Boolean useAffectedRows,
       Boolean useServerPrepStmts,
       String connectionAttributes,
-      Boolean useBulkStmts,
       Boolean autocommit,
       Boolean includeInnodbStatusInDeadlockExceptions,
       Boolean includeThreadDumpInDeadlockExceptions,
@@ -380,7 +376,6 @@ public class Configuration {
     if (useAffectedRows != null) this.useAffectedRows = useAffectedRows;
     if (useServerPrepStmts != null) this.useServerPrepStmts = useServerPrepStmts;
     this.connectionAttributes = connectionAttributes;
-    if (useBulkStmts != null) this.useBulkStmts = useBulkStmts;
     if (autocommit != null) this.autocommit = autocommit;
     if (includeInnodbStatusInDeadlockExceptions != null)
       this.includeInnodbStatusInDeadlockExceptions = includeInnodbStatusInDeadlockExceptions;
@@ -691,7 +686,6 @@ public class Configuration {
         this.allowLocalInfile,
         this.useCompression,
         this.useAffectedRows,
-        this.useBulkStmts,
         this.cachePrepStmts,
         this.prepStmtCacheSize,
         this.useServerPrepStmts,
@@ -875,10 +869,6 @@ public class Configuration {
 
   public String connectionAttributes() {
     return connectionAttributes;
-  }
-
-  public boolean useBulkStmts() {
-    return useBulkStmts;
   }
 
   public boolean autocommit() {
@@ -1182,7 +1172,6 @@ public class Configuration {
     private Boolean allowLocalInfile;
     private Boolean useCompression;
     private Boolean useAffectedRows;
-    private Boolean useBulkStmts;
 
     // prepare
     private Boolean cachePrepStmts;
@@ -1552,11 +1541,6 @@ public class Configuration {
       return this;
     }
 
-    public Builder useBulkStmts(Boolean useBulkStmts) {
-      this.useBulkStmts = useBulkStmts;
-      return this;
-    }
-
     public Builder autocommit(Boolean autocommit) {
       this.autocommit = autocommit;
       return this;
@@ -1705,7 +1689,6 @@ public class Configuration {
               this.useAffectedRows,
               this.useServerPrepStmts,
               this.connectionAttributes,
-              this.useBulkStmts,
               this.autocommit,
               this.includeInnodbStatusInDeadlockExceptions,
               this.includeThreadDumpInDeadlockExceptions,
