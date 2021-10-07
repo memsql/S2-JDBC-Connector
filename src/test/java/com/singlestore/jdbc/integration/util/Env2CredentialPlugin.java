@@ -11,7 +11,7 @@ import com.singlestore.jdbc.plugin.credential.CredentialPlugin;
 /**
  * Authentication using environment variable.
  *
- * <p>default implementation use environment variable MARIADB_USER and MARIADB_PWD
+ * <p>default implementation use environment variable SINGLESTORE_USER and SINGLESTORE_PWD
  *
  * <p>example : `jdbc:singlestore://host/db?credentialType=ENV`
  *

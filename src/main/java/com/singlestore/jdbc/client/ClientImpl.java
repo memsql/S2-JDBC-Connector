@@ -251,7 +251,7 @@ public class ClientImpl implements Client, AutoCloseable {
               msgs, null, 0, 0L, ResultSet.CONCUR_READ_ONLY, ResultSet.TYPE_FORWARD_ONLY, false);
 
       // read max allowed packet
-      Result result = (Result) res.get(1);
+      Result result = (Result) res.get(0);
       result.next();
 
       waitTimeout = Integer.parseInt(result.getString(2));
@@ -260,7 +260,7 @@ public class ClientImpl implements Client, AutoCloseable {
       if (hostAddress != null
           && Boolean.TRUE.equals(hostAddress.primary)
           && !galeraAllowedStates.isEmpty()) {
-        ResultSet rs = (ResultSet) res.get(2);
+        ResultSet rs = (ResultSet) res.get(1);
         rs.next();
         if (!galeraAllowedStates.contains(rs.getString(2))) {
           throw exceptionFactory.create(

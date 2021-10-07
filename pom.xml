@@ -21,7 +21,7 @@
     <osgi.compendium.version>5.0.0</osgi.compendium.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <logback.version>1.2.3</logback.version>
-    <jacoco.version>0.8.5</jacoco.version>
+    <jacoco.version>0.8.7</jacoco.version>
   </properties>
 
   <licenses>
