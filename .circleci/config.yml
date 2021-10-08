@@ -96,7 +96,7 @@ jobs:
       - run:
           name: Publish
           command: |
-            mvn clean deploy -DskipTests -Dmaven.javadoc.skip
+            mvn clean deploy -DskipTests -DjavadocExecutable=/usr/lib/jvm/jdk1.8.0/bin/javadoc
 workflows:
   test:
     jobs:
