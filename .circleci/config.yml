@@ -48,6 +48,7 @@ jobs:
       image: ubuntu-2004:202008-01
     resource_class: << parameters.machine_class >>
     environment:
+      JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64
       SINGLESTORE_IMAGE: << parameters.singlestore_image >>
       SINGLESTORE_PASSWORD: << parameters.singlestore_password >>
     steps:
@@ -64,7 +65,7 @@ jobs:
           paths:
             - ~/.m2
           key: singlestore-jdbc-client-{{ checksum "pom.xml" }}
-      - run: mvn package -Dmaven.test.skip -Dmaven.javadoc.skip=true
+      - run: mvn package -Dmaven.test.skip
       - run: javac Test_SingleStore.java
       - run: CLASSPATH="target/singlestore-jdbc-client-0.1.0-preview.jar:." java Test_SingleStore
       - store_test_results: # uploads the test metadata from the `target/surefire-reports` directory so that it can show up in the CircleCI dashboard.
@@ -78,7 +79,7 @@ jobs:
     machine:
       image: ubuntu-2004:202008-01
     environment:
-#      JAVA_HOME: /usr/lib/jvm/jdk1.8.0
+      JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64
       SONATYPE_USERNAME: memsql
     steps:
       - setup_environment
@@ -96,7 +97,7 @@ jobs:
       - run:
           name: Publish
           command: |
-            mvn clean deploy -DskipTests -DjavadocExecutable=/usr/lib/jvm/jdk1.8.0/bin/javadoc
+            mvn clean deploy -DskipTests
 workflows:
   test:
     jobs:
