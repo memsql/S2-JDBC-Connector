@@ -45,8 +45,8 @@ System.out.println(rs.getTimestamp(1));
 ```
 
 Another way to get a connection with SingleStore JDBC Driver is to use a connection pool.
-`SingleStorePoolDataSource` is an implementation that maintains a pool of connections. When a new connection is requested, one is borrowed from the pool.
-`SingleStoreDataSource` is a basic implementation that just returns a new connection each time the `getConnection()` method is called.
+* `SingleStorePoolDataSource` is an implementation that maintains a pool of connections. When a new connection is requested, one is borrowed from the pool.
+* `SingleStoreDataSource` is a basic implementation that just returns a new connection each time the `getConnection()` method is called.
 
 Example:
 ```script
