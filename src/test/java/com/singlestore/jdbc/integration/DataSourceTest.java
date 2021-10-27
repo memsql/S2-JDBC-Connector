@@ -8,7 +8,7 @@ package com.singlestore.jdbc.integration;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.singlestore.jdbc.Common;
-import com.singlestore.jdbc.MariaDbDataSource;
+import com.singlestore.jdbc.SingleStoreDataSource;
 import java.io.*;
 import java.sql.*;
 import javax.sql.DataSource;
@@ -19,12 +19,16 @@ public class DataSourceTest extends Common {
 
   @Test
   public void basic() throws SQLException {
-    DataSource ds = new MariaDbDataSource(mDefUrl);
+    DataSource ds = new SingleStoreDataSource(mDefUrl);
     try (Connection con1 = ds.getConnection()) {
       try (Connection con2 = ds.getConnection()) {
 
         ResultSet rs1 = con1.createStatement().executeQuery("SELECT 1");
         ResultSet rs2 = con2.createStatement().executeQuery("SELECT 2");
+        ResultSet rs3 = con2.createStatement().executeQuery("SELECT NOW()");
+        rs3.next();
+        java.sql.Timestamp ts = rs3.getTimestamp(1);
+        System.out.println(ts);
         while (rs1.next()) {
           assertEquals(1, rs1.getInt(1));
         }
@@ -49,7 +53,7 @@ public class DataSourceTest extends Common {
             + ".* TO 'dsUser'@'%' IDENTIFIED BY 'MySup8%rPassw@ord'");
     stmt.execute("FLUSH PRIVILEGES");
 
-    DataSource ds = new MariaDbDataSource(mDefUrl + "allowPublicKeyRetrieval");
+    DataSource ds = new SingleStoreDataSource(mDefUrl + "allowPublicKeyRetrieval");
     try (Connection con1 = ds.getConnection()) {
       try (Connection con2 = ds.getConnection("dsUser", "MySup8%rPassw@ord")) {
         ResultSet rs1 = con1.createStatement().executeQuery("SELECT 1");
@@ -74,20 +78,20 @@ public class DataSourceTest extends Common {
 
   @Test
   public void exceptions() throws SQLException {
-    DataSource ds = new MariaDbDataSource(mDefUrl);
+    DataSource ds = new SingleStoreDataSource(mDefUrl);
     ds.unwrap(javax.sql.DataSource.class);
-    ds.unwrap(MariaDbDataSource.class);
+    ds.unwrap(SingleStoreDataSource.class);
     assertThrowsContains(
         SQLException.class,
         () -> ds.unwrap(String.class),
         "Datasource is not a wrapper for java.lang.String");
 
     assertTrue(ds.isWrapperFor(javax.sql.DataSource.class));
-    assertTrue(ds.isWrapperFor(MariaDbDataSource.class));
+    assertTrue(ds.isWrapperFor(SingleStoreDataSource.class));
     assertFalse(ds.isWrapperFor(String.class));
     assertThrowsContains(
         SQLException.class,
-        () -> new MariaDbDataSource("jdbc:wrongUrl"),
+        () -> new SingleStoreDataSource("jdbc:wrongUrl"),
         "Wrong SingleStoreDB url: jdbc:wrongUrl");
     assertNull(ds.getLogWriter());
     assertNull(ds.getParentLogger());
