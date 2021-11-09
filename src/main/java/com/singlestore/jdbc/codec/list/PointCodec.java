@@ -13,6 +13,7 @@ import com.singlestore.jdbc.codec.DataType;
 import com.singlestore.jdbc.message.server.ColumnDefinitionPacket;
 import com.singlestore.jdbc.type.*;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLDataException;
 import java.util.Calendar;
 
@@ -25,7 +26,7 @@ public class PointCodec implements Codec<Point> {
   }
 
   public boolean canDecode(ColumnDefinitionPacket column, Class<?> type) {
-    return column.getType() == DataType.GEOMETRY && type.isAssignableFrom(Point.class);
+    return column.getType() == DataType.STRING && type.isAssignableFrom(Point.class);
   }
 
   public boolean canEncode(Object value) {
@@ -43,12 +44,13 @@ public class PointCodec implements Codec<Point> {
   public Point decodeBinary(
       ReadableByteBuf buf, int length, ColumnDefinitionPacket column, Calendar cal)
       throws SQLDataException {
-    if (column.getType() == DataType.GEOMETRY) {
-      buf.skip(4); // SRID
-      Geometry geo = Geometry.getGeometry(buf, length - 4, column);
-      if (geo instanceof Point) return (Point) geo;
-      throw new SQLDataException(
-          String.format("Geometric type %s cannot be decoded as Point", geo.getClass().getName()));
+    if (column.getType() == DataType.STRING) {
+      String s = buf.readString(length);
+      try {
+        return new Point(s);
+      } catch (IllegalArgumentException ex) {
+        throw new SQLDataException(String.format("Failed to decode '%s' as Point", s));
+      }
     }
     buf.skip(length);
     throw new SQLDataException(
@@ -59,19 +61,16 @@ public class PointCodec implements Codec<Point> {
   public void encodeText(
       PacketWriter encoder, Context context, Object value, Calendar cal, Long maxLength)
       throws IOException {
-    encoder.writeBytes(("ST_PointFromText('" + value.toString() + "')").getBytes());
+    encoder.writeBytes(("'" + value + "'").getBytes());
   }
 
   @Override
   public void encodeBinary(PacketWriter encoder, Object value, Calendar cal, Long maxLength)
       throws IOException {
-    Point pt = (Point) value;
-    encoder.writeLength(25);
-    encoder.writeInt(0); // SRID
-    encoder.writeByte(0x01); // LITTLE ENDIAN
-    encoder.writeInt(1); // wkbPoint
-    encoder.writeDouble(pt.getX());
-    encoder.writeDouble(pt.getY());
+    byte[] b = value.toString().getBytes(StandardCharsets.UTF_8);
+    int len = maxLength != null ? Math.min(maxLength.intValue(), b.length) : b.length;
+    encoder.writeLength(len);
+    encoder.writeBytes(b, 0, len);
   }
 
   public int getBinaryEncodeType() {

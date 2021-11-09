@@ -5,8 +5,7 @@
 
 package com.singlestore.jdbc;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.singlestore.jdbc.integration.tools.TcpProxy;
 import com.singlestore.jdbc.util.constants.HaMode;
@@ -23,6 +22,7 @@ import org.junit.jupiter.api.extension.*;
 import org.junit.jupiter.api.function.Executable;
 
 public class Common {
+  public static final double geometryEpsilon = 1e-7;
 
   public static Connection sharedConn;
   public static Connection sharedConnBinary;
@@ -203,6 +203,10 @@ public class Common {
   public int getOffsetAtDate(int year, int month, int day) {
     return TimeZone.getDefault()
         .getOffset(new GregorianCalendar(year, month, day).getTimeInMillis());
+  }
+
+  public static void assertEqualCoordinate(double expected, double actual) {
+    assertEquals(expected, actual, geometryEpsilon);
   }
 
   @RegisterExtension public Extension watcher = new Follow();
