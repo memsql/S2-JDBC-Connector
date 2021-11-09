@@ -121,7 +121,6 @@ public class Configuration {
 
   // HA options
   private int retriesAllDown = 120;
-  private String galeraAllowedState = null;
   private boolean transactionReplay = false;
 
   // Pool options
@@ -192,7 +191,6 @@ public class Configuration {
       boolean dumpQueriesOnException,
       boolean includeThreadDumpInDeadlockExceptions,
       int retriesAllDown,
-      String galeraAllowedState,
       boolean transactionReplay,
       boolean pool,
       String poolName,
@@ -253,7 +251,6 @@ public class Configuration {
     this.dumpQueriesOnException = dumpQueriesOnException;
     this.includeThreadDumpInDeadlockExceptions = includeThreadDumpInDeadlockExceptions;
     this.retriesAllDown = retriesAllDown;
-    this.galeraAllowedState = galeraAllowedState;
     this.transactionReplay = transactionReplay;
     this.pool = pool;
     this.poolName = poolName;
@@ -309,7 +306,6 @@ public class Configuration {
       String tlsSocketType,
       Integer maxQuerySizeToLog,
       Integer retriesAllDown,
-      String galeraAllowedState,
       Boolean pool,
       String poolName,
       Integer maxPoolSize,
@@ -380,7 +376,6 @@ public class Configuration {
     if (tlsSocketType != null) this.tlsSocketType = tlsSocketType;
     if (maxQuerySizeToLog != null) this.maxQuerySizeToLog = maxQuerySizeToLog;
     if (retriesAllDown != null) this.retriesAllDown = retriesAllDown;
-    if (galeraAllowedState != null) this.galeraAllowedState = galeraAllowedState;
     if (pool != null) this.pool = pool;
     if (poolName != null) this.poolName = poolName;
     if (maxPoolSize != null) this.maxPoolSize = maxPoolSize;
@@ -693,7 +688,6 @@ public class Configuration {
         this.dumpQueriesOnException,
         this.includeThreadDumpInDeadlockExceptions,
         this.retriesAllDown,
-        this.galeraAllowedState,
         this.transactionReplay,
         this.pool,
         this.poolName,
@@ -894,10 +888,6 @@ public class Configuration {
 
   public int retriesAllDown() {
     return retriesAllDown;
-  }
-
-  public String galeraAllowedState() {
-    return galeraAllowedState;
   }
 
   public boolean pool() {
@@ -1182,7 +1172,6 @@ public class Configuration {
 
     // HA options
     private Integer retriesAllDown;
-    private String galeraAllowedState;
     private Boolean transactionReplay;
 
     // Pool options
@@ -1565,11 +1554,6 @@ public class Configuration {
       return this;
     }
 
-    public Builder galeraAllowedState(String galeraAllowedState) {
-      this.galeraAllowedState = nullOrEmpty(galeraAllowedState);
-      return this;
-    }
-
     public Builder pool(Boolean pool) {
       this.pool = pool;
       return this;
@@ -1678,7 +1662,6 @@ public class Configuration {
               this.tlsSocketType,
               this.maxQuerySizeToLog,
               this.retriesAllDown,
-              this.galeraAllowedState,
               this.pool,
               this.poolName,
               this.maxPoolSize,
