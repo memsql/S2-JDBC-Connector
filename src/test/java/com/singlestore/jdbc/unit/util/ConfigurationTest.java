@@ -71,10 +71,6 @@ public class ConfigurationTest extends Common {
         "someCipher",
         Configuration.parse("jdbc:singlestore://localhost/?enabledSSLCipherSuites=someCipher")
             .enabledSslCipherSuites());
-    assertEquals(
-        "/tmp/path",
-        Configuration.parse("jdbc:singlestore://localhost/?serverRSAPublicKeyFile=/tmp/path")
-            .serverRsaPublicKeyFile());
   }
 
   @Test
@@ -617,14 +613,13 @@ public class ConfigurationTest extends Common {
         "jdbc:singlestore:replication://address=(type=primary)(port=3306)(host=master1),address=(port=3307)"
             + "(type=primary)(host=master2),address=(type=replica)(host=slave1)(port=3308)/database"
             + "?user=greg&password=pass&pinGlobalTxToPhysicalConnection&servicePrincipalName=BLA"
-            + "&allowPublicKeyRetrieval&serverRSAPublicKeyFile=/tmp/path";
+            + "&allowPublicKeyRetrieval";
     Configuration conf = com.singlestore.jdbc.Configuration.parse(url);
     assertEquals("database", conf.database());
     assertEquals("greg", conf.user());
     assertEquals("pass", conf.password());
     assertEquals("BLA", conf.servicePrincipalName());
     assertTrue(conf.allowPublicKeyRetrieval());
-    assertEquals("/tmp/path", conf.serverRsaPublicKeyFile());
     assertEquals(3, conf.addresses().size());
     assertEquals(HostAddress.from("master1", 3306, true), conf.addresses().get(0));
     assertEquals(HostAddress.from("master2", 3307, true), conf.addresses().get(1));
@@ -817,11 +812,10 @@ public class ConfigurationTest extends Common {
             .useReadAheadInput(false)
             .cachePrepStmts(false)
             .serverSslCert("mycertPath")
-            .serverRsaPublicKeyFile("RSAPath")
             .allowPublicKeyRetrieval(true)
             .build();
     assertEquals(
-        "jdbc:singlestore://address=(host=host1)(port=3305)(type=primary),address=(host=host2)(port=3307)(type=replica)/db?user=me&password=pwd&autocommit=false&defaultFetchSize=10&maxQuerySizeToLog=100&geometryDefaultType=default&restrictedAuth=mysql_native_password,client_ed25519&socketFactory=someSocketFactory&connectTimeout=22&pipe=pipeName&localSocket=localSocket&tcpKeepAlive=true&tcpKeepIdle=10&tcpKeepCount=50&tcpKeepInterval=50&tcpAbortiveClose=true&localSocketAddress=localSocketAddress&socketTimeout=1000&useReadAheadInput=false&tlsSocketType=TLStype&sslMode=TRUST&serverSslCert=mycertPath&keyStore=/tmp&keyStorePassword=MyPWD&keyStoreType=JKS&enabledSslCipherSuites=myCipher,cipher2&enabledSslProtocolSuites=TLSv1.2&allowMultiQueries=true&allowLocalInfile=true&useCompression=true&useAffectedRows=true&cachePrepStmts=false&prepStmtCacheSize=2&useServerPrepStmts=true&credentialType=ENV&sessionVariables=blabla&connectionAttributes=bla=bla&servicePrincipalName=SPN&blankTableNameMeta=true&tinyInt1isBit=false&yearIsDateType=false&dumpQueriesOnException=true&includeThreadDumpInDeadlockExceptions=true&retriesAllDown=10&transactionReplay=true&pool=true&poolName=myPool&maxPoolSize=16&minPoolSize=12&maxIdleTime=25000&registerJmxPool=false&poolValidMinDelay=260&useResetConnection=true&serverRsaPublicKeyFile=RSAPath&allowPublicKeyRetrieval=true",
+        "jdbc:singlestore://address=(host=host1)(port=3305)(type=primary),address=(host=host2)(port=3307)(type=replica)/db?user=me&password=pwd&autocommit=false&defaultFetchSize=10&maxQuerySizeToLog=100&geometryDefaultType=default&restrictedAuth=mysql_native_password,client_ed25519&socketFactory=someSocketFactory&connectTimeout=22&pipe=pipeName&localSocket=localSocket&tcpKeepAlive=true&tcpKeepIdle=10&tcpKeepCount=50&tcpKeepInterval=50&tcpAbortiveClose=true&localSocketAddress=localSocketAddress&socketTimeout=1000&useReadAheadInput=false&tlsSocketType=TLStype&sslMode=TRUST&serverSslCert=mycertPath&keyStore=/tmp&keyStorePassword=MyPWD&keyStoreType=JKS&enabledSslCipherSuites=myCipher,cipher2&enabledSslProtocolSuites=TLSv1.2&allowMultiQueries=true&allowLocalInfile=true&useCompression=true&useAffectedRows=true&cachePrepStmts=false&prepStmtCacheSize=2&useServerPrepStmts=true&credentialType=ENV&sessionVariables=blabla&connectionAttributes=bla=bla&servicePrincipalName=SPN&blankTableNameMeta=true&tinyInt1isBit=false&yearIsDateType=false&dumpQueriesOnException=true&includeThreadDumpInDeadlockExceptions=true&retriesAllDown=10&transactionReplay=true&pool=true&poolName=myPool&maxPoolSize=16&minPoolSize=12&maxIdleTime=25000&registerJmxPool=false&poolValidMinDelay=260&useResetConnection=true&allowPublicKeyRetrieval=true",
         conf.toString());
   }
 

@@ -134,7 +134,6 @@ public class Configuration {
   private boolean useResetConnection = false;
 
   // MySQL sha authentication
-  private String serverRsaPublicKeyFile = null;
   private boolean allowPublicKeyRetrieval = false;
 
   private Codec<?>[] codecs = null;
@@ -200,7 +199,6 @@ public class Configuration {
       boolean registerJmxPool,
       int poolValidMinDelay,
       boolean useResetConnection,
-      String serverRsaPublicKeyFile,
       boolean allowPublicKeyRetrieval) {
     this.user = user;
     this.password = password;
@@ -260,7 +258,6 @@ public class Configuration {
     this.registerJmxPool = registerJmxPool;
     this.poolValidMinDelay = poolValidMinDelay;
     this.useResetConnection = useResetConnection;
-    this.serverRsaPublicKeyFile = serverRsaPublicKeyFile;
     this.allowPublicKeyRetrieval = allowPublicKeyRetrieval;
     this.initialUrl = buildUrl(this);
   }
@@ -314,7 +311,6 @@ public class Configuration {
       Boolean registerJmxPool,
       Integer poolValidMinDelay,
       Boolean useResetConnection,
-      String serverRsaPublicKeyFile,
       Boolean allowPublicKeyRetrieval,
       String serverSslCert,
       String keyStore,
@@ -390,7 +386,6 @@ public class Configuration {
     if (registerJmxPool != null) this.registerJmxPool = registerJmxPool;
     if (poolValidMinDelay != null) this.poolValidMinDelay = poolValidMinDelay;
     if (useResetConnection != null) this.useResetConnection = useResetConnection;
-    if (serverRsaPublicKeyFile != null) this.serverRsaPublicKeyFile = serverRsaPublicKeyFile;
     if (allowPublicKeyRetrieval != null) this.allowPublicKeyRetrieval = allowPublicKeyRetrieval;
     if (useReadAheadInput != null) this.useReadAheadInput = useReadAheadInput;
     if (cachePrepStmts != null) this.cachePrepStmts = cachePrepStmts;
@@ -697,7 +692,6 @@ public class Configuration {
         this.registerJmxPool,
         this.poolValidMinDelay,
         this.useResetConnection,
-        this.serverRsaPublicKeyFile,
         this.allowPublicKeyRetrieval);
   }
 
@@ -920,10 +914,6 @@ public class Configuration {
 
   public boolean useResetConnection() {
     return useResetConnection;
-  }
-
-  public String serverRsaPublicKeyFile() {
-    return serverRsaPublicKeyFile;
   }
 
   public boolean allowPublicKeyRetrieval() {
@@ -1185,7 +1175,6 @@ public class Configuration {
     private Boolean useResetConnection;
 
     // MySQL sha authentication
-    private String serverRsaPublicKeyFile;
     private Boolean allowPublicKeyRetrieval;
 
     public Builder user(String user) {
@@ -1594,11 +1583,6 @@ public class Configuration {
       return this;
     }
 
-    public Builder serverRsaPublicKeyFile(String serverRsaPublicKeyFile) {
-      this.serverRsaPublicKeyFile = nullOrEmpty(serverRsaPublicKeyFile);
-      return this;
-    }
-
     public Builder allowPublicKeyRetrieval(Boolean allowPublicKeyRetrieval) {
       this.allowPublicKeyRetrieval = allowPublicKeyRetrieval;
       return this;
@@ -1670,7 +1654,6 @@ public class Configuration {
               this.registerJmxPool,
               this.poolValidMinDelay,
               this.useResetConnection,
-              this.serverRsaPublicKeyFile,
               this.allowPublicKeyRetrieval,
               this.serverSslCert,
               this.keyStore,
