@@ -194,6 +194,23 @@ public class Common {
             + "(81), (82), (83), (84), (85), (86), (87), (88), (89), (90),\n"
             + "(91), (92), (93), (94), (95), (96), (97), (98), (99), (100);");
   }
+
+  public void ensureLargeRange(Statement stmt, int max) throws SQLException {
+    stmt.execute("DROP TABLE IF EXISTS large_range");
+    stmt.execute("CREATE TABLE large_range(n int key)");
+    int iters = max == 0 ? 0 : 32 - Integer.numberOfLeadingZeros(max - 1);
+    stmt.execute(
+        "CREATE OR REPLACE PROCEDURE fill_range() AS "
+            + "DECLARE cur_max int = 2;"
+            + " BEGIN "
+            + "INSERT INTO large_range VALUES (1);"
+            + String.format(" FOR i IN 1 .. %d LOOP", iters)
+            + " INSERT INTO large_range SELECT n + cur_max FROM large_range;"
+            + " cur_max = cur_max * 2;"
+            + "END LOOP;"
+            + "END");
+    stmt.execute("CALL fill_range()");
+  }
   // Calculates offset in milliseconds that would need to be added to timestamp in UTC time to get
   // timestamp in the current time zone.
   // These timestamps are compared against values from db converted from UTC to local timezone using

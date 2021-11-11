@@ -54,8 +54,7 @@ public class PoolDataSourceTest extends Common {
 
   @Test
   public void testDataSource() throws SQLException {
-    try (SingleStorePoolDataSource ds =
-        new SingleStorePoolDataSource(mDefUrl + "&allowPublicKeyRetrieval")) {
+    try (SingleStorePoolDataSource ds = new SingleStorePoolDataSource(mDefUrl)) {
       try (Connection connection = ds.getConnection()) {
         assertEquals(connection.isValid(0), true);
       }
@@ -166,10 +165,7 @@ public class PoolDataSourceTest extends Common {
   private void testResetUserVariable(boolean useResetConnection) throws SQLException {
     try (SingleStorePoolDataSource pool =
         new SingleStorePoolDataSource(
-            mDefUrl
-                + "&maxPoolSize=1&useResetConnection="
-                + useResetConnection
-                + "&allowPublicKeyRetrieval")) {
+            mDefUrl + "&maxPoolSize=1&useResetConnection=" + useResetConnection)) {
       try (Connection connection = pool.getConnection()) {
         Statement statement = connection.createStatement();
         assertUnknown(statement);
@@ -591,8 +587,7 @@ public class PoolDataSourceTest extends Common {
   @Test
   public void poolWithUser() throws SQLException {
     try (SingleStorePoolDataSource pool =
-        new SingleStorePoolDataSource(
-            mDefUrl + "&maxPoolSize=1&poolName=myPool&allowPublicKeyRetrieval")) {
+        new SingleStorePoolDataSource(mDefUrl + "&maxPoolSize=1&poolName=myPool")) {
       long threadId = 0;
       try (Connection conn = pool.getConnection()) {
         conn.isValid(1);
