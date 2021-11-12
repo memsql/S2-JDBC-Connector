@@ -13,7 +13,6 @@ import com.singlestore.jdbc.codec.DataType;
 import com.singlestore.jdbc.message.server.ColumnDefinitionPacket;
 import com.singlestore.jdbc.type.*;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLDataException;
 import java.util.Calendar;
 
@@ -67,10 +66,7 @@ public class PointCodec implements Codec<Point> {
   @Override
   public void encodeBinary(PacketWriter encoder, Object value, Calendar cal, Long maxLength)
       throws IOException {
-    byte[] b = value.toString().getBytes(StandardCharsets.UTF_8);
-    int len = maxLength != null ? Math.min(maxLength.intValue(), b.length) : b.length;
-    encoder.writeLength(len);
-    encoder.writeBytes(b, 0, len);
+    encodeBinaryAsString(encoder, value, maxLength);
   }
 
   public int getBinaryEncodeType() {

@@ -6,24 +6,36 @@
 package com.singlestore.jdbc.type;
 
 import java.util.Arrays;
-import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class LineString implements Geometry {
 
   private final Point[] points;
-  private final boolean open;
 
-  public LineString(Point[] points, boolean open) {
+  private static final Pattern linePattern = Pattern.compile("^LINESTRING\\((.*)\\)$");
+
+  public LineString(String s) throws IllegalArgumentException {
+    Matcher m = linePattern.matcher(s);
+    if (!m.matches()) {
+      throw new IllegalArgumentException();
+    }
+    String[] pointStrings = m.group(1).split(",");
+
+    points = new Point[pointStrings.length];
+    for (int i = 0; i < pointStrings.length; i++) {
+      String[] coords = pointStrings[i].trim().split(" ");
+      System.out.println(pointStrings[i]);
+      points[i] = new Point(Double.parseDouble(coords[0]), Double.parseDouble(coords[1]));
+    }
+  }
+
+  public LineString(Point[] points) {
     this.points = points;
-    this.open = open;
   }
 
   public Point[] getPoints() {
     return points;
-  }
-
-  public boolean isOpen() {
-    return open;
   }
 
   @Override
@@ -43,14 +55,12 @@ public class LineString implements Geometry {
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (o == null || !(o instanceof LineString)) return false;
-    return open == ((LineString) o).isOpen() && toString().equals(o.toString());
+    if (!(o instanceof LineString)) return false;
+    return toString().equals(o.toString());
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(open);
-    result = 31 * result + Arrays.hashCode(points);
-    return result;
+    return Arrays.hashCode(points);
   }
 }

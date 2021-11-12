@@ -32,8 +32,7 @@ public class GeometryCollectionCodecTest extends CommonCodecTest {
                   new Point(50, 50),
                   new Point(0, 50),
                   new Point(0, 0)
-                },
-                false),
+                }),
             new LineString(
                 new Point[] {
                   new Point(10, 10),
@@ -41,8 +40,7 @@ public class GeometryCollectionCodecTest extends CommonCodecTest {
                   new Point(20, 20),
                   new Point(10, 20),
                   new Point(10, 10)
-                },
-                false)
+                })
           });
 
   GeometryCollection geo1 =
@@ -56,8 +54,7 @@ public class GeometryCollectionCodecTest extends CommonCodecTest {
                   new Point(20, 20),
                   new Point(10, 20),
                   new Point(10, 10)
-                },
-                true)
+                })
           });
   GeometryCollection geo2 =
       new GeometryCollection(
@@ -71,8 +68,7 @@ public class GeometryCollectionCodecTest extends CommonCodecTest {
                         new Point(50, 50),
                         new Point(0, 50),
                         new Point(0, 0)
-                      },
-                      false),
+                      }),
                   new LineString(
                       new Point[] {
                         new Point(10, 10),
@@ -80,8 +76,7 @@ public class GeometryCollectionCodecTest extends CommonCodecTest {
                         new Point(20, 20),
                         new Point(10, 20),
                         new Point(10, 10)
-                      },
-                      false)
+                      })
                 }),
             new MultiPoint(new Point[] {new Point(0, 0), new Point(0, 10), new Point(10, 0)})
           });
@@ -93,13 +88,11 @@ public class GeometryCollectionCodecTest extends CommonCodecTest {
                   new LineString(
                       new Point[] {
                         new Point(0, 0), new Point(50, 0), new Point(50, 50), new Point(0, 50)
-                      },
-                      true),
+                      }),
                   new LineString(
                       new Point[] {
                         new Point(10, 10), new Point(20, 10), new Point(20, 20), new Point(10, 20)
-                      },
-                      true)
+                      })
                 }),
             new MultiPolygon(
                 new Polygon[] {
@@ -114,8 +107,7 @@ public class GeometryCollectionCodecTest extends CommonCodecTest {
                               new Point(9, 3),
                               new Point(7, 2),
                               new Point(1, 1)
-                            },
-                            false),
+                            }),
                       })
                 })
           });
@@ -342,8 +334,7 @@ public class GeometryCollectionCodecTest extends CommonCodecTest {
                     new Point(20, 20),
                     new Point(10, 20),
                     new Point(10, 10)
-                  },
-                  true)
+                  })
             }),
         geo1);
     assertEquals(
@@ -357,8 +348,7 @@ public class GeometryCollectionCodecTest extends CommonCodecTest {
                         new Point(20, 20),
                         new Point(10, 20),
                         new Point(10, 10)
-                      },
-                      true)
+                      })
                 })
             .hashCode(),
         geo1.hashCode());
@@ -375,8 +365,7 @@ public class GeometryCollectionCodecTest extends CommonCodecTest {
                     new Point(20, 20),
                     new Point(10, 20),
                     new Point(10, 10)
-                  },
-                  true)
+                  })
             }),
         geo1);
   }

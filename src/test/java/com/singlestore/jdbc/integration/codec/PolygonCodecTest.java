@@ -36,8 +36,7 @@ public class PolygonCodecTest extends CommonCodecTest {
                   new Point(9, 3),
                   new Point(7, 2),
                   new Point(1, 1)
-                },
-                false)
+                })
           });
   private Polygon ls2 =
       new Polygon(
@@ -49,8 +48,7 @@ public class PolygonCodecTest extends CommonCodecTest {
                   new Point(50, 50),
                   new Point(0, 50),
                   new Point(0, 0)
-                },
-                false),
+                }),
             new LineString(
                 new Point[] {
                   new Point(10, 10),
@@ -58,8 +56,7 @@ public class PolygonCodecTest extends CommonCodecTest {
                   new Point(20, 20),
                   new Point(10, 20),
                   new Point(10, 10)
-                },
-                false)
+                })
           });
 
   private Polygon ls3 =
@@ -72,8 +69,7 @@ public class PolygonCodecTest extends CommonCodecTest {
                   new Point(50, 50),
                   new Point(0, 50),
                   new Point(0, 0)
-                },
-                false)
+                })
           });
 
   @AfterAll
@@ -430,8 +426,7 @@ public class PolygonCodecTest extends CommonCodecTest {
                     new Point(50, 50),
                     new Point(0, 50),
                     new Point(0, 0)
-                  },
-                  false),
+                  }),
               new LineString(
                   new Point[] {
                     new Point(10, 10),
@@ -439,8 +434,7 @@ public class PolygonCodecTest extends CommonCodecTest {
                     new Point(20, 20),
                     new Point(10, 20),
                     new Point(10, 10)
-                  },
-                  false)
+                  })
             });
     assertEquals(testPoly, ls2);
     assertEquals(testPoly.hashCode(), ls2.hashCode());
@@ -456,8 +450,7 @@ public class PolygonCodecTest extends CommonCodecTest {
                     new Point(50, 60),
                     new Point(0, 50),
                     new Point(0, 0)
-                  },
-                  false),
+                  }),
               new LineString(
                   new Point[] {
                     new Point(10, 10),
@@ -465,8 +458,7 @@ public class PolygonCodecTest extends CommonCodecTest {
                     new Point(20, 20),
                     new Point(10, 20),
                     new Point(10, 10)
-                  },
-                  false)
+                  })
             }),
         ls2);
   }

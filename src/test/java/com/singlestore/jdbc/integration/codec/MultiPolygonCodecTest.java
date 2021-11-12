@@ -35,8 +35,7 @@ public class MultiPolygonCodecTest extends CommonCodecTest {
                         new Point(9, 3),
                         new Point(7, 2),
                         new Point(1, 1)
-                      },
-                      false),
+                      }),
                 }),
             new Polygon(
                 new LineString[] {
@@ -47,8 +46,7 @@ public class MultiPolygonCodecTest extends CommonCodecTest {
                         new Point(50, 50),
                         new Point(0, 50),
                         new Point(0, 0)
-                      },
-                      false),
+                      }),
                   new LineString(
                       new Point[] {
                         new Point(10, 10),
@@ -56,8 +54,7 @@ public class MultiPolygonCodecTest extends CommonCodecTest {
                         new Point(20, 20),
                         new Point(10, 20),
                         new Point(10, 10)
-                      },
-                      false)
+                      })
                 })
           });
   private MultiPolygon ls2 =
@@ -74,8 +71,7 @@ public class MultiPolygonCodecTest extends CommonCodecTest {
                         new Point(9, 3),
                         new Point(7, 2),
                         new Point(1, 1)
-                      },
-                      false),
+                      }),
                 })
           });
 
@@ -91,8 +87,7 @@ public class MultiPolygonCodecTest extends CommonCodecTest {
                         new Point(50, 50),
                         new Point(0, 50),
                         new Point(0, 0)
-                      },
-                      false),
+                      }),
                   new LineString(
                       new Point[] {
                         new Point(10, 10),
@@ -100,8 +95,7 @@ public class MultiPolygonCodecTest extends CommonCodecTest {
                         new Point(20, 20),
                         new Point(10, 20),
                         new Point(10, 10)
-                      },
-                      false)
+                      })
                 })
           });
 
@@ -356,8 +350,7 @@ public class MultiPolygonCodecTest extends CommonCodecTest {
                           new Point(9, 3),
                           new Point(7, 2),
                           new Point(1, 1)
-                        },
-                        false),
+                        }),
                   }),
               new Polygon(
                   new LineString[] {
@@ -368,8 +361,7 @@ public class MultiPolygonCodecTest extends CommonCodecTest {
                           new Point(50, 50),
                           new Point(0, 50),
                           new Point(0, 0)
-                        },
-                        false),
+                        }),
                     new LineString(
                         new Point[] {
                           new Point(10, 10),
@@ -377,8 +369,7 @@ public class MultiPolygonCodecTest extends CommonCodecTest {
                           new Point(20, 20),
                           new Point(10, 20),
                           new Point(10, 10)
-                        },
-                        false)
+                        })
                   })
             });
     assertEquals(testPoly, ls1);
@@ -399,8 +390,7 @@ public class MultiPolygonCodecTest extends CommonCodecTest {
                           new Point(9, 3),
                           new Point(7, 2),
                           new Point(1, 1)
-                        },
-                        false),
+                        }),
                   }),
               new Polygon(
                   new LineString[] {
@@ -411,8 +401,7 @@ public class MultiPolygonCodecTest extends CommonCodecTest {
                           new Point(50, 50),
                           new Point(0, 50),
                           new Point(0, 0)
-                        },
-                        false),
+                        }),
                     new LineString(
                         new Point[] {
                           new Point(10, 10),
@@ -420,8 +409,7 @@ public class MultiPolygonCodecTest extends CommonCodecTest {
                           new Point(20, 20),
                           new Point(10, 20),
                           new Point(10, 15)
-                        },
-                        false)
+                        })
                   })
             }),
         ls1);

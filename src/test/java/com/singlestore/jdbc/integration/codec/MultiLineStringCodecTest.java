@@ -35,8 +35,7 @@ public class MultiLineStringCodecTest extends CommonCodecTest {
                   new Point(6, 9),
                   new Point(9, 3),
                   new Point(7, 2)
-                },
-                true)
+                })
           });
   private MultiLineString ls2 =
       new MultiLineString(
@@ -44,13 +43,11 @@ public class MultiLineStringCodecTest extends CommonCodecTest {
             new LineString(
                 new Point[] {
                   new Point(0, 0), new Point(50, 0), new Point(50, 50), new Point(0, 50)
-                },
-                true),
+                }),
             new LineString(
                 new Point[] {
                   new Point(10, 10), new Point(20, 10), new Point(20, 20), new Point(10, 20)
-                },
-                true)
+                })
           });
 
   private MultiLineString ls3 =
@@ -59,8 +56,7 @@ public class MultiLineStringCodecTest extends CommonCodecTest {
             new LineString(
                 new Point[] {
                   new Point(0, 0), new Point(50, 0), new Point(50, 50), new Point(0, 50)
-                },
-                true)
+                })
           });
 
   @AfterAll
@@ -401,13 +397,11 @@ public class MultiLineStringCodecTest extends CommonCodecTest {
               new LineString(
                   new Point[] {
                     new Point(0, 0), new Point(50, 0), new Point(50, 50), new Point(0, 50)
-                  },
-                  true),
+                  }),
               new LineString(
                   new Point[] {
                     new Point(10, 10), new Point(20, 10), new Point(20, 20), new Point(10, 20)
-                  },
-                  true)
+                  })
             }),
         ls2);
     assertEquals(
@@ -416,13 +410,11 @@ public class MultiLineStringCodecTest extends CommonCodecTest {
                   new LineString(
                       new Point[] {
                         new Point(0, 0), new Point(50, 0), new Point(50, 50), new Point(0, 50)
-                      },
-                      true),
+                      }),
                   new LineString(
                       new Point[] {
                         new Point(10, 10), new Point(20, 10), new Point(20, 20), new Point(10, 20)
-                      },
-                      true)
+                      })
                 })
             .hashCode(),
         ls2.hashCode());
@@ -435,13 +427,11 @@ public class MultiLineStringCodecTest extends CommonCodecTest {
               new LineString(
                   new Point[] {
                     new Point(0, 0), new Point(50, 0), new Point(50, 50), new Point(0, 50)
-                  },
-                  true),
+                  }),
               new LineString(
                   new Point[] {
                     new Point(10, 10), new Point(20, 10), new Point(20, 20), new Point(10, 20)
-                  },
-                  false)
+                  })
             }),
         ls1);
   }
