@@ -86,11 +86,6 @@ public class Common {
     }
   }
 
-  public static boolean isMariaDBServer() {
-    // TODO PLAT-5820
-    return false;
-  }
-
   public static boolean minVersion(int major, int minor, int patch) {
     // TODO PLAT-5820
     try {

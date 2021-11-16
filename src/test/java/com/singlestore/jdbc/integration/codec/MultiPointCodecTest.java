@@ -85,55 +85,27 @@ public class MultiPointCodecTest extends CommonCodecTest {
   }
 
   public void getObject(ResultSet rs, boolean defaultGeo) throws SQLException {
-    if (defaultGeo
-        && isMariaDBServer()
-        && minVersion(10, 5, 1)
-        && !"maxscale".equals(System.getenv("srv"))
-        && !"skysql-ha".equals(System.getenv("srv"))) {
-      assertEquals(
-          new MultiPoint(new Point[] {new Point(0, 0), new Point(0, 10), new Point(10, 0)}),
-          rs.getObject(1));
-      assertFalse(rs.wasNull());
-      assertEquals(
-          new MultiPoint(
-              new Point[] {
-                new Point(10, 10),
-                new Point(20, 10),
-                new Point(20, 20),
-                new Point(10, 20),
-                new Point(10, 10)
-              }),
-          rs.getObject(2));
-      assertFalse(rs.wasNull());
-      assertEquals(
-          new MultiPoint(new Point[] {new Point(-1, 0.55), new Point(3, 5), new Point(1, 1)}),
-          rs.getObject(3));
-      assertFalse(rs.wasNull());
-      assertNull(rs.getObject(4));
-      assertTrue(rs.wasNull());
-    } else {
-      assertEquals(
-          new MultiPoint(new Point[] {new Point(0, 0), new Point(0, 10), new Point(10, 0)}),
-          rs.getObject(1, MultiPoint.class));
-      assertFalse(rs.wasNull());
-      assertEquals(
-          new MultiPoint(
-              new Point[] {
-                new Point(10, 10),
-                new Point(20, 10),
-                new Point(20, 20),
-                new Point(10, 20),
-                new Point(10, 10)
-              }),
-          rs.getObject(2, MultiPoint.class));
-      assertFalse(rs.wasNull());
-      assertEquals(
-          new MultiPoint(new Point[] {new Point(-1, 0.55), new Point(3, 5), new Point(1, 1)}),
-          rs.getObject(3, MultiPoint.class));
-      assertFalse(rs.wasNull());
-      assertNull(rs.getObject(4));
-      assertTrue(rs.wasNull());
-    }
+    assertEquals(
+        new MultiPoint(new Point[] {new Point(0, 0), new Point(0, 10), new Point(10, 0)}),
+        rs.getObject(1, MultiPoint.class));
+    assertFalse(rs.wasNull());
+    assertEquals(
+        new MultiPoint(
+            new Point[] {
+              new Point(10, 10),
+              new Point(20, 10),
+              new Point(20, 20),
+              new Point(10, 20),
+              new Point(10, 10)
+            }),
+        rs.getObject(2, MultiPoint.class));
+    assertFalse(rs.wasNull());
+    assertEquals(
+        new MultiPoint(new Point[] {new Point(-1, 0.55), new Point(3, 5), new Point(1, 1)}),
+        rs.getObject(3, MultiPoint.class));
+    assertFalse(rs.wasNull());
+    assertNull(rs.getObject(4));
+    assertTrue(rs.wasNull());
   }
 
   @Test
@@ -259,24 +231,10 @@ public class MultiPointCodecTest extends CommonCodecTest {
       throws SQLException {
     ResultSet rs = getPrepare(con);
     ResultSetMetaData meta = rs.getMetaData();
-    if (isMariaDBServer()
-        && minVersion(10, 5, 1)
-        && !"maxscale".equals(System.getenv("srv"))
-        && !"skysql-ha".equals(System.getenv("srv"))) {
-      assertEquals("MULTIPOINT", meta.getColumnTypeName(1));
-    } else {
-      assertEquals("GEOMETRY", meta.getColumnTypeName(1));
-    }
+    assertEquals("GEOMETRY", meta.getColumnTypeName(1));
     assertEquals(sharedConn.getCatalog(), meta.getCatalogName(1));
     assertEquals(
-        geoDefault
-            ? ((isMariaDBServer()
-                    && minVersion(10, 5, 1)
-                    && !"maxscale".equals(System.getenv("srv"))
-                    && !"skysql-ha".equals(System.getenv("srv")))
-                ? MultiPoint.class.getName()
-                : GeometryCollection.class.getName())
-            : byte[].class.getName(),
+        geoDefault ? GeometryCollection.class.getName() : byte[].class.getName(),
         meta.getColumnClassName(1));
     assertEquals("t1alias", meta.getColumnLabel(1));
     assertEquals("t1", meta.getColumnName(1));

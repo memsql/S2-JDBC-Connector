@@ -424,8 +424,8 @@ public class Configuration {
   }
 
   /**
-   * Tell if mariadb driver accept url string. (Correspond to interface
-   * java.jdbc.Driver.acceptsURL() method)
+   * Tell if the driver accepts url string. (Correspond to interface java.jdbc.Driver.acceptsURL()
+   * method)
    *
    * @param url url String
    * @return true if url string correspond.
@@ -1337,7 +1337,7 @@ public class Configuration {
      *
      * <ul>
      *   <li>null or empty is WKB byte array
-     *   <li>'default' will return org.mariadb.mariadb.jdbc.type Object
+     *   <li>'default' will return com.singlestore.jdbc.type Object
      * </ul>
      *
      * In the future JTS might be implemented

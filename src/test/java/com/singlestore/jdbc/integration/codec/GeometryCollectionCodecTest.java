@@ -175,29 +175,14 @@ public class GeometryCollectionCodecTest extends CommonCodecTest {
   }
 
   public void getObject(ResultSet rs, boolean defaultGeo) throws SQLException {
-    if (defaultGeo
-        && isMariaDBServer()
-        && minVersion(10, 5, 1)
-        && !"maxscale".equals(System.getenv("srv"))
-        && !"skysql-ha".equals(System.getenv("srv"))) {
-      assertEquals(geo1, rs.getObject(1));
-      assertFalse(rs.wasNull());
-      assertEquals(geo2, rs.getObject(2));
-      assertFalse(rs.wasNull());
-      assertEquals(geo3, rs.getObject(3));
-      assertFalse(rs.wasNull());
-      assertNull(rs.getObject(4));
-      assertTrue(rs.wasNull());
-    } else {
-      assertEquals(geo1, rs.getObject(1, GeometryCollection.class));
-      assertFalse(rs.wasNull());
-      assertEquals(geo2, rs.getObject(2, GeometryCollection.class));
-      assertFalse(rs.wasNull());
-      assertEquals(geo3, rs.getObject(3, GeometryCollection.class));
-      assertFalse(rs.wasNull());
-      assertNull(rs.getObject(4));
-      assertTrue(rs.wasNull());
-    }
+    assertEquals(geo1, rs.getObject(1, GeometryCollection.class));
+    assertFalse(rs.wasNull());
+    assertEquals(geo2, rs.getObject(2, GeometryCollection.class));
+    assertFalse(rs.wasNull());
+    assertEquals(geo3, rs.getObject(3, GeometryCollection.class));
+    assertFalse(rs.wasNull());
+    assertNull(rs.getObject(4));
+    assertTrue(rs.wasNull());
   }
 
   @Test
@@ -252,14 +237,7 @@ public class GeometryCollectionCodecTest extends CommonCodecTest {
       throws SQLException {
     ResultSet rs = getPrepare(con);
     ResultSetMetaData meta = rs.getMetaData();
-    if (isMariaDBServer()
-        && minVersion(10, 5, 1)
-        && !"maxscale".equals(System.getenv("srv"))
-        && !"skysql-ha".equals(System.getenv("srv"))) {
-      assertEquals("GEOMETRYCOLLECTION", meta.getColumnTypeName(1));
-    } else {
-      assertEquals("GEOMETRY", meta.getColumnTypeName(1));
-    }
+    assertEquals("GEOMETRY", meta.getColumnTypeName(1));
     assertEquals(sharedConn.getCatalog(), meta.getCatalogName(1));
     assertEquals(
         geoDefault ? GeometryCollection.class.getName() : byte[].class.getName(),

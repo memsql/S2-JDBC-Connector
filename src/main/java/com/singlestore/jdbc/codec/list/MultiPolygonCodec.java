@@ -66,10 +66,10 @@ public class MultiPolygonCodec implements Codec<MultiPolygon> {
   @Override
   public void encodeBinary(PacketWriter encoder, Object value, Calendar cal, Long maxLength)
       throws IOException {
-    MultiPolygon mariadbMultiPolygon = (MultiPolygon) value;
+    MultiPolygon multiPolygon = (MultiPolygon) value;
 
     int length = 13;
-    for (Polygon poly : mariadbMultiPolygon.getPolygons()) {
+    for (Polygon poly : multiPolygon.getPolygons()) {
       length += 9;
       for (LineString ls : poly.getLines()) {
         length += 4 + ls.getPoints().length * 16;
@@ -80,9 +80,9 @@ public class MultiPolygonCodec implements Codec<MultiPolygon> {
     encoder.writeInt(0); // SRID
     encoder.writeByte(0x01); // LITTLE ENDIAN
     encoder.writeInt(6); // wkbMultiPolygon
-    encoder.writeInt(mariadbMultiPolygon.getPolygons().length); // nb polygon
+    encoder.writeInt(multiPolygon.getPolygons().length); // nb polygon
 
-    for (Polygon poly : mariadbMultiPolygon.getPolygons()) {
+    for (Polygon poly : multiPolygon.getPolygons()) {
       encoder.writeByte(0x01); // LITTLE ENDIAN
       encoder.writeInt(3); // wkbPolygon
       encoder.writeInt(poly.getLines().length);

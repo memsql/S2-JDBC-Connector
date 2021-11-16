@@ -122,30 +122,15 @@ public class MultiLineStringCodecTest extends CommonCodecTest {
   }
 
   public void getObject(ResultSet rs, boolean defaultGeo) throws SQLException {
-    if (defaultGeo
-        && isMariaDBServer()
-        && minVersion(10, 5, 1)
-        && !"maxscale".equals(System.getenv("srv"))
-        && !"skysql-ha".equals(System.getenv("srv"))) {
-      assertEquals(ls1, rs.getObject(1));
-      assertFalse(rs.wasNull());
-      assertEquals(ls2, rs.getObject(2));
-      assertFalse(rs.wasNull());
-      assertEquals(ls3, rs.getObject(3));
-      assertFalse(rs.wasNull());
-      assertNull(rs.getObject(4));
-      assertTrue(rs.wasNull());
-    } else {
-      assertEquals(ls1, rs.getObject(1, MultiLineString.class));
-      assertFalse(rs.wasNull());
-      // MultiLineString((0 0,50 0,50 50,0 50,0 0), (10 10,20 10,20 20,10 20,10 10))
-      assertEquals(ls2, rs.getObject(2, MultiLineString.class));
-      assertFalse(rs.wasNull());
-      assertEquals(ls3, rs.getObject(3, MultiLineString.class));
-      assertFalse(rs.wasNull());
-      assertNull(rs.getObject(4));
-      assertTrue(rs.wasNull());
-    }
+    assertEquals(ls1, rs.getObject(1, MultiLineString.class));
+    assertFalse(rs.wasNull());
+    // MultiLineString((0 0,50 0,50 50,0 50,0 0), (10 10,20 10,20 20,10 20,10 10))
+    assertEquals(ls2, rs.getObject(2, MultiLineString.class));
+    assertFalse(rs.wasNull());
+    assertEquals(ls3, rs.getObject(3, MultiLineString.class));
+    assertFalse(rs.wasNull());
+    assertNull(rs.getObject(4));
+    assertTrue(rs.wasNull());
   }
 
   @Test
@@ -313,24 +298,10 @@ public class MultiLineStringCodecTest extends CommonCodecTest {
       throws SQLException {
     ResultSet rs = getPrepare(con);
     ResultSetMetaData meta = rs.getMetaData();
-    if (isMariaDBServer()
-        && minVersion(10, 5, 1)
-        && !"maxscale".equals(System.getenv("srv"))
-        && !"skysql-ha".equals(System.getenv("srv"))) {
-      assertEquals("MULTILINESTRING", meta.getColumnTypeName(1));
-    } else {
-      assertEquals("GEOMETRY", meta.getColumnTypeName(1));
-    }
+    assertEquals("GEOMETRY", meta.getColumnTypeName(1));
     assertEquals(sharedConn.getCatalog(), meta.getCatalogName(1));
     assertEquals(
-        geoDefault
-            ? ((isMariaDBServer()
-                    && minVersion(10, 5, 1)
-                    && !"maxscale".equals(System.getenv("srv"))
-                    && !"skysql-ha".equals(System.getenv("srv")))
-                ? MultiLineString.class.getName()
-                : GeometryCollection.class.getName())
-            : byte[].class.getName(),
+        geoDefault ? GeometryCollection.class.getName() : byte[].class.getName(),
         meta.getColumnClassName(1));
     assertEquals("t1alias", meta.getColumnLabel(1));
     assertEquals("t1", meta.getColumnName(1));
