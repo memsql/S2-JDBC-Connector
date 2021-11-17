@@ -36,7 +36,7 @@ public class Common {
     protected Connection connectionText;
     protected Connection connectionBinary;
 
-    @Param({"mysql", "singlestore"})
+    @Param({"mariadb", "mysql", "singlestore"})
     String driver;
 
     @Setup(Level.Trial)
@@ -44,11 +44,14 @@ public class Common {
 
       String className;
       switch (driver) {
+        case "singlestore":
+          className = "com.singlestore.jdbc.Driver";
+          break;
         case "mysql":
           className = "com.mysql.cj.jdbc.Driver";
           break;
-        case "singlestore":
-          className = "com.singlestore.jdbc.Driver";
+        case "mariadb":
+          className = "org.mariadb.jdbc.Driver";
           break;
         default:
           throw new RuntimeException("wrong param");
