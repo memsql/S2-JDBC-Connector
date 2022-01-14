@@ -636,7 +636,7 @@ public class DateCodecTest extends CommonCodecTest {
     assertEquals(10, meta.getPrecision(1));
     assertEquals(0, meta.getScale(1));
     assertEquals("", meta.getSchemaName(1));
-    assertEquals(10, meta.getColumnDisplaySize(1));
+    assertEquals(13, meta.getColumnDisplaySize(1));
   }
 
   @Test

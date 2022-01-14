@@ -140,9 +140,9 @@ public class FailoverTest extends Common {
     Statement stmt = sharedConn.createStatement();
     stmt.execute("DROP TABLE IF EXISTS transaction_failover_3");
     stmt.execute(
-        "CREATE TABLE transaction_failover_3 "
-            + "(id int not null primary key auto_increment, test varchar(20)) "
-            + "engine=innodb");
+        createRowstore()
+            + " TABLE transaction_failover_3 "
+            + "(id int not null primary key auto_increment, test varchar(20)) ");
 
     try (Connection con =
         createProxyCon(
@@ -166,12 +166,14 @@ public class FailoverTest extends Common {
           p.execute();
         } else {
           assertThrowsContains(
-              SQLException.class, () -> p.execute(), "In progress transaction was lost");
+              SQLTransientConnectionException.class,
+              p::execute,
+              "In progress transaction was lost");
         }
       }
       if (transactionReplay) {
         con.commit();
-        ResultSet rs = stmt.executeQuery("SELECT * FROM transaction_failover_3 order by id");
+        ResultSet rs = stmt.executeQuery("SELECT * FROM transaction_failover_3 ORDER BY id");
 
         for (int i = 0; i < 4; i++) {
           assertTrue(rs.next());
