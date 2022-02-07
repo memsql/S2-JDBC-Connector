@@ -5,14 +5,18 @@
 
 package com.singlestore.jdbc.plugin.credential;
 
-public class Credential {
-  private final String password;
-  private final String user;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-  public Credential(String user, String password) {
+public class Credential {
+  private String password;
+  private String user;
+
+  public Credential(@JsonProperty("user") String user, @JsonProperty("password") String password) {
     this.user = user;
     this.password = password;
   }
+
+  public Credential() {}
 
   public String getUser() {
     return user;

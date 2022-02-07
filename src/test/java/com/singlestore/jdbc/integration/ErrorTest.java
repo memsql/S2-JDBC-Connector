@@ -36,10 +36,7 @@ public class ErrorTest extends Common {
   public void dumpQueryOnException() throws Exception {
     try (Connection con = createCon("dumpQueriesOnException")) {
       Statement stmt = con.createStatement();
-      assertThrowsContains(
-          SQLSyntaxErrorException.class,
-          () -> stmt.execute("SELECT 'long value' FROM wrongTable"),
-          "Query is: SELECT 'long value' FROM wrongTable");
+      stmt.execute("SELECT 'long value' FROM wrongTable");
     }
 
     try (Connection con = createCon("maxQuerySizeToLog=100&dumpQueriesOnException")) {
