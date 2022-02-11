@@ -10,7 +10,6 @@ import java.nio.file.StandardCopyOption;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.SQLInvalidAuthorizationSpecException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -21,26 +20,22 @@ public class BrowserAuthTest extends Common {
     drop();
 
     Statement stmt = sharedConn.createStatement();
-    stmt.execute("GRANT SELECT ON *.* TO 'browserAuthUser' IDENTIFIED BY 'mock_token1'");
+    stmt.execute("GRANT SELECT ON *.* TO 'browserAuthUser' IDENTIFIED BY 'mock_token'");
   }
 
   @Test
   public void mockAuthHelper() throws SQLException, IOException {
     File mockAuthHelper = setupMockAuthHelper();
 
-    try (java.sql.Connection connection =
+    java.sql.Connection connection =
         DriverManager.getConnection(
             String.format("jdbc:singlestore://%s:%s/", hostname, port)
                 + sharedConn.getCatalog()
                 + "?credentialType=BROWSER&authHelperPath="
-                + mockAuthHelper)) {
-      ResultSet rs = connection.createStatement().executeQuery("select 1");
-      assertTrue(rs.next());
-    } catch (SQLInvalidAuthorizationSpecException e) {
-      System.out.println(e.getErrorCode());
-    }
+                + mockAuthHelper);
+    ResultSet rs = connection.createStatement().executeQuery("select 1");
+    assertTrue(rs.next());
 
-    // the token must be cached in the keystore
     assertTrue(mockAuthHelper.delete());
   }
 

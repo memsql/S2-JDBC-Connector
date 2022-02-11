@@ -52,14 +52,6 @@ public class BrowserCredentialPlugin implements CredentialPlugin {
   @Override
   public CredentialPlugin initialize(Configuration conf, String userName, HostAddress hostAddress)
       throws SQLException {
-    //    try {
-    //      Class.forName("com.amazonaws.auth.BasicAWSCredentials");
-    //    } catch (ClassNotFoundException ex) {
-    //      throw new SQLException(
-    //          "Identity plugin 'AWS-IAM' is used without having AWS SDK in "
-    //              + "classpath. "
-    //              + "Please add 'com.amazonaws:aws-java-sdk-rds' to classpath");
-    //    }
     this.generator = new BrowserCredentialGenerator(conf.nonMappedOptions());
 
     return this;
@@ -67,8 +59,7 @@ public class BrowserCredentialPlugin implements CredentialPlugin {
 
   @Override
   // get() is synchronized to avoid requesting credentials twice if a second thread tries to
-  // establish a connection
-  // while user sign-in is still in progress
+  // establish a connection while user sign-in is still in progress
   public synchronized Credential get() throws SQLException {
     if (credential != null && credential.isValid()) {
       return credential.getCredential();

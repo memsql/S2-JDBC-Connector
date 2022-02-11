@@ -39,29 +39,30 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLNonTransientConnectionException;
 import java.sql.SQLPermission;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.net.ssl.SSLSocket;
 
 public class ClientImpl implements Client, AutoCloseable {
   private static final Logger logger = Loggers.getLogger(ClientImpl.class);
-  private final Socket socket;
+  protected final ExceptionFactory exceptionFactory;
+  private Socket socket;
   private final MutableInt sequence = new MutableInt();
   private final MutableInt compressionSequence = new MutableInt();
   private final ReentrantLock lock;
   private final Configuration conf;
   private final HostAddress hostAddress;
-  private boolean closed = false;
-  protected final ExceptionFactory exceptionFactory;
+  private final boolean disablePipeline;
   protected PacketWriter writer;
+  protected Context context;
+  private boolean closed = false;
   private PacketReader reader;
   private com.singlestore.jdbc.Statement streamStmt = null;
   private ClientMessage streamMsg = null;
   private int socketTimeout;
   private int waitTimeout;
-  private final boolean disablePipeline;
-  protected Context context;
 
   public ClientImpl(
       Configuration conf, HostAddress hostAddress, ReentrantLock lock, boolean skipPostCommands)
@@ -74,11 +75,26 @@ public class ClientImpl implements Client, AutoCloseable {
     this.disablePipeline =
         Boolean.parseBoolean(conf.nonMappedOptions().getProperty("disablePipeline", "false"));
 
-    String host = hostAddress != null ? hostAddress.host : null;
     this.socketTimeout = conf.socketTimeout();
-    this.socket = ConnectionHelper.connectSocket(conf, hostAddress);
 
+    String host = hostAddress != null ? hostAddress.host : null;
     try {
+      connect(host, skipPostCommands);
+    } catch (SQLException sqlException) {
+      // retry when connecting via browser auth token because token might have
+      // expired while we were connecting
+      // TODO: can we check for a specific error code 2628 ?(only future versions of SingleStore
+      // will support specific error code for expired JWT)
+      if (conf.credentialPlugin().type().equals("BROWSER")) {
+        this.closed = false;
+        connect(host, skipPostCommands);
+      }
+    }
+  }
+
+  private void connect(String host, boolean skipPostCommands) throws SQLException {
+    try {
+      socket = ConnectionHelper.connectSocket(conf, hostAddress);
       // **********************************************************************
       // creating socket
       // **********************************************************************
@@ -148,6 +164,14 @@ public class ClientImpl implements Client, AutoCloseable {
       if (credentialPlugin != null && credentialPlugin.defaultAuthenticationPluginType() != null) {
         authenticationPluginType = credentialPlugin.defaultAuthenticationPluginType();
       }
+
+      if ("mysql_clear_password".equals(authenticationPluginType)
+          && !(credentialPlugin != null && credentialPlugin.type().equals("BROWSER"))) {
+        if ((clientCapabilities & Capabilities.SSL) == 0) {
+          throw new IllegalStateException("Cannot send password in clear if SSL is not enabled.");
+        }
+      }
+
       Credential credential = ConnectionHelper.loadCredential(credentialPlugin, conf, hostAddress);
 
       new HandshakeResponse(
@@ -180,7 +204,6 @@ public class ClientImpl implements Client, AutoCloseable {
       if (!skipPostCommands) {
         postConnectionQueries();
       }
-
     } catch (IOException ioException) {
       destroySocket();
 
@@ -525,8 +548,6 @@ public class ClientImpl implements Client, AutoCloseable {
   /**
    * Read server response packet.
    *
-   * @see <a href="https://mariadb.com/kb/en/mariadb/4-server-response-packets/">server response
-   *     packets</a>
    * @param stmt current statement (null if internal)
    * @param message current message
    * @param fetchSize default fetch size
@@ -534,6 +555,8 @@ public class ClientImpl implements Client, AutoCloseable {
    * @param resultSetType type
    * @param closeOnCompletion must resultset close statement on completion
    * @throws SQLException if any exception
+   * @see <a href="https://mariadb.com/kb/en/mariadb/4-server-response-packets/">server response
+   *     packets</a>
    */
   public Completion readPacket(
       com.singlestore.jdbc.Statement stmt,
