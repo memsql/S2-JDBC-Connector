@@ -21,6 +21,7 @@ public class BrowserCredentialGenerator {
   public BrowserCredentialGenerator(Properties nonMappedOptions) throws SQLException {
     String path = nonMappedOptions.getProperty("authHelperPath");
     if (path == null) {
+      // TODO: this will depend on how we distribute auth helper
       path = "changeme";
     }
 
@@ -35,7 +36,7 @@ public class BrowserCredentialGenerator {
       throw new SQLException(
           "Identity plugin 'BROWSER' is used but Auth Helper at \""
               + path
-              + "\" is not executable. Please make sure JVM has the permission to execute the file.");
+              + "\" is not executable. Please make sure that the JVM has the permission to execute this file.");
     }
   }
 
@@ -67,15 +68,18 @@ public class BrowserCredentialGenerator {
             .lines()
             .collect(Collectors.joining("\n"));
 
-    //        BufferedReader stdError = new BufferedReader(new
-    //                InputStreamReader(proc.getErrorStream()));
+    String stdError =
+        new BufferedReader(new InputStreamReader(proc.getErrorStream(), StandardCharsets.UTF_8))
+            .lines()
+            .collect(Collectors.joining("\n"));
 
     if (proc.exitValue() != 0) {
-      // TODO: maybe add stderr to the message
       throw new SQLException(
           "Auth Helper returned an error when using identity plugin 'BROWSER'."
               + "\nStdout:\n"
-              + stdOut);
+              + stdOut
+              + "\nStderr:\n"
+              + stdError);
     }
 
     ObjectMapper objectMapper = new ObjectMapper();
@@ -85,15 +89,17 @@ public class BrowserCredentialGenerator {
     try {
       outMap = objectMapper.readValue(stdOut, mapType);
     } catch (IOException e) {
-      // TODO: maybe add stderr to the message
       throw new SQLException(
           "Could not parse output from Auth Helper when using identity plugin 'BROWSER'."
               + "\nStdout:\n"
-              + stdOut);
+              + stdOut
+              + "\nStderr:\n"
+              + stdError);
     }
 
     return new ExpiringCredential(
         new Credential(outMap.get("username"), outMap.get("token")),
+        outMap.get("email"),
         Instant.parse(outMap.get("expiration")));
   }
 }

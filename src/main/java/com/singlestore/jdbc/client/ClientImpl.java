@@ -35,10 +35,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLNonTransientConnectionException;
-import java.sql.SQLPermission;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -78,14 +75,19 @@ public class ClientImpl implements Client, AutoCloseable {
     this.socketTimeout = conf.socketTimeout();
 
     String host = hostAddress != null ? hostAddress.host : null;
+
     try {
       connect(host, skipPostCommands);
-    } catch (SQLException sqlException) {
+    } catch (SQLInvalidAuthorizationSpecException sqlException) {
       // retry when connecting via browser auth token because token might have
       // expired while we were connecting
-      // TODO: can we check for a specific error code 2628 ?(only future versions of SingleStore
-      // will support specific error code for expired JWT)
-      if (conf.credentialPlugin().type().equals("BROWSER")) {
+      // error 2628 is JWT_TOKEN_EXPIRED
+      // error 1045 is ACCESS_DENIED_ERROR, used for compatibility with versions where 2628 is not
+      // implemented
+      if (conf.credentialPlugin() != null
+              && conf.credentialPlugin().type().equals("BROWSER")
+              && sqlException.getErrorCode() == 1045
+          || sqlException.getErrorCode() == 2628) {
         this.closed = false;
         connect(host, skipPostCommands);
       }
@@ -93,8 +95,8 @@ public class ClientImpl implements Client, AutoCloseable {
   }
 
   private void connect(String host, boolean skipPostCommands) throws SQLException {
+    this.socket = ConnectionHelper.connectSocket(conf, hostAddress);
     try {
-      socket = ConnectionHelper.connectSocket(conf, hostAddress);
       // **********************************************************************
       // creating socket
       // **********************************************************************
@@ -120,6 +122,7 @@ public class ClientImpl implements Client, AutoCloseable {
       this.exceptionFactory.setThreadId(handshake.getThreadId());
       long clientCapabilities =
           ConnectionHelper.initializeClientCapabilities(conf, handshake.getCapabilities());
+
       this.context =
           conf.transactionReplay()
               ? new RedoContext(
@@ -165,11 +168,9 @@ public class ClientImpl implements Client, AutoCloseable {
         authenticationPluginType = credentialPlugin.defaultAuthenticationPluginType();
       }
 
-      if ("mysql_clear_password".equals(authenticationPluginType)
-          && !(credentialPlugin != null && credentialPlugin.type().equals("BROWSER"))) {
-        if ((clientCapabilities & Capabilities.SSL) == 0) {
-          throw new IllegalStateException("Cannot send password in clear if SSL is not enabled.");
-        }
+      if ("mysql_clear_password".equals(authenticationPluginType) && sslSocket == null) {
+        throw new IllegalStateException(
+            "Cannot send password in clear text if SSL is not enabled.");
       }
 
       Credential credential = ConnectionHelper.loadCredential(credentialPlugin, conf, hostAddress);

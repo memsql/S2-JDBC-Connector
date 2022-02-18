@@ -12,12 +12,15 @@ public class ExpiringCredential {
 
   private final Instant expiration;
   private final Credential credential;
+  private final String email;
 
   public ExpiringCredential(
       @JsonProperty("credential") Credential credential,
+      @JsonProperty("email") String email,
       @JsonProperty("expiration") Instant expiration) {
     this.credential = credential;
     this.expiration = expiration;
+    this.email = email;
   }
 
   @JsonIgnore
@@ -27,6 +30,10 @@ public class ExpiringCredential {
 
   public Credential getCredential() {
     return credential;
+  }
+
+  public String getEmail() {
+    return email;
   }
 
   // for serialization

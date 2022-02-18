@@ -12,20 +12,6 @@ import com.singlestore.jdbc.plugin.credential.CredentialPlugin;
 import com.singlestore.jdbc.plugin.credential.browser.keyring.Keyring;
 import java.sql.SQLException;
 
-/**
- * Permit AWS database IAM authentication.
- *
- * <p>Token is generated using IAM credential and region.
- *
- * <p>Implementation use SDK DefaultAWSCredentialsProviderChain and DefaultAwsRegionProviderChain
- * (environment variable / system properties, files, ...) or using connection string options :
- * accessKeyId, secretKey, region.
- *
- * @see <a
- *     href="https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html">DefaultAWSCredentialsProviderChain</a>
- * @see <a
- *     href="https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/regions/providers/DefaultAwsRegionProviderChain.html">DefaultAwsRegionProviderChain</a>
- */
 public class BrowserCredentialPlugin implements CredentialPlugin {
 
   private BrowserCredentialGenerator generator;
@@ -41,8 +27,7 @@ public class BrowserCredentialPlugin implements CredentialPlugin {
 
   @Override
   public String defaultAuthenticationPluginType() {
-    //    return "mysql_clear_password";
-    return null;
+    return "mysql_clear_password";
   }
 
   public BrowserCredentialPlugin() {
@@ -79,7 +64,13 @@ public class BrowserCredentialPlugin implements CredentialPlugin {
     }
 
     credential = cred;
-    userEmail = cred.getCredential().getUser();
+    userEmail = cred.getEmail();
     return cred.getCredential();
+  }
+
+  // this function is for testing only
+  public void clear() {
+    userEmail = null;
+    credential = null;
   }
 }
