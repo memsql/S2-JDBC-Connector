@@ -8,7 +8,6 @@ import com.sun.jna.win32.StdCallLibrary;
 import com.sun.jna.win32.W32APIOptions;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -25,7 +24,7 @@ public class WindowsKeyring implements Keyring {
   }
 
   @Override
-  public ExpiringCredential getCredential() throws SQLException {
+  public ExpiringCredential getCredential() {
     PointerByReference pCredential = new PointerByReference();
     try {
       boolean res;
@@ -50,8 +49,8 @@ public class WindowsKeyring implements Keyring {
       try {
         return Keyring.fromBlob(new String(credBytes, StandardCharsets.UTF_16LE));
       } catch (IOException e) {
-        throw new SQLException(
-            "Error while parsing cached token from the Windows Credential Manager Keyring", e);
+        logger.debug("Error while parsing cached token from the Windows Credential Manager", e);
+        return null;
       }
     } finally {
       if (pCredential.getValue() != null) {
@@ -63,7 +62,7 @@ public class WindowsKeyring implements Keyring {
   }
 
   @Override
-  public void setCredential(ExpiringCredential cred) throws SQLException {
+  public void setCredential(ExpiringCredential cred) {
     byte[] credBlob = Keyring.makeBlob(cred).getBytes(StandardCharsets.UTF_16LE);
     Memory credBlobMem = new Memory(credBlob.length);
     credBlobMem.write(0, credBlob, 0, credBlob.length);
@@ -82,7 +81,7 @@ public class WindowsKeyring implements Keyring {
     }
 
     if (!res) {
-      throw new SQLException(
+      logger.debug(
           "Could not write to Windows Credential Manager. Error code: " + Native.getLastError());
     }
   }

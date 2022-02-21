@@ -7,15 +7,14 @@ import com.singlestore.jdbc.plugin.credential.browser.ExpiringCredential;
 import com.singlestore.jdbc.util.log.Logger;
 import com.singlestore.jdbc.util.log.Loggers;
 import java.io.IOException;
-import java.sql.SQLException;
 
 public interface Keyring {
   String STORAGE_KEY = "SingleStore JDBC Safe Storage";
   Logger logger = Loggers.getLogger(Keyring.class);
 
-  ExpiringCredential getCredential() throws SQLException;
+  ExpiringCredential getCredential();
 
-  void setCredential(ExpiringCredential cred) throws SQLException;
+  void setCredential(ExpiringCredential cred);
 
   static String makeBlob(ExpiringCredential cred) {
     ObjectMapper mapper = new ObjectMapper();

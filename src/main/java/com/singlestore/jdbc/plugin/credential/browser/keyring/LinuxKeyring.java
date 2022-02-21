@@ -2,7 +2,6 @@ package com.singlestore.jdbc.plugin.credential.browser.keyring;
 
 import com.singlestore.jdbc.plugin.credential.browser.ExpiringCredential;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +21,7 @@ public class LinuxKeyring implements Keyring {
   }
 
   @Override
-  public ExpiringCredential getCredential() throws SQLException {
+  public ExpiringCredential getCredential() {
     String entryPath = getExistingEntry();
     if (entryPath == null) {
       return null;
@@ -30,12 +29,13 @@ public class LinuxKeyring implements Keyring {
     try {
       return Keyring.fromBlob(String.valueOf(collection.getSecret(entryPath)));
     } catch (IOException e) {
-      throw new SQLException("Error while parsing cached token from the GNOME Keyring", e);
+      logger.debug("Error while parsing cached token from the GNOME Keyring", e);
+      return null;
     }
   }
 
   @Override
-  public void setCredential(ExpiringCredential cred) throws SQLException {
+  public void setCredential(ExpiringCredential cred) {
     String entryPath = getExistingEntry();
     String credBlob = Keyring.makeBlob(cred);
     if (entryPath == null) {
@@ -48,15 +48,15 @@ public class LinuxKeyring implements Keyring {
     }
   }
 
-  private String getExistingEntry() throws SQLException {
+  private String getExistingEntry() {
     String foundPath = null;
     List<String> entires = collection.getItems(ATTRIBUTES);
     if (entires != null) {
       for (String entry : collection.getItems(ATTRIBUTES)) {
         if (collection.getLabel(entry).equals(STORAGE_KEY)) {
           if (foundPath != null) {
-            throw new SQLException(
-                "Found multiple keychain entries matching \"" + STORAGE_KEY + "\"");
+            logger.debug("Found multiple keychain entries matching \"" + STORAGE_KEY + "\"");
+            return null;
           }
           foundPath = entry;
         }
