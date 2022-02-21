@@ -14,7 +14,6 @@ public interface CredentialPlugin {
   String type();
 
   Credential get() throws SQLException;
-  //  Credential get();
 
   default boolean mustUseSsl() {
     return false;

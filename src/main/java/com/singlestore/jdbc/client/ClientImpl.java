@@ -551,6 +551,8 @@ public class ClientImpl implements Client, AutoCloseable {
   /**
    * Read server response packet.
    *
+   * @see <a href="https://mariadb.com/kb/en/mariadb/4-server-response-packets/">server response
+   *     packets</a>
    * @param stmt current statement (null if internal)
    * @param message current message
    * @param fetchSize default fetch size
@@ -558,8 +560,6 @@ public class ClientImpl implements Client, AutoCloseable {
    * @param resultSetType type
    * @param closeOnCompletion must resultset close statement on completion
    * @throws SQLException if any exception
-   * @see <a href="https://mariadb.com/kb/en/mariadb/4-server-response-packets/">server response
-   *     packets</a>
    */
   public Completion readPacket(
       com.singlestore.jdbc.Statement stmt,
