@@ -90,6 +90,8 @@ public class ClientImpl implements Client, AutoCloseable {
           || sqlException.getErrorCode() == 2628) {
         this.closed = false;
         connect(host, skipPostCommands);
+      } else {
+        throw sqlException;
       }
     }
   }

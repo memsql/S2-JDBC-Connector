@@ -41,7 +41,11 @@ public class LinuxKeyring implements Keyring {
     if (entryPath == null) {
       entryPath = collection.createItem(STORAGE_KEY, credBlob);
     }
-    collection.updateItem(entryPath, STORAGE_KEY, credBlob, ATTRIBUTES);
+    if (entryPath != null) {
+      collection.updateItem(entryPath, STORAGE_KEY, credBlob, ATTRIBUTES);
+    } else {
+      logger.warn("Failed to save credentials in the GNOME keyring");
+    }
   }
 
   private String getExistingEntry() throws SQLException {

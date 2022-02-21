@@ -825,10 +825,10 @@ public class ConnectionTest extends Common {
     assertTrue((capabilities & Capabilities.MULTI_RESULTS) > 0);
     assertTrue((capabilities & Capabilities.PS_MULTI_RESULTS) > 0);
     assertTrue((capabilities & Capabilities.PLUGIN_AUTH) > 0);
+    assertTrue((capabilities & Capabilities.PLUGIN_AUTH_LENENC_CLIENT_DATA) > 0);
 
     assertEquals(0, (capabilities & Capabilities.COMPRESS));
     assertEquals(0, (capabilities & Capabilities.CONNECT_ATTRS));
-    assertEquals(0, (capabilities & Capabilities.PLUGIN_AUTH_LENENC_CLIENT_DATA));
     assertEquals(0, (capabilities & Capabilities.CLIENT_SESSION_TRACK));
     assertEquals(0, (capabilities & Capabilities.CLIENT_DEPRECATE_EOF));
     assertEquals(0, (capabilities & Capabilities.COMPRESS));
