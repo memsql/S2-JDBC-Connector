@@ -25,7 +25,6 @@
     </properties>
 
     <licenses>
-
         <license>
             <name>LGPL-2.1</name>
         </license>
@@ -37,7 +36,6 @@
     </organization>
 
     <developers>
-
         <developer>
             <id>singlestore</id>
             <name>SingleStore</name>
@@ -61,12 +59,10 @@
     <!--  </issueManagement>-->
 
     <distributionManagement>
-
         <snapshotRepository>
             <id>ossrh</id>
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </snapshotRepository>
-
         <repository>
             <id>ossrh</id>
             <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
@@ -75,7 +71,6 @@
 
     <dependencyManagement>
         <dependencies>
-
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
@@ -83,7 +78,6 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-bom</artifactId>
@@ -96,44 +90,34 @@
 
     <build>
         <resources>
-
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
             </resource>
         </resources>
-
         <plugins>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
-
                 <configuration>
                     <showWarnings>true</showWarnings>
-
                     <compilerArgs>
                         <arg>-Xlint:all,-options,-path,-processing</arg>
                     </compilerArgs>
                     <source>1.8</source>
                     <target>1.8</target>
                 </configuration>
-
                 <executions>
-
                     <execution>
                         <id>compile-java-8</id>
-
                         <goals>
                             <goal>compile</goal>
                         </goals>
                     </execution>
-
                     <execution>
                         <id>compile-java-11</id>
                         <phase>compile</phase>
-
                         <goals>
                             <goal>compile</goal>
                         </goals>
@@ -141,7 +125,6 @@
                             <release>11</release>
                             <source>11</source>
                             <target>11</target>
-
                             <compileSourceRoots>
                                 <compileSourceRoot>${project.basedir}/src/main/java11</compileSourceRoot>
                             </compileSourceRoots>
@@ -155,19 +138,15 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.2.0</version>
-
                 <configuration>
                     <source>8</source>
-
                     <excludePackageNames>
                         com.singlestore.jdbc.client,com.singlestore.jdbc.codec,com.singlestore.jdbc.message,com.singlestore.jdbc.util
                     </excludePackageNames>
                 </configuration>
                 <executions>
-
                     <execution>
                         <id>attach-javadocs</id>
-
                         <goals>
                             <goal>jar</goal>
                         </goals>
@@ -179,10 +158,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.2.0</version>
-
                 <configuration>
                     <archive>
-
                         <manifestEntries>
                             <Multi-Release>true</Multi-Release>
                         </manifestEntries>
@@ -195,7 +172,6 @@
                 <artifactId>maven-source-plugin</artifactId>
                 <version>3.2.1</version>
                 <executions>
-
                     <execution>
                         <!--package phase-->
                         <goals>
@@ -211,12 +187,10 @@
                 <version>1.6.8</version>
                 <extensions>true</extensions>
                 <executions>
-
                     <execution>
                         <phase>deploy</phase>
                     </execution>
                 </executions>
-
                 <configuration>
                     <serverId>ossrh</serverId>
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
@@ -230,10 +204,8 @@
                 <artifactId>maven-gpg-plugin</artifactId>
                 <version>1.6</version>
                 <executions>
-
                     <execution>
                         <phase>verify</phase>
-
                         <goals>
                             <goal>sign</goal>
                         </goals>
@@ -245,10 +217,8 @@
                 <groupId>com.cosium.code</groupId>
                 <artifactId>git-code-format-maven-plugin</artifactId>
                 <version>2.7</version>
-
                 <executions>
                     <execution>
-
                         <goals>
                             <goal>install-hooks</goal>
                         </goals>
@@ -261,11 +231,9 @@
                 <version>3.0.0</version>
                 <executions>
                     <execution>
-
                         <goals>
                             <goal>enforce</goal>
                         </goals>
-
                         <configuration>
                             <rules>
                                 <requireMavenVersion>
@@ -280,69 +248,12 @@
     </build>
 
     <dependencies>
-
-        <dependency>
-          <groupId>de.swiesend</groupId>
-          <artifactId>secret-service</artifactId>
-          <version>1.7.0</version>
-          <optional>true</optional>
-        </dependency>
-
-        <dependency>
-          <groupId>net.java.dev.jna</groupId>
-          <artifactId>jna</artifactId>
-          <version>${jna.version}</version>
-          <optional>true</optional>
-        </dependency>
-
-        <dependency>
-          <groupId>net.java.dev.jna</groupId>
-          <artifactId>jna-platform</artifactId>
-          <version>${jna.version}</version>
-          <optional>true</optional>
-        </dependency>
-
-        <dependency>
-            <groupId>com.github.waffle</groupId>
-            <artifactId>waffle-jna</artifactId>
-            <version>1.9.1</version>
-            <optional>true</optional>
-        </dependency>
-
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <version>${assertj.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>2.0.0-alpha5</version>
-            <optional>true</optional>
-        </dependency>
-
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>${logback.version}</version>
-            <scope>test</scope>
-        </dependency>
-
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.core</artifactId>
             <version>${osgi.version}</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.compendium</artifactId>
@@ -350,31 +261,84 @@
             <scope>provided</scope>
         </dependency>
 
+        <!--logging-->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.0-alpha5</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!--test dependencies-->
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${assertj.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--GSSAPI authentication plugin dependency-->
+        <dependency>
+            <groupId>com.github.waffle</groupId>
+            <artifactId>waffle-jna</artifactId>
+            <version>1.9.1</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!--AWS-IAM BROWSER credential plugin dependency-->
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-rds</artifactId>
             <optional>true</optional>
         </dependency>
 
+        <!--BROWSER credential plugin dependencies-->
         <dependency>
-          <groupId>com.fasterxml.jackson.datatype</groupId>
-          <artifactId>jackson-datatype-jsr310</artifactId>
-          <version>2.13.1</version>
+            <groupId>de.swiesend</groupId>
+            <artifactId>secret-service</artifactId>
+            <version>1.7.0</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>${jna.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna-platform</artifactId>
+            <version>${jna.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>2.13.1</version>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 
 
     <profiles>
-
         <profile>
             <id>default</id>
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
-
             <build>
                 <plugins>
-
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
@@ -388,7 +352,6 @@
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
                         <version>${jacoco.version}</version>
-
                         <configuration>
                             <destFile>${jacoco.reportPath}</destFile>
                             <append>true</append>
@@ -396,15 +359,12 @@
                                 <exclude>META-INF/**</exclude>
                             </excludes>
                         </configuration>
-
                         <executions>
-
                             <execution>
                                 <goals>
                                     <goal>prepare-agent</goal>
                                 </goals>
                             </execution>
-
                             <execution>
                                 <id>report</id>
                                 <phase>test</phase>
@@ -419,15 +379,12 @@
         </profile>
         <profile>
             <id>bench</id>
-
             <dependencies>
-
                 <dependency>
                     <groupId>org.openjdk.jmh</groupId>
                     <artifactId>jmh-core</artifactId>
                     <version>${jmh.version}</version>
                 </dependency>
-
                 <dependency>
                     <groupId>org.openjdk.jmh</groupId>
                     <artifactId>jmh-generator-annprocess</artifactId>
@@ -439,25 +396,20 @@
                     <artifactId>mysql-connector-java</artifactId>
                     <version>[8.0.20,)</version>
                 </dependency>
-
                 <dependency>
                     <groupId>org.mariadb.jdbc</groupId>
                     <artifactId>mariadb-java-client</artifactId>
                     <version>2.7.4</version>
                 </dependency>
-
             </dependencies>
 
             <build>
                 <plugins>
-
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>build-helper-maven-plugin</artifactId>
                         <version>3.0.0</version>
-
                         <executions>
-
                             <execution>
                                 <id>add-source</id>
                                 <phase>generate-sources</phase>
@@ -470,7 +422,6 @@
                                     </sources>
                                 </configuration>
                             </execution>
-
                             <execution>
                                 <id>add-resource</id>
                                 <phase>generate-resources</phase>
@@ -478,7 +429,6 @@
                                     <goal>add-resource</goal>
                                 </goals>
                                 <configuration>
-
                                     <resources>
                                         <resource>
                                             <directory>src/benchmark/resources</directory>
@@ -493,9 +443,7 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-shade-plugin</artifactId>
                         <version>3.2.1</version>
-
                         <executions>
-
                             <execution>
                                 <phase>package</phase>
                                 <goals>
@@ -503,7 +451,6 @@
                                 </goals>
                                 <configuration>
                                     <finalName>benchmarks</finalName>
-
                                     <transformers>
                                         <transformer
                                                 implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
