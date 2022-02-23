@@ -22,7 +22,6 @@ public class BrowserAuthTest extends Common {
     drop();
 
     Statement stmt = sharedConn.createStatement();
-    stmt.execute("DROP USER IF EXISTS SPCM1DAADM3DF001");
     stmt.execute("CREATE USER SPCM1DAADM3DF001 IDENTIFIED WITH authentication_jwt");
     stmt.execute("GRANT ALL PRIVILEGES ON test.* TO SPCM1DAADM3DF001");
   }
@@ -44,7 +43,7 @@ public class BrowserAuthTest extends Common {
     assertThrowsContains(
         Exception.class,
         () -> DriverManager.getConnection(connString),
-        "Cannot send password in clear text if SSL is not enabled.");
+        "unable to find valid certification path to requested target");
 
     assertTrue(mockAuthHelper.delete());
   }

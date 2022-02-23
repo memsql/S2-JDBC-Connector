@@ -26,6 +26,11 @@ public class BrowserCredentialPlugin implements CredentialPlugin {
   }
 
   @Override
+  public boolean mustUseSsl() {
+    return true;
+  }
+
+  @Override
   public String defaultAuthenticationPluginType() {
     return "mysql_clear_password";
   }

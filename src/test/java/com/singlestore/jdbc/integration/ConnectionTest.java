@@ -610,6 +610,38 @@ public class ConnectionTest extends Common {
     stmt.execute("drop user test_pam@'%'");
   }
 
+  @Test
+  public void jwtCredentialPlugin() throws Throwable {
+    Statement stmt = sharedConn.createStatement();
+
+    stmt.execute("DROP USER IF EXISTS SPCM1DAADM3DF001");
+    stmt.execute("CREATE USER SPCM1DAADM3DF001 IDENTIFIED WITH authentication_jwt");
+    stmt.execute("GRANT ALL PRIVILEGES ON test.* TO SPCM1DAADM3DF001");
+    String jwt =
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVC"
+            + "J9.eyJhcHBfZGlzcGxheW5hbWUiOiJTUENNMURBQURNM0RGMDAxIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxNzE2M"
+            + "jM5MDIwfQ.DWtsZ4Hqg-AWCPaEjV-Q6vfTJSbD4m7LWcngcG0lBZV53mOzBvKEcsrM2hRUOtUaNP_RbFDG9KOhsyBEz7"
+            + "351ZNRQhiApjJiYdNlfG934YxHtmxyJQjQzhvW7AF3iSnLMttArWMUhZ7Y7KA2vcGkrRrYOy9UsbcJr0JPU63ehvIshq"
+            + "QADKaZ08ws7jeUczYX9hB20Mg_WAVOCRVkTgT-arrS0Do7DKbzhuaz9ajcks5Zbr7zJSR8GIDYfrfMwTXVm_IARhBXCD"
+            + "jvkr21qqlsbSEOwPE0eK9C_k8SKmP8zTdMAlMiuQx1Dfd9IUUjemfcfxRtHJkbR3utZUNyLf3-3Q";
+
+    try (Connection connection =
+        createCon("credentialType=JWT&sslMode=trust&user=SPCM1DAADM3DF001&password=" + jwt)) {
+      connection.getCatalog();
+    }
+
+    assertThrowsContains(
+        SQLException.class,
+        () -> createCon("credentialType=JWT&user=SPCM1DAADM3DF001&password=" + jwt),
+        "unable to find valid certification path to requested target");
+    assertThrowsContains(
+        SQLException.class,
+        () ->
+            createCon(
+                "credentialType=JWT&sslMode=trust&user=SPCM1DAADM3DF001&password=" + "invalid_jwt"),
+        "Access denied for user 'SPCM1DAADM3DF001'@'172.17.0.1' (using password: YES)");
+  }
+
   @Nested
   @DisplayName("Compression Test")
   class Compression {
