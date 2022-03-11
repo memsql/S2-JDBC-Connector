@@ -94,7 +94,7 @@ public final class InitialHandshakePacket implements ServerMessage {
 
     //  Singlestore uses PLUGIN_AUTH_LENENC_CLIENT_DATA format if client supports it
     //  even though it doesn't correctly report it as a server capability
-    serverCapabilities = serverCapabilities | Capabilities.PLUGIN_AUTH_LENENC_CLIENT_DATA;
+    serverCapabilities |= Capabilities.PLUGIN_AUTH_LENENC_CLIENT_DATA;
 
     return new InitialHandshakePacket(
         threadId,
