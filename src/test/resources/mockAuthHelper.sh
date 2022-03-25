@@ -17,7 +17,7 @@ if [[ "$#" -eq 0 ]]; then
 fi
 
 if [[ "$#" -eq 1 ]]; then
-    if [[ "$1" -eq "fail" ]]; then
+    if [[ "$1" == "fail" ]]; then
       exit 1
     fi
     echo "{"
@@ -25,7 +25,7 @@ if [[ "$#" -eq 1 ]]; then
     echo "  \"username\": \"$1\","
     echo "  \"email\": \"test@singlestore.com\","
     echo "  \"token\": \"mock_token\","
-    if [[ "$1" -eq "expire" ]]; then
+    if [[ "$1" == "expire" ]]; then
       echo "  \"expiration\":\"2019-10-12T07:20:50.52Z\""
     else
       echo "  \"expiration\":\"2222-10-12T07:20:50.52Z\""
