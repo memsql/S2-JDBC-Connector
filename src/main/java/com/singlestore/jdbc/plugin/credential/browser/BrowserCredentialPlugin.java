@@ -22,7 +22,7 @@ public class BrowserCredentialPlugin implements CredentialPlugin {
 
   @Override
   public String type() {
-    return "BROWSER";
+    return "BROWSER_SSO";
   }
 
   @Override

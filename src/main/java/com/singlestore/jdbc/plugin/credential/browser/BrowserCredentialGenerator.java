@@ -8,33 +8,46 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.Properties;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class BrowserCredentialGenerator {
+  // TODO: verify auth helper executable name
+  private static final String helperExec = "singlestore-auth-helper";
 
   private final File authHelperBin;
 
   public BrowserCredentialGenerator(Properties nonMappedOptions) throws SQLException {
     String path = nonMappedOptions.getProperty("authHelperPath");
     if (path == null) {
-      // TODO: this will depend on how we distribute auth helper
-      path = "changeme";
+      Optional<Path> execPath =
+          Stream.of(System.getenv("PATH").split(Pattern.quote(File.pathSeparator)))
+              .map(Paths::get)
+              .filter(p -> Files.exists(p.resolve(helperExec)))
+              .findFirst();
+      // TODO: update default path
+      path = execPath.map(Path::toString).orElse("changeme");
     }
 
     authHelperBin = new File(path);
     if (!authHelperBin.exists()) {
       throw new SQLException(
-          "Identity plugin 'BROWSER' is used without having Auth Helper at \""
+          "Identity plugin 'BROWSER_SSO' is used without having Auth Helper at \""
               + path
               + "\". Please install Auth Helper or provide a path to an existing one via authHelperPath option.");
     }
     if (!authHelperBin.canExecute()) {
       throw new SQLException(
-          "Identity plugin 'BROWSER' is used but Auth Helper at \""
+          "Identity plugin 'BROWSER_SSO' is used but Auth Helper at \""
               + path
               + "\" is not executable. Please make sure that the JVM has the permission to execute this file.");
     }
@@ -57,7 +70,7 @@ public class BrowserCredentialGenerator {
       throw new SQLException(
           "Could not execute Auth Helper at "
               + authHelperBin.getPath()
-              + "when using identity plugin 'BROWSER'",
+              + "when using identity plugin 'BROWSER_SSO'",
           e);
     } catch (InterruptedException e) {
       throw new SQLException(e);
@@ -75,7 +88,7 @@ public class BrowserCredentialGenerator {
 
     if (proc.exitValue() != 0) {
       throw new SQLException(
-          "Auth Helper returned an error when using identity plugin 'BROWSER'."
+          "Auth Helper returned an error when using identity plugin 'BROWSER_SSO'."
               + "\nStdout:\n"
               + stdOut
               + "\nStderr:\n"
@@ -90,7 +103,7 @@ public class BrowserCredentialGenerator {
       outMap = objectMapper.readValue(stdOut, mapType);
     } catch (IOException e) {
       throw new SQLException(
-          "Could not parse output from Auth Helper when using identity plugin 'BROWSER'."
+          "Could not parse output from Auth Helper when using identity plugin 'BROWSER_SSO'."
               + "\nStdout:\n"
               + stdOut
               + "\nStderr:\n"

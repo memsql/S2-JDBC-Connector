@@ -35,7 +35,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.SQLInvalidAuthorizationSpecException;
+import java.sql.SQLNonTransientConnectionException;
+import java.sql.SQLPermission;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -85,7 +89,7 @@ public class ClientImpl implements Client, AutoCloseable {
       // error 1045 is ACCESS_DENIED_ERROR, used for compatibility with versions where 2628 is not
       // implemented
       if (conf.credentialPlugin() != null
-              && conf.credentialPlugin().type().equals("BROWSER")
+              && conf.credentialPlugin().type().equals("BROWSER_SSO")
               && sqlException.getErrorCode() == 1045
           || sqlException.getErrorCode() == 2628) {
         this.closed = false;

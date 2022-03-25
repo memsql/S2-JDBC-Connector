@@ -303,7 +303,7 @@
             <optional>true</optional>
         </dependency>
 
-        <!--BROWSER credential plugin dependencies-->
+        <!--BROWSER_SSO credential plugin dependencies-->
         <dependency>
             <groupId>de.swiesend</groupId>
             <artifactId>secret-service</artifactId>

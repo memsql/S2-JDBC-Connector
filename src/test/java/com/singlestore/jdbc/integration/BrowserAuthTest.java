@@ -33,7 +33,7 @@ public class BrowserAuthTest extends Common {
     String connString =
         String.format("jdbc:singlestore://%s:%s/", hostname, port)
             + sharedConn.getCatalog()
-            + "?credentialType=BROWSER&authHelperPath="
+            + "?credentialType=BROWSER_SSO&authHelperPath="
             + mockAuthHelper;
 
     java.sql.Connection connection = DriverManager.getConnection(connString + "&sslMode=trust");
@@ -54,7 +54,7 @@ public class BrowserAuthTest extends Common {
     String connString =
         String.format("jdbc:singlestore://%s:%s/", hostname, port)
             + sharedConn.getCatalog()
-            + "?credentialType=BROWSER&authHelperPath="
+            + "?credentialType=BROWSER_SSO&authHelperPath="
             + mockAuthHelper
             + "&sslMode=trust";
 
@@ -65,7 +65,7 @@ public class BrowserAuthTest extends Common {
 
     // remove cached credentials from the plugin
     BrowserCredentialPlugin credPlugin =
-        (BrowserCredentialPlugin) CredentialPluginLoader.get("BROWSER");
+        (BrowserCredentialPlugin) CredentialPluginLoader.get("BROWSER_SSO");
     credPlugin.clear();
 
     // remove the contents of mockAuthHelper so it cannot be run properly.
