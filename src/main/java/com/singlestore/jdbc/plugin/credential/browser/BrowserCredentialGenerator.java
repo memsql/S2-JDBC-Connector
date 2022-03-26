@@ -1,118 +1,177 @@
 package com.singlestore.jdbc.plugin.credential.browser;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTDecodeException;
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.exceptions.SignatureGenerationException;
+import com.auth0.jwt.exceptions.SignatureVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.singlestore.jdbc.plugin.credential.Credential;
+import com.singlestore.jdbc.util.log.Logger;
+import com.singlestore.jdbc.util.log.Loggers;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.SQLException;
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.Optional;
 import java.util.Properties;
-import java.util.regex.Pattern;
+import java.util.Random;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class BrowserCredentialGenerator {
-  // TODO: verify auth helper executable name
-  private static final String helperExec = "singlestore-auth-helper";
+  private static final Logger logger = Loggers.getLogger(BrowserCredentialGenerator.class);
 
-  private final File authHelperBin;
+  public BrowserCredentialGenerator(Properties nonMappedOptions) throws SQLException {}
 
-  public BrowserCredentialGenerator(Properties nonMappedOptions) throws SQLException {
-    String path = nonMappedOptions.getProperty("authHelperPath");
-    if (path == null) {
-      Optional<Path> execPath =
-          Stream.of(System.getenv("PATH").split(Pattern.quote(File.pathSeparator)))
-              .map(Paths::get)
-              .filter(p -> Files.exists(p.resolve(helperExec)))
-              .findFirst();
-      // TODO: update default path
-      path = execPath.map(Path::toString).orElse("changeme");
-    }
+  public ExpiringCredential getCredential(String email) throws SQLException {
+    TokenWaiterServer server = new TokenWaiterServer();
+    String listenPath = server.getListenPath();
+    logger.debug("Listening on " + listenPath);
 
-    authHelperBin = new File(path);
-    if (!authHelperBin.exists()) {
-      throw new SQLException(
-          "Identity plugin 'BROWSER_SSO' is used without having Auth Helper at \""
-              + path
-              + "\". Please install Auth Helper or provide a path to an existing one via authHelperPath option.");
-    }
-    if (!authHelperBin.canExecute()) {
-      throw new SQLException(
-          "Identity plugin 'BROWSER_SSO' is used but Auth Helper at \""
-              + path
-              + "\" is not executable. Please make sure that the JVM has the permission to execute this file.");
+    try {
+      return server.WaitForCredential();
+    } catch (InterruptedException e) {
+      throw new SQLException("Interrupted while waiting for JWT", e);
     }
   }
 
-  public ExpiringCredential getCredential(String email) throws SQLException {
-    Runtime rt = Runtime.getRuntime();
-    String[] commands;
-    if (email != null) {
-      commands = new String[] {authHelperBin.getAbsolutePath(), email};
-    } else {
-      commands = new String[] {authHelperBin.getAbsolutePath()};
+  private class TokenWaiterServer {
+    private final ReentrantLock credentialLock = new ReentrantLock();
+    private ExpiringCredential credential;
+    private final String listenPath;
+    private final HttpServer server;
+
+    TokenWaiterServer() throws SQLException {
+      try {
+        server = HttpServer.create(new InetSocketAddress(0), 0);
+      } catch (IOException e) {
+        throw new SQLException(
+            "Could not create a local HTTP server while using identity plugin 'BROWSER_SSO'", e);
+      }
+
+      listenPath = "/" + randomAlphanumeric(20);
+      server.createContext(listenPath, new RequestHandler());
+      credentialLock.lock();
+      server.start();
     }
 
-    Process proc;
-    try {
-      proc = rt.exec(commands);
-      proc.waitFor();
-    } catch (IOException e) {
-      throw new SQLException(
-          "Could not execute Auth Helper at "
-              + authHelperBin.getPath()
-              + "when using identity plugin 'BROWSER_SSO'",
-          e);
-    } catch (InterruptedException e) {
-      throw new SQLException(e);
+    public ExpiringCredential WaitForCredential() throws InterruptedException {
+      credentialLock.wait();
+      server.stop(120);
+      return credential;
     }
 
-    String stdOut =
-        new BufferedReader(new InputStreamReader(proc.getInputStream(), StandardCharsets.UTF_8))
-            .lines()
-            .collect(Collectors.joining("\n"));
-
-    String stdError =
-        new BufferedReader(new InputStreamReader(proc.getErrorStream(), StandardCharsets.UTF_8))
-            .lines()
-            .collect(Collectors.joining("\n"));
-
-    if (proc.exitValue() != 0) {
-      throw new SQLException(
-          "Auth Helper returned an error when using identity plugin 'BROWSER_SSO'."
-              + "\nStdout:\n"
-              + stdOut
-              + "\nStderr:\n"
-              + stdError);
+    public String getListenPath() {
+      return listenPath;
     }
 
-    ObjectMapper objectMapper = new ObjectMapper();
-    TypeReference<HashMap<String, String>> mapType =
-        new TypeReference<HashMap<String, String>>() {};
-    HashMap<String, String> outMap;
-    try {
-      outMap = objectMapper.readValue(stdOut, mapType);
-    } catch (IOException e) {
-      throw new SQLException(
-          "Could not parse output from Auth Helper when using identity plugin 'BROWSER_SSO'."
-              + "\nStdout:\n"
-              + stdOut
-              + "\nStderr:\n"
-              + stdError);
+    public void setCredential(ExpiringCredential cred) {
+      credential = cred;
+      credentialLock.unlock();
+    }
+  }
+
+  // from https://www.baeldung.com/java-random-string 'Generate Random Alphanumeric String With Java
+  // 8'
+  private String randomAlphanumeric(int len) {
+    Random random = new Random();
+    return random
+        .ints(48, 123)
+        .filter(i -> (i <= 57 || i >= 65) && (i <= 90 || i >= 97))
+        .limit(len)
+        .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+        .toString();
+  }
+
+  private static class RequestHandler implements HttpHandler {
+    private TokenWaiterServer server;
+
+    public RequestHandler(TokenWaiterServer server) {
+      this.server = server;
     }
 
-    return new ExpiringCredential(
-        new Credential(outMap.get("username"), outMap.get("token")),
-        outMap.get("email"),
-        Instant.parse(outMap.get("expiration")));
+    public void handle(HttpExchange exchange) throws IOException {
+      if (!exchange.getRequestMethod().equals("POST")) {
+        error(exchange, 400, "POST expected");
+        return;
+      }
+
+      // TODO: check path
+
+      // read the whole response
+      String raw;
+      try {
+        raw =
+            new BufferedReader(new InputStreamReader(exchange.getRequestBody()))
+                .lines()
+                .parallel()
+                .collect(Collectors.joining("\n"));
+      } catch (Exception e) {
+        logger.debug("Bad read from request: ", e);
+        error(exchange, 500, "Bad read from request");
+        return;
+      }
+
+      DecodedJWT jwt;
+      try {
+        jwt = JWT.decode(raw);
+      } catch (JWTDecodeException e) {
+        logger.debug("Could not parse claims: ", e);
+        error(exchange, 400, "Could not parse claims: " + e.getMessage());
+        return;
+      }
+
+      JWTVerifier ver =
+          JWT.require(new DummyAlgorithm())
+              .withClaimPresence("email")
+              .withClaimPresence("dbUsername")
+              .build();
+      try {
+        ver.verify(jwt);
+      } catch (JWTVerificationException e) {
+        logger.debug("Could not verify claims: ", e);
+        error(exchange, 400, "Could not verify claims: " + e.getMessage());
+        return;
+      }
+
+      server.setCredential(
+          new ExpiringCredential(
+              new Credential(jwt.getClaim("dbUsername").asString(), jwt.getToken()),
+              jwt.getClaim("Email").asString(),
+              jwt.getExpiresAt().toInstant()));
+
+      exchange.sendResponseHeaders(204, -1);
+    }
+
+    private void error(HttpExchange exchange, int code, String errorMsg) throws IOException {
+      exchange.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
+      exchange.getResponseHeaders().set("X-Content-Type-Options", "nosniff");
+      exchange.sendResponseHeaders(code, 0);
+      exchange.getResponseBody().write(errorMsg.getBytes(StandardCharsets.UTF_8));
+      exchange.getResponseBody().close();
+    }
+  }
+
+  private static class DummyAlgorithm extends Algorithm {
+    public DummyAlgorithm() {
+      super(
+          "DummyAlgorithm",
+          "Does not do any signature verification. Used to only verify claims for a token");
+    }
+
+    @Override
+    public void verify(DecodedJWT decodedJWT) throws SignatureVerificationException {}
+
+    @Override
+    public byte[] sign(byte[] bytes) throws SignatureGenerationException {
+      return null;
+    }
   }
 }
