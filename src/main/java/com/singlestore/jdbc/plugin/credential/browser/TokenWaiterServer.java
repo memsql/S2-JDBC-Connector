@@ -41,14 +41,14 @@ public class TokenWaiterServer {
 
     String path = "/" + randomAlphanumeric(20);
     server.createContext(path, new RequestHandler(this));
-    listenPath = server.getAddress() + path;
+    listenPath = "http:/" + server.getAddress() + path;
     credentialLock.lock();
     server.start();
   }
 
   public ExpiringCredential WaitForCredential() throws InterruptedException {
     synchronized (credentialLock) {
-      credentialLock.lock();
+      credentialLock.wait();
     }
     server.stop(0);
     return credential;

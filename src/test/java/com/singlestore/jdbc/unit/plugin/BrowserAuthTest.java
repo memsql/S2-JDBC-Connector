@@ -31,7 +31,7 @@ public class BrowserAuthTest {
     TokenWaiterServer server = new TokenWaiterServer();
     String path = server.getListenPath();
     HttpClient httpclient = HttpClients.createDefault();
-    HttpPost httppost = new HttpPost("http:/" + path);
+    HttpPost httppost = new HttpPost(path);
 
     StringEntity entity = new StringEntity(jwt);
     httppost.setEntity(entity);
@@ -53,7 +53,7 @@ public class BrowserAuthTest {
     HttpClient httpclient = HttpClients.createDefault();
 
     // non-POST request
-    HttpGet httpGet = new HttpGet("http:/" + path);
+    HttpGet httpGet = new HttpGet(path);
     HttpResponse response = httpclient.execute(httpGet);
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
     assertNotNull(response.getEntity());
@@ -63,7 +63,7 @@ public class BrowserAuthTest {
 
     // invalid JWT
     String jwt = "wrong-jwt";
-    HttpPost httppost = new HttpPost("http:/" + path);
+    HttpPost httppost = new HttpPost(path);
 
     StringEntity entity = new StringEntity(jwt);
     httppost.setEntity(entity);
@@ -85,7 +85,7 @@ public class BrowserAuthTest {
     jwt =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub3QtZW1haWwiOiJ0ZXN0LWVtYWlsQGdtYWlsLmNvbSIsImRiVXNlcm5hb"
             + "WUiOiJ0ZXN0LXVzZXIiLCJleHAiOjE5MTYyMzkwMjJ9.B4Ry70_6jDvK0n-qEzAnihgsKnL0PivYbPY2BLSandc";
-    httppost = new HttpPost("http:/" + path);
+    httppost = new HttpPost(path);
 
     entity = new StringEntity(jwt);
     httppost.setEntity(entity);
@@ -106,7 +106,7 @@ public class BrowserAuthTest {
     jwt =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwiZGJVc2VybmFtZSI6In"
             + "Rlc3QtdXNlciIsImV4cCI6MTAwMDAwMDAwMH0.yemofu_U02SMEtVg8Mu7XJ9J8clbCuhdacAR0jWY4X0";
-    httppost = new HttpPost("http:/" + path);
+    httppost = new HttpPost(path);
 
     entity = new StringEntity(jwt);
     httppost.setEntity(entity);
@@ -127,7 +127,7 @@ public class BrowserAuthTest {
     jwt =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwiZGJVc2VybmFtZSI6In"
             + "Rlc3QtdXNlciJ9.KqJ5aJVDK08y91zrUvlpV3pONgNgYE1iNRRtiUS5HWk";
-    httppost = new HttpPost("http:/" + path);
+    httppost = new HttpPost(path);
 
     entity = new StringEntity(jwt);
     httppost.setEntity(entity);
