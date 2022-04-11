@@ -13,8 +13,9 @@ import com.singlestore.jdbc.plugin.credential.browser.keyring.Keyring;
 import java.sql.SQLException;
 
 public class BrowserCredentialPlugin implements CredentialPlugin {
+  private static final String baseURL = "https://portal.singlestore.com/engine-sso";
 
-  private BrowserCredentialGenerator generator;
+  protected BrowserCredentialGenerator generator;
   private final Keyring keyring;
 
   private String userEmail;
@@ -42,8 +43,7 @@ public class BrowserCredentialPlugin implements CredentialPlugin {
   @Override
   public CredentialPlugin initialize(Configuration conf, String userName, HostAddress hostAddress)
       throws SQLException {
-    this.generator = new BrowserCredentialGenerator(conf.nonMappedOptions());
-
+    this.generator = new BrowserCredentialGenerator(baseURL);
     return this;
   }
 
@@ -73,9 +73,14 @@ public class BrowserCredentialPlugin implements CredentialPlugin {
     return cred.getCredential();
   }
 
-  // this function is for testing only
-  public void clear() {
+  public void clearLocalCache() {
     userEmail = null;
     credential = null;
+  }
+
+  public void clearKeyring() {
+    if (keyring != null) {
+      keyring.deleteCredential();
+    }
   }
 }

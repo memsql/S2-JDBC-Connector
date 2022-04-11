@@ -55,4 +55,6 @@ public interface Keyring {
     }
     return null;
   }
+
+  void deleteCredential();
 }

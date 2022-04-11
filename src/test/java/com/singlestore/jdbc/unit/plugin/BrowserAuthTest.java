@@ -39,6 +39,7 @@ public class BrowserAuthTest {
 
     assertEquals(response.getStatusLine().getStatusCode(), 204);
     assertNull(response.getEntity());
+    assertEquals(response.getFirstHeader("Access-Control-Allow-Origin").getValue(), "*");
     ExpiringCredential credential = server.WaitForCredential();
     assertEquals("test-email@gmail.com", credential.getEmail());
     assertEquals("test-user", credential.getCredential().getUser());
@@ -60,6 +61,7 @@ public class BrowserAuthTest {
     response.getEntity().writeTo(stream);
     assertEquals("POST expected", stream.toString());
     assertEquals(400, response.getStatusLine().getStatusCode());
+    assertEquals(response.getFirstHeader("Access-Control-Allow-Origin").getValue(), "*");
 
     // invalid JWT
     String jwt = "wrong-jwt";
@@ -75,6 +77,7 @@ public class BrowserAuthTest {
         "Could not parse claims: The token was expected to have 3 parts, but got 1.",
         stream.toString());
     assertEquals(400, response.getStatusLine().getStatusCode());
+    assertEquals(response.getFirstHeader("Access-Control-Allow-Origin").getValue(), "*");
 
     // missing JWT claims
     /*{
@@ -96,6 +99,7 @@ public class BrowserAuthTest {
     assertEquals(
         "Could not verify claims: The Claim 'email' is not present in the JWT.", stream.toString());
     assertEquals(400, response.getStatusLine().getStatusCode());
+    assertEquals(response.getFirstHeader("Access-Control-Allow-Origin").getValue(), "*");
 
     // expired JWT
     /*{
@@ -118,6 +122,7 @@ public class BrowserAuthTest {
         "Could not verify claims: The Token has expired on Sun Sep 09 04:46:40 EEST 2001.",
         stream.toString());
     assertEquals(400, response.getStatusLine().getStatusCode());
+    assertEquals(response.getFirstHeader("Access-Control-Allow-Origin").getValue(), "*");
 
     // no expiration JWT
     /*{
@@ -138,5 +143,6 @@ public class BrowserAuthTest {
     assertEquals(
         "Could not verify claims: The Claim 'exp' is not present in the JWT.", stream.toString());
     assertEquals(400, response.getStatusLine().getStatusCode());
+    assertEquals(response.getFirstHeader("Access-Control-Allow-Origin").getValue(), "*");
   }
 }

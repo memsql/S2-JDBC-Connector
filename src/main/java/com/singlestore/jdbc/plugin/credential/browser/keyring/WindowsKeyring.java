@@ -86,6 +86,19 @@ public class WindowsKeyring implements Keyring {
     }
   }
 
+  @Override
+  public void deleteCredential() {
+    boolean res;
+    synchronized (advapi32) {
+      res = advapi32.CredDeleteW(STORAGE_KEY, CREDENTIAL_TYPE, 0);
+    }
+
+    if (!res) {
+      logger.debug(
+          "Could not write to Windows Credential Manager. Error code: " + Native.getLastError());
+    }
+  }
+
   interface Advapi32Lib extends StdCallLibrary {
     /**
      * BOOL BOOL CredReadW( [in] LPCWSTR TargetName, [in] DWORD Type, [in] DWORD Flags, [out]

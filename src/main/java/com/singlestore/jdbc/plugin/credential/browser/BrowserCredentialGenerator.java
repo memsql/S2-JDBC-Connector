@@ -11,7 +11,11 @@ import java.sql.SQLException;
 
 public class BrowserCredentialGenerator {
   private static final Logger logger = Loggers.getLogger(BrowserCredentialGenerator.class);
-  private static final String baseURL = "https://portal.singlestore.com/engine-sso";
+  protected String baseURL;
+
+  public BrowserCredentialGenerator(String baseURL) {
+    this.baseURL = baseURL;
+  }
 
   public ExpiringCredential getCredential(String email) throws SQLException {
     TokenWaiterServer server = new TokenWaiterServer();
@@ -33,25 +37,28 @@ public class BrowserCredentialGenerator {
       throw new SQLException("Failed to build a URL while using BROSWER-SSO identity plugin", e);
     }
 
-    Runtime rt = Runtime.getRuntime();
-    String operSys = System.getProperty("os.name").toLowerCase();
-    try {
-      if (operSys.contains("win")) {
-        rt.exec("rundll32 url.dll,FileProtocolHandler " + fullURL);
-      } else if (operSys.contains("nix") || operSys.contains("nux") || operSys.contains("aix")) {
-        rt.exec("xdg-open " + fullURL);
-      } else if (operSys.contains("mac")) {
-        rt.exec("open " + fullURL);
-        return null;
-      }
-    } catch (IOException e) {
-      throw new SQLException("Failed to open a browser while using BROSWER-SSO identity plugin", e);
-    }
+    openBrowser(fullURL.toString());
 
     try {
       return server.WaitForCredential();
     } catch (InterruptedException e) {
       throw new SQLException("Interrupted while waiting for JWT", e);
+    }
+  }
+
+  protected void openBrowser(String url) throws SQLException {
+    Runtime rt = Runtime.getRuntime();
+    String operSys = System.getProperty("os.name").toLowerCase();
+    try {
+      if (operSys.contains("win")) {
+        rt.exec("rundll32 url.dll,FileProtocolHandler " + url);
+      } else if (operSys.contains("nix") || operSys.contains("nux") || operSys.contains("aix")) {
+        rt.exec("xdg-open " + url);
+      } else if (operSys.contains("mac")) {
+        rt.exec("open " + url);
+      }
+    } catch (IOException e) {
+      throw new SQLException("Failed to open a browser while using BROSWER-SSO identity plugin", e);
     }
   }
 }

@@ -21,12 +21,12 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Random;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 public class TokenWaiterServer {
   private static final Logger logger = Loggers.getLogger(TokenWaiterServer.class);
-  private final ReentrantLock credentialLock = new ReentrantLock();
+  private final CountDownLatch latch = new CountDownLatch(1);
   private ExpiringCredential credential;
   private final String listenPath;
   private final HttpServer server;
@@ -42,14 +42,11 @@ public class TokenWaiterServer {
     String path = "/" + randomAlphanumeric(20);
     server.createContext(path, new RequestHandler(this));
     listenPath = "http:/" + server.getAddress() + path;
-    credentialLock.lock();
     server.start();
   }
 
   public ExpiringCredential WaitForCredential() throws InterruptedException {
-    synchronized (credentialLock) {
-      credentialLock.wait();
-    }
+    latch.await();
     server.stop(0);
     return credential;
   }
@@ -60,9 +57,7 @@ public class TokenWaiterServer {
 
   public void setCredential(ExpiringCredential cred) {
     credential = cred;
-    synchronized (credentialLock) {
-      credentialLock.unlock();
-    }
+    latch.countDown();
   }
 
   // from https://www.baeldung.com/java-random-string 'Generate Random Alphanumeric String With Java
@@ -85,6 +80,7 @@ public class TokenWaiterServer {
     }
 
     public void handle(HttpExchange exchange) throws IOException {
+      exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
       if (!exchange.getRequestMethod().equals("POST")) {
         error(exchange, 400, "POST expected");
         return;

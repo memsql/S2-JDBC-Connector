@@ -21,6 +21,7 @@ import com.singlestore.jdbc.message.server.InitialHandshakePacket;
 import com.singlestore.jdbc.message.server.PrepareResultPacket;
 import com.singlestore.jdbc.plugin.credential.Credential;
 import com.singlestore.jdbc.plugin.credential.CredentialPlugin;
+import com.singlestore.jdbc.plugin.credential.browser.BrowserCredentialPlugin;
 import com.singlestore.jdbc.util.MutableInt;
 import com.singlestore.jdbc.util.Security;
 import com.singlestore.jdbc.util.constants.Capabilities;
@@ -84,14 +85,17 @@ public class ClientImpl implements Client, AutoCloseable {
       connect(host, skipPostCommands);
     } catch (SQLInvalidAuthorizationSpecException sqlException) {
       // retry when connecting via browser auth token because token might have
-      // expired while we were connecting
+      // expired while we were connecting or the cached token was wrong
       // error 2628 is JWT_TOKEN_EXPIRED
-      // error 1045 is ACCESS_DENIED_ERROR, used for compatibility with versions where 2628 is not
-      // implemented
+      // error 1045 is ACCESS_DENIED_ERROR
       if (conf.credentialPlugin() != null
               && conf.credentialPlugin().type().equals("BROWSER_SSO")
               && sqlException.getErrorCode() == 1045
           || sqlException.getErrorCode() == 2628) {
+        BrowserCredentialPlugin credPlugin = (BrowserCredentialPlugin) conf.credentialPlugin();
+        // clear both local cache and keyring to force re-acquiring the token
+        credPlugin.clearKeyring();
+        credPlugin.clearLocalCache();
         this.closed = false;
         connect(host, skipPostCommands);
       } else {

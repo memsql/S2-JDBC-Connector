@@ -48,6 +48,16 @@ public class LinuxKeyring implements Keyring {
     }
   }
 
+  // deleteCredential sets the stored credential to an empty string if it exists
+  // because we cannot fully delete the entry without user interaction.
+  @Override
+  public void deleteCredential() {
+    String entryPath = getExistingEntry();
+    if (entryPath != null) {
+      collection.updateItem(entryPath, STORAGE_KEY, "", ATTRIBUTES);
+    }
+  }
+
   private String getExistingEntry() {
     String foundPath = null;
     List<String> entires = collection.getItems(ATTRIBUTES);
