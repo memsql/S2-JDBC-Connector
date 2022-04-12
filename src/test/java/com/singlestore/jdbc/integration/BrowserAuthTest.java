@@ -28,7 +28,12 @@ import org.junit.jupiter.api.Test;
 
 public class BrowserAuthTest extends Common {
   /*
-  Keys used to sign the JWTs used in these tests. The public key duplicated in
+  The tests are performed using MockBrowserCredentialPlugin instead of the regular one.
+  There are two differences between them:
+  1) a local address is used instead of the portal one
+  2) we just send a request with a pre-defined user-password instead of opening the browser
+
+  Keys used to sign the JWTs used in these tests. The public key is duplicated in
   scripts/jwt/jwt_auth_config.json which is used to tell SingleStore to accept the tokens
 
   -----BEGIN RSA PRIVATE KEY-----
