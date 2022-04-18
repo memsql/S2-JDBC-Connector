@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: LGPL-2.1-or-later
+// Copyright (c) 2021-2022 SingleStore, Inc.
+
 package com.singlestore.jdbc.unit.plugin;
 
 import static org.junit.jupiter.api.Assertions.*;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: LGPL-2.1-or-later
+// Copyright (c) 2021-2022 SingleStore, Inc.
+
 package com.singlestore.jdbc.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -233,7 +236,7 @@ public class BrowserAuthTest extends Common {
           exchange -> {
             try {
               if (packetsLeft <= 0) {
-                throw new IOException("Got a second packet");
+                throw new IOException("Got an unexpected packet");
               }
               packetsLeft -= 1;
 
