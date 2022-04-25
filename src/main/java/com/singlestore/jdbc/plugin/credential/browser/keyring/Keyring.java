@@ -47,7 +47,7 @@ public interface Keyring {
       } else if (operSys.contains("nix") || operSys.contains("nux") || operSys.contains("aix")) {
         return new LinuxKeyring();
       } else if (operSys.contains("mac")) {
-        return null;
+        return new MacKeyring();
       }
     } catch (Exception e) {
       logger.warn(

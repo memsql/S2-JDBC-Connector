@@ -98,7 +98,7 @@ public class WindowsKeyring implements Keyring {
 
     if (!res) {
       logger.debug(
-          "Could not write to Windows Credential Manager. Error code: " + Native.getLastError());
+          "Could not delete from Windows Credential Manager. Error code: " + Native.getLastError());
     }
   }
 
