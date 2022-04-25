@@ -19,6 +19,11 @@ public class MockBrowserCredentialPlugin extends BrowserCredentialPlugin {
   private static final String baseURL = "http://127.0.0.1:18087";
 
   @Override
+  public String type() {
+    return "MOCK_BROWSER_SSO";
+  }
+
+  @Override
   public CredentialPlugin initialize(Configuration conf, String userName, HostAddress hostAddress)
       throws SQLException {
     this.generator = new MockBrowserCredentialGenerator(baseURL);

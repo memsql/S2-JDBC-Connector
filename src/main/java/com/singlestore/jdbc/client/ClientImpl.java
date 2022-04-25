@@ -89,7 +89,7 @@ public class ClientImpl implements Client, AutoCloseable {
       // error 2628 is JWT_TOKEN_EXPIRED
       // error 1045 is ACCESS_DENIED_ERROR
       if (conf.credentialPlugin() != null
-              && conf.credentialPlugin().type().equals("BROWSER_SSO")
+              && conf.credentialPlugin().type().contains("BROWSER_SSO")
               && sqlException.getErrorCode() == 1045
           || sqlException.getErrorCode() == 2628) {
         BrowserCredentialPlugin credPlugin = (BrowserCredentialPlugin) conf.credentialPlugin();

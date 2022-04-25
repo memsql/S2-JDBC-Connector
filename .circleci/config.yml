@@ -50,6 +50,7 @@ jobs:
     environment:
       SINGLESTORE_IMAGE: << parameters.singlestore_image >>
       SINGLESTORE_PASSWORD: << parameters.singlestore_password >>
+      TEST_ENVIRON: CIRCLE_CI
     steps:
       - setup_environment
       - checkout

@@ -26,6 +26,7 @@ import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClients;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -119,7 +120,7 @@ public class BrowserAuthTest extends Common {
   @AfterAll
   public static void drop() throws SQLException {
     Statement stmt = sharedConn.createStatement();
-    stmt.execute("DROP USER IF EXISTS SPCM1DAADM3DF001");
+    stmt.execute("DROP USER IF EXISTS jwt_user");
   }
 
   @Test
@@ -143,14 +144,62 @@ public class BrowserAuthTest extends Common {
     try {
       // make sure no creds are cached
       BrowserCredentialPlugin credPlugin =
-          (BrowserCredentialPlugin) CredentialPluginLoader.get("BROWSER_SSO");
+          (BrowserCredentialPlugin) CredentialPluginLoader.get("MOCK_BROWSER_SSO");
       credPlugin.clearKeyring();
       credPlugin.clearLocalCache();
 
       String connString =
           String.format("jdbc:singlestore://%s:%s/", hostname, port)
               + sharedConn.getCatalog()
-              + "?credentialType=BROWSER_SSO"
+              + "?credentialType=MOCK_BROWSER_SSO"
+              + "&sslMode=trust";
+
+      try (java.sql.Connection connection = DriverManager.getConnection(connString)) {
+        ResultSet rs = connection.createStatement().executeQuery("select 1");
+        assertTrue(rs.next());
+      }
+
+      // should not query for token again (verified by the MockHttpServer)
+      try (java.sql.Connection connection = DriverManager.getConnection(connString)) {
+        ResultSet rs = connection.createStatement().executeQuery("select 1");
+        assertTrue(rs.next());
+      }
+    } finally {
+      ssoServer.stop();
+    }
+  }
+
+  @Test
+  public void mockBrowserKeystore() throws IOException, SQLException {
+    // keystore cannot be used on CircleCI
+    Assumptions.assumeFalse("CIRCLE_CI".equals(System.getenv("TEST_ENVIRON")));
+    /*{
+      "email": "test-email@gmail.com",
+      "dbUsername": "jwt_user",
+      "exp": 1916239022 (year 2030)
+    }*/
+    String jwt =
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwiZGJVc2VybmFt"
+            + "ZSI6Imp3dF91c2VyIiwiZXhwIjoxOTE2MjM5MDIyfQ.Bo_LcWJrzflkSvVFuJglUzdJPHVsQFZ0JTu0a0zK4J60Bhfed-PCk7I"
+            + "o7lcvmflWDdl9j6ZzbdZOfyAoywg2ME8DGlbgv29Xy1h0BCpnDFhaOl_TVTc40pI_IqCrn97D53pgXH31-KQu5F0ap26j0DwVM"
+            + "0Zk22rYeOFeBOFWSy_HcBoC6UQ9HaZaXEY1aaCP_fOUwMN7HGGJ3vR0VCn7UPLAT3wibeH0b9PspVyqQ2fs3cNAqJo9_sYWBAz"
+            + "-B4gsQCMXsBCpUV_Rn4r1RZI7cDsjsKHcoVleLD-oS4z8zzo472qYd9DWwciVRutTUgOC9Z7LekxUY9RHhvuUmBNbvBKI8qrJQ"
+            + "Scj6wWmmmkRlgT4PYYfmRpmOwxr7Y9M4rr_9F1bOtK1Pf6ml9NCHTW3agF9VO3tvtvlUgnlIeZeAECg6UvtGyxwQmDLNdv6EO1"
+            + "CrP49wbtZSI8O04z-yCCVE-XPPpW0iTAZmGFOu8cDsCxTOnxjKrN7hEHkU4g8hV7NwVHgHyaM5PS06DL0RN2VWXxvbbOVZqc-J"
+            + "sURR8H8vTxVQoxBcUXx9o23FjfdIYa5iFEb8_mdkhWU6CPSKVqE0zXgoO8yyUiXN2aF0-xxY2wptruQnbpkVE3cUNPuUTG9WlH"
+            + "7e1x61-gZISLl-43Bz04Nfqw5C8YvYVjm22KZq9o";
+    MockHttpServer ssoServer = new MockHttpServer(jwt, false, 1, 0);
+    try {
+      // make sure no creds are cached
+      BrowserCredentialPlugin credPlugin =
+          (BrowserCredentialPlugin) CredentialPluginLoader.get("MOCK_BROWSER_SSO");
+      credPlugin.clearKeyring();
+      credPlugin.clearLocalCache();
+
+      String connString =
+          String.format("jdbc:singlestore://%s:%s/", hostname, port)
+              + sharedConn.getCatalog()
+              + "?credentialType=MOCK_BROWSER_SSO"
               + "&sslMode=trust";
 
       try (java.sql.Connection connection = DriverManager.getConnection(connString)) {
@@ -200,15 +249,16 @@ public class BrowserAuthTest extends Common {
     MockHttpServer ssoServer = new MockHttpServer(jwt, false, 2, 0);
 
     try {
-      // make sure no creds are cached in the keyring
+      // make sure no creds are cached
       BrowserCredentialPlugin credPlugin =
-          (BrowserCredentialPlugin) CredentialPluginLoader.get("BROWSER_SSO");
+          (BrowserCredentialPlugin) CredentialPluginLoader.get("MOCK_BROWSER_SSO");
       credPlugin.clearKeyring();
+      credPlugin.clearLocalCache();
 
       String connString =
           String.format("jdbc:singlestore://%s:%s/", hostname, port)
               + sharedConn.getCatalog()
-              + "?credentialType=BROWSER_SSO"
+              + "?credentialType=MOCK_BROWSER_SSO"
               + "&sslMode=trust";
 
       assertThrowsContains(

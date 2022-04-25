@@ -36,7 +36,7 @@ public class TokenWaiterServer {
 
   public TokenWaiterServer() throws SQLException {
     try {
-      server = HttpServer.create(new InetSocketAddress(0), 0);
+      server = HttpServer.create(new InetSocketAddress("0.0.0.0", 0), 0);
     } catch (IOException e) {
       throw new SQLException(
           "Could not create a local HTTP server while using identity plugin 'BROWSER_SSO'", e);
@@ -44,7 +44,8 @@ public class TokenWaiterServer {
 
     String path = "/" + randomAlphanumeric(20);
     server.createContext(path, new RequestHandler(this));
-    listenPath = "http:/" + server.getAddress() + path;
+    System.out.println(server.getAddress());
+    listenPath = "http://0.0.0.0:" + server.getAddress().getPort() + path;
     server.start();
   }
 

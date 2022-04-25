@@ -121,9 +121,7 @@ public class BrowserAuthTest {
     stream = new ByteArrayOutputStream();
     assertNotNull(response.getEntity());
     response.getEntity().writeTo(stream);
-    assertEquals(
-        "Could not verify claims: The Token has expired on Sun Sep 09 04:46:40 EEST 2001.",
-        stream.toString());
+    assertTrue(stream.toString().contains("Could not verify claims: The Token has expired on"));
     assertEquals(400, response.getStatusLine().getStatusCode());
     assertEquals(response.getFirstHeader("Access-Control-Allow-Origin").getValue(), "*");
 
