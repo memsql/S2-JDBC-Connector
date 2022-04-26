@@ -6,11 +6,9 @@ package com.singlestore.jdbc.plugin.credential.browser;
 import com.singlestore.jdbc.util.log.Logger;
 import com.singlestore.jdbc.util.log.Loggers;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.sql.SQLException;
+import org.apache.http.client.utils.URIBuilder;
 
 public class BrowserCredentialGenerator {
   private static final Logger logger = Loggers.getLogger(BrowserCredentialGenerator.class);
@@ -25,22 +23,18 @@ public class BrowserCredentialGenerator {
     String listenPath = server.getListenPath();
     logger.debug("Listening on " + listenPath);
 
-    String urlParams = "returnTo=" + listenPath;
-    if (email != null) {
-      urlParams += "&email=" + email;
-    }
-
-    URL fullURL;
+    URIBuilder ub;
     try {
-      URL base = new URL(baseURL);
-      // do this to properly encode the URL
-      fullURL =
-          new URI(base.getProtocol(), base.getAuthority(), base.getPath(), urlParams, null).toURL();
-    } catch (MalformedURLException | URISyntaxException e) {
+      ub = new URIBuilder(baseURL);
+      ub.addParameter("returnTo", listenPath);
+      if (email != null) {
+        ub.addParameter("email", email);
+      }
+    } catch (URISyntaxException e) {
       throw new SQLException("Failed to build a URL while using BROSWER-SSO identity plugin", e);
     }
 
-    openBrowser(fullURL.toString());
+    openBrowser(ub.toString());
 
     try {
       return server.WaitForCredential();

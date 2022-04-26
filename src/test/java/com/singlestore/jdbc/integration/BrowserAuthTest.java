@@ -25,10 +25,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClients;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 public class BrowserAuthTest extends Common {
   /*
@@ -121,6 +118,21 @@ public class BrowserAuthTest extends Common {
   public static void drop() throws SQLException {
     Statement stmt = sharedConn.createStatement();
     stmt.execute("DROP USER IF EXISTS jwt_user");
+  }
+
+  @Test
+  @Disabled
+  public void browserAuth() throws SQLException {
+    String connString =
+        "jdbc:singlestore://"
+            + "svc-4c25892d-c8d3-4bf3-ab15-1aceeb54a9ff-ddl.aws-oregon-2.svc.singlestore.com:3306/test"
+            + "?credentialType=BROWSER_SSO"
+            + "&sslMode=trust";
+
+    try (java.sql.Connection connection = DriverManager.getConnection(connString)) {
+      ResultSet rs = connection.createStatement().executeQuery("select 1");
+      assertTrue(rs.next());
+    }
   }
 
   @Test

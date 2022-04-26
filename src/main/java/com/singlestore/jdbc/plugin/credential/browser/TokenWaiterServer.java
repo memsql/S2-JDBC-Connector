@@ -36,7 +36,7 @@ public class TokenWaiterServer {
 
   public TokenWaiterServer() throws SQLException {
     try {
-      server = HttpServer.create(new InetSocketAddress("0.0.0.0", 0), 0);
+      server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
     } catch (IOException e) {
       throw new SQLException(
           "Could not create a local HTTP server while using identity plugin 'BROWSER_SSO'", e);
@@ -45,7 +45,7 @@ public class TokenWaiterServer {
     String path = "/" + randomAlphanumeric(20);
     server.createContext(path, new RequestHandler(this));
     System.out.println(server.getAddress());
-    listenPath = "http://0.0.0.0:" + server.getAddress().getPort() + path;
+    listenPath = "http://127.0.0.1:" + server.getAddress().getPort() + path;
     server.start();
   }
 
@@ -104,6 +104,8 @@ public class TokenWaiterServer {
         return;
       }
 
+      System.out.println(raw);
+
       DecodedJWT jwt;
       try {
         jwt = JWT.decode(raw);
@@ -116,7 +118,7 @@ public class TokenWaiterServer {
       JWTVerifier ver =
           JWT.require(new DummyAlgorithm(jwt.getAlgorithm()))
               .withClaimPresence("email")
-              .withClaimPresence("dbUsername")
+              .withClaimPresence("sub")
               .build();
       try {
         ver.verify(jwt);
@@ -137,7 +139,7 @@ public class TokenWaiterServer {
 
       server.setCredential(
           new ExpiringCredential(
-              new Credential(jwt.getClaim("dbUsername").asString(), jwt.getToken()),
+              new Credential(jwt.getClaim("sub").asString(), jwt.getToken()),
               jwt.getClaim("email").asString(),
               jwt.getExpiresAt().toInstant()));
     }
