@@ -43,7 +43,7 @@ public class MacKeyring implements Keyring {
                 null);
       }
 
-      if (status != secLib.ERR_SEC_SUCCESS) {
+      if (status != SecurityLibrary.ERR_SEC_SUCCESS) {
         logger.debug(
             "Could not read from the OS X Keychain or the key does not exist. Error code: "
                 + Native.getLastError());
@@ -92,7 +92,8 @@ public class MacKeyring implements Keyring {
               itemRef);
     }
 
-    if (status != secLib.ERR_SEC_SUCCESS && status != secLib.ERR_SEC_ITEM_NOT_FOUND) {
+    if (status != SecurityLibrary.ERR_SEC_SUCCESS
+        && status != SecurityLibrary.ERR_SEC_ITEM_NOT_FOUND) {
       logger.debug(
           "Could not check the existence of key in the OS X Keychain. Error code: "
               + Native.getLastError());
@@ -118,7 +119,7 @@ public class MacKeyring implements Keyring {
       }
     }
 
-    if (status != secLib.ERR_SEC_SUCCESS) {
+    if (status != SecurityLibrary.ERR_SEC_SUCCESS) {
       logger.debug(
           "Could not set/modify the item in the OS X Keychain. Error code: "
               + Native.getLastError());
@@ -146,7 +147,8 @@ public class MacKeyring implements Keyring {
               itemRef);
     }
 
-    if (status != secLib.ERR_SEC_SUCCESS && status != secLib.ERR_SEC_ITEM_NOT_FOUND) {
+    if (status != SecurityLibrary.ERR_SEC_SUCCESS
+        && status != SecurityLibrary.ERR_SEC_ITEM_NOT_FOUND) {
       logger.debug(
           "Could not check the existence of key in the OS X Keychain. Error code: "
               + Native.getLastError());
@@ -161,7 +163,7 @@ public class MacKeyring implements Keyring {
       status = secLib.SecKeychainItemDelete(itemRef[0]);
     }
 
-    if (status != secLib.ERR_SEC_SUCCESS) {
+    if (status != SecurityLibrary.ERR_SEC_SUCCESS) {
       logger.info(
           "Could not delete the key from the OS X Keychain. Error code = " + Native.getLastError());
     }
