@@ -11,7 +11,10 @@ import com.singlestore.jdbc.plugin.credential.browser.keyring.Keyring;
 import java.sql.SQLException;
 
 public class BrowserCredentialPlugin implements CredentialPlugin {
-  private static final String baseURL = "https://portal.singlestore.com/engine-sso";
+  // TODO change it back
+  //  private static final String baseURL = "https://portal.singlestore.com/engine-sso";
+  private static final String baseURL =
+      "https://portal-staging.dev.helios.singlestore.com/engine-sso";
 
   protected BrowserCredentialGenerator generator;
   private final Keyring keyring;
