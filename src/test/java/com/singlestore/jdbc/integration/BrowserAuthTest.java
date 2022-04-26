@@ -9,6 +9,7 @@ import com.singlestore.jdbc.Common;
 import com.singlestore.jdbc.Statement;
 import com.singlestore.jdbc.plugin.credential.CredentialPluginLoader;
 import com.singlestore.jdbc.plugin.credential.browser.BrowserCredentialPlugin;
+import com.singlestore.jdbc.plugin.credential.browser.TokenWaiterServer;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -138,20 +139,21 @@ public class BrowserAuthTest extends Common {
   @Test
   public void mockBrowser() throws IOException, SQLException {
     /*{
-      "email": "test-email@gmail.com",
-      "dbUsername": "jwt_user",
-      "exp": 1916239022 (year 2030)
+       "email": "test-email@gmail.com",
+       "sub": "wrong_user",
+       "username": "jwt_user",
+       "exp": 1916239022 (year 2030)
     }*/
     String jwt =
-        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwiZGJVc2VybmFt"
-            + "ZSI6Imp3dF91c2VyIiwiZXhwIjoxOTE2MjM5MDIyfQ.Bo_LcWJrzflkSvVFuJglUzdJPHVsQFZ0JTu0a0zK4J60Bhfed-PCk7I"
-            + "o7lcvmflWDdl9j6ZzbdZOfyAoywg2ME8DGlbgv29Xy1h0BCpnDFhaOl_TVTc40pI_IqCrn97D53pgXH31-KQu5F0ap26j0DwVM"
-            + "0Zk22rYeOFeBOFWSy_HcBoC6UQ9HaZaXEY1aaCP_fOUwMN7HGGJ3vR0VCn7UPLAT3wibeH0b9PspVyqQ2fs3cNAqJo9_sYWBAz"
-            + "-B4gsQCMXsBCpUV_Rn4r1RZI7cDsjsKHcoVleLD-oS4z8zzo472qYd9DWwciVRutTUgOC9Z7LekxUY9RHhvuUmBNbvBKI8qrJQ"
-            + "Scj6wWmmmkRlgT4PYYfmRpmOwxr7Y9M4rr_9F1bOtK1Pf6ml9NCHTW3agF9VO3tvtvlUgnlIeZeAECg6UvtGyxwQmDLNdv6EO1"
-            + "CrP49wbtZSI8O04z-yCCVE-XPPpW0iTAZmGFOu8cDsCxTOnxjKrN7hEHkU4g8hV7NwVHgHyaM5PS06DL0RN2VWXxvbbOVZqc-J"
-            + "sURR8H8vTxVQoxBcUXx9o23FjfdIYa5iFEb8_mdkhWU6CPSKVqE0zXgoO8yyUiXN2aF0-xxY2wptruQnbpkVE3cUNPuUTG9WlH"
-            + "7e1x61-gZISLl-43Bz04Nfqw5C8YvYVjm22KZq9o";
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwic3ViIjoid3Jvbmd"
+            + "fdXNlciIsInVzZXJuYW1lIjoiand0X3VzZXIiLCJleHAiOjE5MTYyMzkwMjJ9.rSUfkgB8MhxazNAxZU8Wa2BIVqcxs3vBnT"
+            + "EDqNLT9yhP4gbMBz0EzAIiAFQe8A1yeeNhvwfHP2GDLYhi3c88HtdI2P6T00a90x7RCrmD7mWWgdA7OTrdxKNX3CsuVmthaG"
+            + "ExDAJDe3i_dPfZxFNHmYAX_4KBugZTwQOvsKir7sKPBi9atnTPm9dGqapYWWIcDyMGNk5GD50Pzxgncc2VMfx2AcVmzANIK2"
+            + "E7SOCRsN96YL0BkTb34CW2NeH001bnoIEjEJeQI3lEbCVafjTbBXHWptbwL2j9aoiV0XzjkT00-GdtUt1i6DfQO-EWF0J_IC"
+            + "_79wEiGfOnM5waWi-LDQ0FnXjV1FIpnOiJab9meIB11sW5MFn2U8q0yMareRHJQ43ZWg5uAnAf2ugm71EsTQtbmKGgDsTzt2"
+            + "UglhiNpnONzOEDCzz61FiVUTgWu0wMYzUgitgMJYvaDUit3F2OfQw4x--60VWKhB-q4EGm0DvPgFHMspxcZKNFlqJH3Qfgk8"
+            + "LDtJBI0kPpSJoYKbS9n1SmmfVL1UZOTsZNutIYNuN2CWo_D_TJNFKMys6sI7OIQ5QtYyHZyW1wShrR2V2Kwj6IxXpA2XxQf2"
+            + "emCRhCNGl5js73ljVnI0HsPLcEzEreRUQWOxgHCuB4dk2QgBj7EiZl57Cm0GywEqDlwf-XX1g";
     MockHttpServer ssoServer = new MockHttpServer(jwt, false, 1, 0);
     try {
       // make sure no creds are cached
@@ -186,20 +188,20 @@ public class BrowserAuthTest extends Common {
     // keystore cannot be used on CircleCI
     Assumptions.assumeFalse("CIRCLE_CI".equals(System.getenv("TEST_ENVIRON")));
     /*{
-      "email": "test-email@gmail.com",
-      "dbUsername": "jwt_user",
-      "exp": 1916239022 (year 2030)
+       "email": "test-email@gmail.com",
+       "username": "jwt_user",
+       "exp": 1916239022 (year 2030)
     }*/
     String jwt =
-        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwiZGJVc2VybmFt"
-            + "ZSI6Imp3dF91c2VyIiwiZXhwIjoxOTE2MjM5MDIyfQ.Bo_LcWJrzflkSvVFuJglUzdJPHVsQFZ0JTu0a0zK4J60Bhfed-PCk7I"
-            + "o7lcvmflWDdl9j6ZzbdZOfyAoywg2ME8DGlbgv29Xy1h0BCpnDFhaOl_TVTc40pI_IqCrn97D53pgXH31-KQu5F0ap26j0DwVM"
-            + "0Zk22rYeOFeBOFWSy_HcBoC6UQ9HaZaXEY1aaCP_fOUwMN7HGGJ3vR0VCn7UPLAT3wibeH0b9PspVyqQ2fs3cNAqJo9_sYWBAz"
-            + "-B4gsQCMXsBCpUV_Rn4r1RZI7cDsjsKHcoVleLD-oS4z8zzo472qYd9DWwciVRutTUgOC9Z7LekxUY9RHhvuUmBNbvBKI8qrJQ"
-            + "Scj6wWmmmkRlgT4PYYfmRpmOwxr7Y9M4rr_9F1bOtK1Pf6ml9NCHTW3agF9VO3tvtvlUgnlIeZeAECg6UvtGyxwQmDLNdv6EO1"
-            + "CrP49wbtZSI8O04z-yCCVE-XPPpW0iTAZmGFOu8cDsCxTOnxjKrN7hEHkU4g8hV7NwVHgHyaM5PS06DL0RN2VWXxvbbOVZqc-J"
-            + "sURR8H8vTxVQoxBcUXx9o23FjfdIYa5iFEb8_mdkhWU6CPSKVqE0zXgoO8yyUiXN2aF0-xxY2wptruQnbpkVE3cUNPuUTG9WlH"
-            + "7e1x61-gZISLl-43Bz04Nfqw5C8YvYVjm22KZq9o";
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwidXNlcm5hbWUiOiJ"
+            + "qd3RfdXNlciIsImV4cCI6MTkxNjIzOTAyMn0.Olpk3wlI07zqo98Ya7KOdE6Bmux_Kdp8ZMB1qylQO-SPFwnV3FqQyY40KQJ"
+            + "6c6D1FtedRmfWPo9b6FUIAawEPfFGxY95OjfnhdACEKz-gZcNhWCSRlBIIgwqwj22mebLRbu64_Y9t7j8a_ld0vs7q6rtxfJ"
+            + "WatEQUwXxhWs3eYHfTeLHs-f-y9iixqohqjCDzWgQ-LYeflCVlNMWYJFo9lzy8cEushuHDiRhiaSESC_QTGWgV74tI1ORqzr"
+            + "oxViM8n9uuKzU-Ez6oLQMocFdFkO7ohXr-SSdFQ5otHjLZDfsJgBxp5llh16o5FnFl1HGUF3u3XXMIdM-q-aNIed4mKlAkti"
+            + "MTtuKszgndgK5Lt40dfg5gyw4zRApWeLgJQR0zWOk292KHuGPrzAZvedsWoP0hcVksiST87n3N4u1BfYAjh9t6CrbHKeMkkv"
+            + "NoCZt8czApXp5G2Hd0jxae01cVSxEQ8s7jWJMBbCeC5RuAYaazANFw3AEl_rd_KP9MsBJu1MFr7O1VIWOfG7PDrTVOa_oY9N"
+            + "j7ozv3V4dRk5s4UEE_ZhCxLNPt3XS6kotHWiXCS-Jkos3vEMAm6It77KrAPXDSxPbeDEVD5fvnAPRNUrkXTfafdlzmYY_1o-"
+            + "9QQmi3UjhWZ_bBEMFVV3UFjYsPBLn8WVFzWOSSGV-JnGAE3A";
     MockHttpServer ssoServer = new MockHttpServer(jwt, false, 1, 0);
     try {
       // make sure no creds are cached
@@ -244,20 +246,20 @@ public class BrowserAuthTest extends Common {
   @Test
   public void mockBrowserError() throws IOException, SQLException {
     /*{
-      "email": "test-email@gmail.com",
-      "dbUsername": "wrong_user",
-      "exp": 1916239022 (year 2030)
+       "email": "test-email@gmail.com",
+       "username": "wrong_user",
+       "exp": 1916239022
     }*/
     String jwt =
-        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwiZGJVc2VybmFtZSI6In"
-            + "dyb25nX3VzZXIiLCJleHAiOjE5MTYyMzkwMjJ9.xM_14g4eBvymw8wtjC_TzBn45GrBga_VVlPGQh-0y7aSMVQ77RGG"
-            + "c0BxoYeNMu885MH7SK20lP3NiWxQzZblrbPa86ueeApNEG4ndZLkP_7zgpcRtUBu9KQWOmMYiEW8_r2CVz1wxQh36SN"
-            + "S8BlvQRXXVhYwpWfbWX4lAcI0BRK04iRGwUuJnRWXVfXreELlErHn_Nu8GxU3GWl0nkFUtgdc1mt8ic580TQNo1o3IM"
-            + "oMbzPErDxKRtDNPRbO38hmawaskYWhbUCmyH-LTb8-p9cBUPfIT5rgiagr9qRLu9JtZ3bQc2PI979Cyj1RfriG5NMs7"
-            + "uf3DnjNYhIkEqvCZ-fpJ2VfcHs3TGFcy1ygQRlxYNhenwUPRiKigL6nHx7ksJaVqFIjQq2soZnuwm-gJuERF5L4HwLq"
-            + "yIYmKnxxcfPdMLCv4f4CGfZji17CxP4KxQzRz-8k5lj_-ZFV1uZpdhPl6-nUA-dMdns7QV6vuNPa4jMP3rl5wBQaV-y"
-            + "4iOV98tcgInrdw0PmLZeuUPvOcfw0wQJiQY1K84imnfTRJhfaLSvZcF6KhxQxn0d1q9ibsJL1NWBWPYhrUtAfDJEm2r"
-            + "fe89CVJEnUIpuHbjNKBVeYrgx-Hgvau-lsPK3MDNJUAm1R8d0xG4t3UjElk8pZBudeKvO7TyKXbZNJ6sIvqqg";
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwidXNlcm5hbWUiOiJ3cm9"
+            + "uZ191c2VyIiwiZXhwIjoxOTE2MjM5MDIyfQ.Dwg0CLnhzSV718S7zxStCWiEpqDNrDmUhTOOS-ZnsisQk0S66s9Fxghl9Te0dmBj"
+            + "a_IHhXUmJTPrirATSdAA4Ez4rLc2j5hvf57jsiPR9ImtobG0cwkjUiRV2CPtyqgWAfSbOnu8_bbitkqL4SEB5-fruaaASMTGPNdT"
+            + "vouNMC0t-PhUbLGmDdf779UjBzMR0mI_n7_NO57-p5M5crHYuvS_CnBzokRf4OjUco0w1pd0ovri0Uz-qo9gdHc_s1-3YGkNzGwG"
+            + "VoPjLx4EdETvq6F_3nj06Dt2sP51BkpccuL3uvRZMLu-8bqsZ2I08ZHgpLmoO8OWfvbIclT9xMpWEkvFrFCAu3CZXIZ-PGlUzQsv"
+            + "5cN0siGDRmlILj1rtIDIYiNudNnEge0-7oxSPi4zx_cw-X8AaJZyUkBe-9sd4dmbrpjCSoEL32ACKUuXQ3KTdI2XvoxfFA-9Lh7B"
+            + "Hjgjp3EEYsZ-gr9BngqkX-K8viXQOXuIAJxxAAgteVpgvTu8iMcqb1Tiv-YK7z4BDvlPUwPkQHNCeZS--MaPsWibkOhs9uxrpbIb"
+            + "F3wEjbfJQ1y35gl-q39LNfwPf38ytn_ZhIUPMLUGyoi0tM6l7X23sGb3fDdY6wvD4PabeboMVAxsISjp_bqkBkdBf9ZQ2Z0ZOtq2"
+            + "ZBXcKvCzOBCge-Z9woQ";
     MockHttpServer ssoServer = new MockHttpServer(jwt, false, 2, 0);
 
     try {
@@ -279,6 +281,32 @@ public class BrowserAuthTest extends Common {
           "Access denied for user 'wrong_user'@'172.17.0.1'");
     } finally {
       ssoServer.stop();
+    }
+  }
+
+  @Test
+  public void mockBrowserTimeout() throws IOException, SQLException {
+    // make sure no creds are cached
+    BrowserCredentialPlugin credPlugin =
+        (BrowserCredentialPlugin) CredentialPluginLoader.get("MOCK_BROWSER_SSO");
+    credPlugin.clearKeyring();
+    credPlugin.clearLocalCache();
+
+    try {
+      TokenWaiterServer.WAIT_TIMEOUT = 1;
+
+      String connString =
+          String.format("jdbc:singlestore://%s:%s/", hostname, port)
+              + sharedConn.getCatalog()
+              + "?credentialType=MOCK_BROWSER_SSO"
+              + "&sslMode=trust";
+
+      assertThrowsContains(
+          SQLException.class,
+          () -> DriverManager.getConnection(connString),
+          "Timed out waiting for JWT");
+    } finally {
+      TokenWaiterServer.WAIT_TIMEOUT = 300;
     }
   }
 

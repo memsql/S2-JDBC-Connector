@@ -1,5 +1,5 @@
 {
-  "username_claim": "dbUsername",
+  "username_claim": "username",
   "methods": [
     {
       "algorithms": [ "RS256" ],

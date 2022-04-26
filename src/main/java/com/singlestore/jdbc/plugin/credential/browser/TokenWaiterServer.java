@@ -25,9 +25,15 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class TokenWaiterServer {
+  // time to wait for a JWT to be received before throwing in seconds.
+  // Public for test purposes
+  public static int WAIT_TIMEOUT = 300;
+
   private static final Logger logger = Loggers.getLogger(TokenWaiterServer.class);
   private final CountDownLatch latch = new CountDownLatch(1);
   private ExpiringCredential credential;
@@ -44,15 +50,20 @@ public class TokenWaiterServer {
 
     String path = "/" + randomAlphanumeric(20);
     server.createContext(path, new RequestHandler(this));
-    System.out.println(server.getAddress());
     listenPath = "http://127.0.0.1:" + server.getAddress().getPort() + path;
     server.start();
   }
 
-  public ExpiringCredential WaitForCredential() throws InterruptedException {
-    latch.await();
-    server.stop(0);
-    return credential;
+  public ExpiringCredential WaitForCredential() throws InterruptedException, TimeoutException {
+    try {
+      boolean result = latch.await(WAIT_TIMEOUT, TimeUnit.SECONDS);
+      if (!result) {
+        throw new TimeoutException();
+      }
+      return credential;
+    } finally {
+      server.stop(0);
+    }
   }
 
   public String getListenPath() {
@@ -104,8 +115,6 @@ public class TokenWaiterServer {
         return;
       }
 
-      System.out.println(raw);
-
       DecodedJWT jwt;
       try {
         jwt = JWT.decode(raw);
@@ -116,10 +125,7 @@ public class TokenWaiterServer {
       }
 
       JWTVerifier ver =
-          JWT.require(new DummyAlgorithm(jwt.getAlgorithm()))
-              .withClaimPresence("email")
-              .withClaimPresence("sub")
-              .build();
+          JWT.require(new DummyAlgorithm(jwt.getAlgorithm())).withClaimPresence("email").build();
       try {
         ver.verify(jwt);
         // a bug in the jwt lib doesn't allow us to check whether expiration is specified through
@@ -127,6 +133,10 @@ public class TokenWaiterServer {
         // Though if 'exp' is in the JWT, it is correctly validated against the current time.
         if (jwt.getExpiresAt() == null) {
           throw new JWTVerificationException("The Claim 'exp' is not present in the JWT.");
+        }
+        if (jwt.getClaim("sub").isNull() && jwt.getClaim("username").isNull()) {
+          throw new JWTVerificationException(
+              "One of claims 'sub' and 'username' must be present in the JWT.");
         }
       } catch (JWTVerificationException e) {
         logger.debug("Could not verify claims: ", e);
@@ -139,7 +149,11 @@ public class TokenWaiterServer {
 
       server.setCredential(
           new ExpiringCredential(
-              new Credential(jwt.getClaim("sub").asString(), jwt.getToken()),
+              new Credential(
+                  jwt.getClaim("username").isNull()
+                      ? jwt.getClaim("sub").asString()
+                      : jwt.getClaim("username").asString(),
+                  jwt.getToken()),
               jwt.getClaim("email").asString(),
               jwt.getExpiresAt().toInstant()));
     }

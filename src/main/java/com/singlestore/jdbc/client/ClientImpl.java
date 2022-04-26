@@ -94,6 +94,7 @@ public class ClientImpl implements Client, AutoCloseable {
           || sqlException.getErrorCode() == 2628) {
         BrowserCredentialPlugin credPlugin = (BrowserCredentialPlugin) conf.credentialPlugin();
         // clear both local cache and keyring to force re-acquiring the token
+        logger.debug("Failed to connect with the JWT, retrying browser auth");
         credPlugin.clearKeyring();
         credPlugin.clearLocalCache();
         this.closed = false;

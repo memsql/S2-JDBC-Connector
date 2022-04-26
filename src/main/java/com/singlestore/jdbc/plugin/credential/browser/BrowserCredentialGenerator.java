@@ -8,6 +8,7 @@ import com.singlestore.jdbc.util.log.Loggers;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
+import java.util.concurrent.TimeoutException;
 import org.apache.http.client.utils.URIBuilder;
 
 public class BrowserCredentialGenerator {
@@ -40,6 +41,8 @@ public class BrowserCredentialGenerator {
       return server.WaitForCredential();
     } catch (InterruptedException e) {
       throw new SQLException("Interrupted while waiting for JWT", e);
+    } catch (TimeoutException e) {
+      throw new SQLException("Timed out waiting for JWT", e);
     }
   }
 

@@ -50,8 +50,7 @@ class MockBrowserCredentialGenerator extends BrowserCredentialGenerator {
         response.getEntity().writeTo(stream);
         throw new SQLException(stream.toString());
       }
-    } catch (IOException e) {
-      throw new SQLException(e);
+    } catch (IOException ignored) {
     }
   }
 }
