@@ -618,15 +618,15 @@ public class ConnectionTest extends Common {
     stmt.execute("CREATE USER jwt_user IDENTIFIED WITH authentication_jwt");
     stmt.execute("GRANT ALL PRIVILEGES ON test.* TO jwt_user");
     String jwt =
-        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwiZGJVc2VybmFt"
-            + "ZSI6Imp3dF91c2VyIiwiZXhwIjoxOTE2MjM5MDIyfQ.Bo_LcWJrzflkSvVFuJglUzdJPHVsQFZ0JTu0a0zK4J60Bhfed-PCk7I"
-            + "o7lcvmflWDdl9j6ZzbdZOfyAoywg2ME8DGlbgv29Xy1h0BCpnDFhaOl_TVTc40pI_IqCrn97D53pgXH31-KQu5F0ap26j0DwVM"
-            + "0Zk22rYeOFeBOFWSy_HcBoC6UQ9HaZaXEY1aaCP_fOUwMN7HGGJ3vR0VCn7UPLAT3wibeH0b9PspVyqQ2fs3cNAqJo9_sYWBAz"
-            + "-B4gsQCMXsBCpUV_Rn4r1RZI7cDsjsKHcoVleLD-oS4z8zzo472qYd9DWwciVRutTUgOC9Z7LekxUY9RHhvuUmBNbvBKI8qrJQ"
-            + "Scj6wWmmmkRlgT4PYYfmRpmOwxr7Y9M4rr_9F1bOtK1Pf6ml9NCHTW3agF9VO3tvtvlUgnlIeZeAECg6UvtGyxwQmDLNdv6EO1"
-            + "CrP49wbtZSI8O04z-yCCVE-XPPpW0iTAZmGFOu8cDsCxTOnxjKrN7hEHkU4g8hV7NwVHgHyaM5PS06DL0RN2VWXxvbbOVZqc-J"
-            + "sURR8H8vTxVQoxBcUXx9o23FjfdIYa5iFEb8_mdkhWU6CPSKVqE0zXgoO8yyUiXN2aF0-xxY2wptruQnbpkVE3cUNPuUTG9WlH"
-            + "7e1x61-gZISLl-43Bz04Nfqw5C8YvYVjm22KZq9o";
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwic3ViIjoid3Jvbmd"
+            + "fdXNlciIsInVzZXJuYW1lIjoiand0X3VzZXIiLCJleHAiOjE5MTYyMzkwMjJ9.rSUfkgB8MhxazNAxZU8Wa2BIVqcxs3vBnT"
+            + "EDqNLT9yhP4gbMBz0EzAIiAFQe8A1yeeNhvwfHP2GDLYhi3c88HtdI2P6T00a90x7RCrmD7mWWgdA7OTrdxKNX3CsuVmthaG"
+            + "ExDAJDe3i_dPfZxFNHmYAX_4KBugZTwQOvsKir7sKPBi9atnTPm9dGqapYWWIcDyMGNk5GD50Pzxgncc2VMfx2AcVmzANIK2"
+            + "E7SOCRsN96YL0BkTb34CW2NeH001bnoIEjEJeQI3lEbCVafjTbBXHWptbwL2j9aoiV0XzjkT00-GdtUt1i6DfQO-EWF0J_IC"
+            + "_79wEiGfOnM5waWi-LDQ0FnXjV1FIpnOiJab9meIB11sW5MFn2U8q0yMareRHJQ43ZWg5uAnAf2ugm71EsTQtbmKGgDsTzt2"
+            + "UglhiNpnONzOEDCzz61FiVUTgWu0wMYzUgitgMJYvaDUit3F2OfQw4x--60VWKhB-q4EGm0DvPgFHMspxcZKNFlqJH3Qfgk8"
+            + "LDtJBI0kPpSJoYKbS9n1SmmfVL1UZOTsZNutIYNuN2CWo_D_TJNFKMys6sI7OIQ5QtYyHZyW1wShrR2V2Kwj6IxXpA2XxQf2"
+            + "emCRhCNGl5js73ljVnI0HsPLcEzEreRUQWOxgHCuB4dk2QgBj7EiZl57Cm0GywEqDlwf-XX1g";
 
     try (Connection connection =
         createCon("credentialType=JWT&sslMode=trust&user=jwt_user&password=" + jwt)) {

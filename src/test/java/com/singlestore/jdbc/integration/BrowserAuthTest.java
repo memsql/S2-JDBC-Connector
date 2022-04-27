@@ -278,7 +278,7 @@ public class BrowserAuthTest extends Common {
       assertThrowsContains(
           SQLException.class,
           () -> DriverManager.getConnection(connString),
-          "Access denied for user 'wrong_user'@'172.17.0.1'");
+          "Access denied for user 'wrong_user'@");
     } finally {
       ssoServer.stop();
     }
