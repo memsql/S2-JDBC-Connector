@@ -43,6 +43,8 @@ public class BrowserCredentialGenerator {
       throw new SQLException("Interrupted while waiting for JWT", e);
     } catch (TimeoutException e) {
       throw new SQLException("Timed out waiting for JWT", e);
+    } catch (IOException e) {
+      throw new SQLException("Could not acquire JWT", e);
     }
   }
 

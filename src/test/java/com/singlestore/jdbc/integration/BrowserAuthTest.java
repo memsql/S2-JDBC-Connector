@@ -18,6 +18,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -277,6 +278,141 @@ public class BrowserAuthTest extends Common {
           SQLException.class,
           () -> DriverManager.getConnection(connString),
           "Access denied for user 'wrong_user'@");
+    } finally {
+      ssoServer.stop();
+    }
+  }
+
+  @Test
+  public void mockBrowserBadJWT() throws IOException, SQLException {
+    /*{
+       "email": "test-email@gmail.com",
+       "exp": 1916239022
+    }*/
+    String noLoginJwt =
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwiZXhwIjoxOTE2MjM"
+            + "5MDIyfQ.hwY3NahUOD7Lkyl5-sVAUw5LCht1XVJSsqkq-tSiXigNe_A2sVtbsciFu5MRD32RW_6ZfsNYOm-lzeiRi6k3seSm"
+            + "GmWwi3jhKBdtTOgkUPuzqvSZPlWhXW2cOhk44KKQgEepen4zcJqCTLmt6JvDizgUPkjjT9Ns2_j33b8ymsGcwiuANbG1iCJI"
+            + "VoxKIePmfsfhAN1YkUOXAlQaFBkGb4PGm3MBf77Hg_Ph7EbIXw6B3dtW_Fzm9S8hzM-9Yyp4eFB-ysq_dOra5bFvSJWxIG4z"
+            + "ZDY9Ulmyes_fT97VYz3jysclU9stIz1vR4JDhaZwkOEsQzruQfRTzRqwWaIClZLd2ZZuuf-_ZZbfSZLr8O0dH1BcnhRGsNo5"
+            + "m8ZRu-PD7p78G5mYKw3pAtcCWn5-4ZAZPN7vEEvjeqwXhwXpdt3uOQuY4ysd8tCX3aAiKEXlrBc_A1iFtBRjGV38i8lYwnFy"
+            + "jsbVNvt_khNjVrAaZ5oTyeTH0x5Zhvlh4aQw1uOcIQG6k3yR0gHVCHM620_VeLEBRliSxlyLZwU9AQOh0uQpYvGAZbshXLSs"
+            + "CBh8h6P5tlgexJrb9dDyV1gvaZInPp1ASTJ-GwZ_xTXS6uqYrlHym-W30_7_ws8tFwLpMavsRYUQIksilO7ULK0vbGV9eD4V"
+            + "DETvEny0BhwBsI1YoB0";
+    /*{
+       "email": "test-email@gmail.com",
+       "exp": 1000000000
+    }*/
+    String expiredJwt =
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwiZXhwIjoxMDAwMDA"
+            + "wMDAwfQ.Wgd3K7iRbeLK1sfnX3z0mSbhD0vJXxfLW7skaSpEj7V3kNgwNh1zcQvTJUsWrxtcTmJNsaIcNDpU_PaTIag2o3HZ"
+            + "o_b80Y0jfldtSjnET3g6x5dWtjYGg1xItEldLsh-MhObupWJSH7QGFuJYgofsLZ-8b9DYiJRSDiIhCKkmp88VYEM2spGlyjs"
+            + "kjJxEqUaHyi483x5yIfLUeeXhCSIsySUtSzUkaPz8DS2mtG8_NzytVBlehu9JiegBJ9mXXDgcLYrhgp2mhTRLGD_0jtZNZPS"
+            + "dQMjoikktRUzsTXgirogSCPUvbk6rT1Q6Z7SlowtWwaKPQxv4GPp-1CMfuwWioR8lviMpvO9yBVwXmE_iSzqPq7Y18Pm3JSb"
+            + "VQr2A8v3RoeSoYOHQaIzqq5oUvvH4pVimh5L0goI7jEUnln7qc51e1OkPPLySuzynommke86KPTbVaoPzou3vuGNnzeGfqyt"
+            + "Qm4Su54uQrgn6-J8LgS3l-Fxe91B2hUc1kT3cj6kNf1C6XaY0EyzFGkXoOmdI9uiCRzKOqyTtK2EVpMGlVe3B8yFd7lmBf49"
+            + "8o-QbGENxYTHz4psy6ZlnBIzjtpN3-D9NwcC7eEipDB8B5VxEW2aLJndnvBIb70ll6j3FeNv19-5S4Ek3xuouRUJNXSnt7ne"
+            + "BUFDtzchHZjkpjmutuo";
+
+    // make sure no creds are cached
+    BrowserCredentialPlugin credPlugin =
+        (BrowserCredentialPlugin) CredentialPluginLoader.get("MOCK_BROWSER_SSO");
+    credPlugin.clearKeyring();
+    credPlugin.clearLocalCache();
+
+    String connString =
+        String.format("jdbc:singlestore://%s:%s/", hostname, port)
+            + sharedConn.getCatalog()
+            + "?credentialType=MOCK_BROWSER_SSO"
+            + "&sslMode=trust";
+
+    MockHttpServer ssoServer = new MockHttpServer(noLoginJwt, false, 1, 0);
+    try {
+      DriverManager.getConnection(connString);
+      fail();
+    } catch (SQLException e) {
+      assertTrue(e.getMessage().contains("Could not acquire JWT"));
+      assertTrue(e.getCause().getMessage().contains("Could not verify claims"));
+      assertTrue(
+          e.getCause()
+              .getCause()
+              .getMessage()
+              .contains("One of claims 'sub' and 'username' must be present in the JWT"));
+    } finally {
+      ssoServer.stop();
+    }
+
+    ssoServer = new MockHttpServer(expiredJwt, false, 1, 0);
+    try {
+      DriverManager.getConnection(connString);
+      fail();
+    } catch (SQLException e) {
+      assertTrue(e.getMessage().contains("Could not acquire JWT"));
+      assertTrue(e.getCause().getMessage().contains("Could not verify claims"));
+      assertTrue(e.getCause().getCause().getMessage().contains("The Token has expired"));
+    } finally {
+      ssoServer.stop();
+    }
+  }
+
+  @Test
+  public void mockBrowserParallelized() throws SQLException, IOException, InterruptedException {
+    /*{
+       "email": "test-email@gmail.com",
+       "sub": "wrong_user",
+       "username": "jwt_user",
+       "exp": 1916239022 (year 2030)
+    }*/
+    String jwt =
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3QtZW1haWxAZ21haWwuY29tIiwic3ViIjoid3Jvbmd"
+            + "fdXNlciIsInVzZXJuYW1lIjoiand0X3VzZXIiLCJleHAiOjE5MTYyMzkwMjJ9.rSUfkgB8MhxazNAxZU8Wa2BIVqcxs3vBnT"
+            + "EDqNLT9yhP4gbMBz0EzAIiAFQe8A1yeeNhvwfHP2GDLYhi3c88HtdI2P6T00a90x7RCrmD7mWWgdA7OTrdxKNX3CsuVmthaG"
+            + "ExDAJDe3i_dPfZxFNHmYAX_4KBugZTwQOvsKir7sKPBi9atnTPm9dGqapYWWIcDyMGNk5GD50Pzxgncc2VMfx2AcVmzANIK2"
+            + "E7SOCRsN96YL0BkTb34CW2NeH001bnoIEjEJeQI3lEbCVafjTbBXHWptbwL2j9aoiV0XzjkT00-GdtUt1i6DfQO-EWF0J_IC"
+            + "_79wEiGfOnM5waWi-LDQ0FnXjV1FIpnOiJab9meIB11sW5MFn2U8q0yMareRHJQ43ZWg5uAnAf2ugm71EsTQtbmKGgDsTzt2"
+            + "UglhiNpnONzOEDCzz61FiVUTgWu0wMYzUgitgMJYvaDUit3F2OfQw4x--60VWKhB-q4EGm0DvPgFHMspxcZKNFlqJH3Qfgk8"
+            + "LDtJBI0kPpSJoYKbS9n1SmmfVL1UZOTsZNutIYNuN2CWo_D_TJNFKMys6sI7OIQ5QtYyHZyW1wShrR2V2Kwj6IxXpA2XxQf2"
+            + "emCRhCNGl5js73ljVnI0HsPLcEzEreRUQWOxgHCuB4dk2QgBj7EiZl57Cm0GywEqDlwf-XX1g";
+    MockHttpServer ssoServer = new MockHttpServer(jwt, false, 1, 0);
+    try {
+      // make sure no creds are cached
+      BrowserCredentialPlugin credPlugin =
+          (BrowserCredentialPlugin) CredentialPluginLoader.get("MOCK_BROWSER_SSO");
+      credPlugin.clearKeyring();
+      credPlugin.clearLocalCache();
+
+      String connString =
+          String.format("jdbc:singlestore://%s:%s/", hostname, port)
+              + sharedConn.getCatalog()
+              + "?credentialType=MOCK_BROWSER_SSO"
+              + "&sslMode=trust";
+
+      int threadNum = 4;
+      Thread[] threads = new Thread[threadNum];
+      AtomicInteger errorCount = new AtomicInteger(0);
+      for (int i = 0; i < threadNum; ++i) {
+        threads[i] =
+            new Thread(
+                () -> {
+                  try (java.sql.Connection connection = DriverManager.getConnection(connString)) {
+                    for (int j = 0; j < 10; ++j) {
+                      ResultSet rs = connection.createStatement().executeQuery("select 1");
+                      assertTrue(rs.next());
+                    }
+                  } catch (SQLException e) {
+                    errorCount.incrementAndGet();
+                  }
+                });
+      }
+
+      for (int i = 0; i < threadNum; ++i) {
+        threads[i].start();
+      }
+      for (int i = 0; i < threadNum; ++i) {
+        threads[i].join();
+      }
+
+      assertEquals(0, errorCount.get());
     } finally {
       ssoServer.stop();
     }

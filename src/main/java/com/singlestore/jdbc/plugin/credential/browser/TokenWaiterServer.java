@@ -30,15 +30,15 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class TokenWaiterServer {
+  private static final Logger logger = Loggers.getLogger(TokenWaiterServer.class);
   // time to wait for a JWT to be received before throwing in seconds.
   // Public for test purposes
   public static int WAIT_TIMEOUT = 300;
-
-  private static final Logger logger = Loggers.getLogger(TokenWaiterServer.class);
   private final CountDownLatch latch = new CountDownLatch(1);
-  private ExpiringCredential credential;
   private final String listenPath;
   private final HttpServer server;
+  private ExpiringCredential credential;
+  private IOException handleException;
 
   public TokenWaiterServer() throws SQLException {
     try {
@@ -54,11 +54,15 @@ public class TokenWaiterServer {
     server.start();
   }
 
-  public ExpiringCredential WaitForCredential() throws InterruptedException, TimeoutException {
+  public ExpiringCredential WaitForCredential()
+      throws InterruptedException, TimeoutException, IOException {
     try {
       boolean result = latch.await(WAIT_TIMEOUT, TimeUnit.SECONDS);
       if (!result) {
         throw new TimeoutException();
+      }
+      if (handleException != null) {
+        throw handleException;
       }
       return credential;
     } finally {
@@ -72,6 +76,11 @@ public class TokenWaiterServer {
 
   public void setCredential(ExpiringCredential cred) {
     credential = cred;
+    latch.countDown();
+  }
+
+  public void setHandleException(IOException e) {
+    handleException = e;
     latch.countDown();
   }
 
@@ -98,6 +107,8 @@ public class TokenWaiterServer {
       exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
       if (!exchange.getRequestMethod().equals("POST")) {
         error(exchange, 400, "POST expected");
+        server.setHandleException(
+            new IOException("POST request expected, got " + exchange.getRequestMethod()));
         return;
       }
 
@@ -110,8 +121,8 @@ public class TokenWaiterServer {
                 .parallel()
                 .collect(Collectors.joining("\n"));
       } catch (Exception e) {
-        logger.debug("Bad read from request: ", e);
         error(exchange, 500, "Bad read from request");
+        server.setHandleException(new IOException("Bad read from request: ", e));
         return;
       }
 
@@ -119,8 +130,8 @@ public class TokenWaiterServer {
       try {
         jwt = JWT.decode(raw);
       } catch (JWTDecodeException e) {
-        logger.debug("Could not parse claims: ", e);
         error(exchange, 400, "Could not parse claims: " + e.getMessage());
+        server.setHandleException(new IOException("Could not parse claims: ", e));
         return;
       }
 
@@ -139,8 +150,8 @@ public class TokenWaiterServer {
               "One of claims 'sub' and 'username' must be present in the JWT.");
         }
       } catch (JWTVerificationException e) {
-        logger.debug("Could not verify claims: ", e);
         error(exchange, 400, "Could not verify claims: " + e.getMessage());
+        server.setHandleException(new IOException("Could not verify claims: ", e));
         return;
       }
 
