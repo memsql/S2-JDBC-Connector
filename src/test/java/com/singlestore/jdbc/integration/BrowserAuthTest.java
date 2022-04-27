@@ -108,9 +108,7 @@ public class BrowserAuthTest extends Common {
   @BeforeAll
   public static void beforeAll2() throws SQLException {
     drop();
-
     Statement stmt = sharedConn.createStatement();
-    stmt.execute("DROP USER IF EXISTS jwt_user");
     stmt.execute("CREATE USER jwt_user IDENTIFIED WITH authentication_jwt");
     stmt.execute("GRANT ALL PRIVILEGES ON test.* TO jwt_user");
   }
