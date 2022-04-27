@@ -8,12 +8,14 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 public class MacKeyring implements Keyring {
   // OS X keychain requires an account name (arbitrary) to be specified
   // in addition to the storage key
   private static final String ACCOUNT = "SingleStore";
+  private static final Charset CHARSET = StandardCharsets.UTF_8;
   private final SecurityLibrary secLib;
 
   public MacKeyring() {
@@ -22,8 +24,8 @@ public class MacKeyring implements Keyring {
 
   @Override
   public ExpiringCredential getCredential() {
-    byte[] serviceBytes = STORAGE_KEY.getBytes(StandardCharsets.UTF_8);
-    byte[] userBytes = ACCOUNT.getBytes(StandardCharsets.UTF_8);
+    byte[] serviceBytes = STORAGE_KEY.getBytes(CHARSET);
+    byte[] userBytes = ACCOUNT.getBytes(CHARSET);
 
     int[] dataLength = new int[1];
     Pointer[] data = new Pointer[1];
@@ -56,8 +58,7 @@ public class MacKeyring implements Keyring {
       }
 
       try {
-        return Keyring.fromBlob(
-            new String(data[0].getByteArray(0, dataLength[0]), StandardCharsets.UTF_8));
+        return Keyring.fromBlob(new String(data[0].getByteArray(0, dataLength[0]), CHARSET));
       } catch (IOException e) {
         logger.debug("Error while parsing cached token from the OS X Keychain", e);
         return null;
@@ -73,9 +74,9 @@ public class MacKeyring implements Keyring {
 
   @Override
   public void setCredential(ExpiringCredential cred) {
-    byte[] credBlob = Keyring.makeBlob(cred).getBytes(StandardCharsets.UTF_16LE);
-    byte[] serviceBytes = STORAGE_KEY.getBytes(StandardCharsets.UTF_8);
-    byte[] userBytes = ACCOUNT.getBytes(StandardCharsets.UTF_8);
+    byte[] credBlob = Keyring.makeBlob(cred).getBytes(CHARSET);
+    byte[] serviceBytes = STORAGE_KEY.getBytes(CHARSET);
+    byte[] userBytes = ACCOUNT.getBytes(CHARSET);
 
     Pointer[] itemRef = new Pointer[1];
     int status;
@@ -128,8 +129,8 @@ public class MacKeyring implements Keyring {
 
   @Override
   public void deleteCredential() {
-    byte[] serviceBytes = STORAGE_KEY.getBytes(StandardCharsets.UTF_8);
-    byte[] userBytes = ACCOUNT.getBytes(StandardCharsets.UTF_8);
+    byte[] serviceBytes = STORAGE_KEY.getBytes(CHARSET);
+    byte[] userBytes = ACCOUNT.getBytes(CHARSET);
 
     Pointer[] itemRef = new Pointer[1];
 
