@@ -419,7 +419,7 @@ public class BrowserAuthTest extends Common {
   }
 
   @Test
-  public void mockBrowserTimeout() throws IOException, SQLException {
+  public void mockBrowserTimeout() throws SQLException {
     // make sure no creds are cached
     BrowserCredentialPlugin credPlugin =
         (BrowserCredentialPlugin) CredentialPluginLoader.get("MOCK_BROWSER_SSO");
