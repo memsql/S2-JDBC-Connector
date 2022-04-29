@@ -305,6 +305,12 @@
 
         <!--BROWSER_SSO credential plugin dependencies-->
         <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.13</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
             <groupId>de.swiesend</groupId>
             <artifactId>secret-service</artifactId>
             <version>1.7.0</version>
@@ -322,14 +328,12 @@
             <version>${jna.version}</version>
             <optional>true</optional>
         </dependency>
-
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
             <version>2.13.2</version>
             <optional>true</optional>
         </dependency>
-
         <dependency>
             <groupId>com.auth0</groupId>
             <artifactId>java-jwt</artifactId>
@@ -367,7 +371,7 @@
                                     <goal>shade</goal>
                                 </goals>
                                 <configuration>
-                                    <finalName>singlestore-jdbc-client-${version}-uberjar</finalName>
+                                    <finalName>singlestore-jdbc-client-${version}-uber</finalName>
 <!--                                    <minimizeJar>true</minimizeJar>-->
                                     <filters>
                                         <filter>
@@ -379,6 +383,23 @@
                                             </excludes>
                                         </filter>
                                     </filters>
+                                    <artifactSet>
+                                        <includes>
+                                            <include>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</include>
+                                            <include>com.fasterxml.jackson.core:*</include>
+                                            <include>com.auth0:java-jwt</include>
+                                            <include>org.slf4j:slf4j-api</include>
+                                            <!--Linux keyring dependencies-->
+                                            <include>de.swiesend:secret-service</include>
+                                            <include>at.favre.lib:hkdf</include>
+                                            <include>com.github.hypfvieh:dbus-java</include>
+                                            <include>com.github.jnr:*</include>
+                                            <include>org.ow2.asm:*</include>
+
+                                            Windows and Mac keyring dependencies
+                                            <include>net.java.dev.jna:*</include>
+                                        </includes>
+                                    </artifactSet>
                                 </configuration>
                             </execution>
                         </executions>

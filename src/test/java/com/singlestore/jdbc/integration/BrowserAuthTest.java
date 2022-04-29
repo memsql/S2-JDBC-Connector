@@ -123,6 +123,10 @@ public class BrowserAuthTest extends Common {
   @Test
   @Disabled
   public void browserAuth() throws SQLException {
+    BrowserCredentialPlugin credPlugin =
+        (BrowserCredentialPlugin) CredentialPluginLoader.get("BROWSER_SSO");
+    credPlugin.clearKeyring();
+    credPlugin.clearLocalCache();
     String connString =
         "jdbc:singlestore://"
             + "svc-4c25892d-c8d3-4bf3-ab15-1aceeb54a9ff-ddl.aws-oregon-2.svc.singlestore.com:3306/test"
