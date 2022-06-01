@@ -7,7 +7,7 @@
     <artifactId>singlestore-jdbc-client</artifactId>
     <packaging>jar</packaging>
     <name>singlestore-jdbc-client</name>
-    <version>1.0.2</version>
+    <version>1.1.0</version>
     <description>SingleStore JDBC Driver</description>
     <url>https://https://github.com/memsql/S2-JDBC-Connector</url>
 
@@ -49,14 +49,8 @@
         <url>git://git@github.com:memsql/S2-JDBC-Connector.git</url>
         <connection>scm:git:git@github.com:memsql/S2-JDBC-Connector.git</connection>
         <developerConnection>scm:git:git@github.com:memsql/S2-JDBC-Connector.git</developerConnection>
-        <tag>singlestore-jdbc-client-1.0.2</tag>
+        <tag>singlestore-jdbc-client-1.1.0</tag>
     </scm>
-
-    <!--  TODO add issue tracker -->
-    <!--  <issueManagement>-->
-    <!--    <system>JIRA</system>-->
-    <!--    <url>https://mariadb.atlassian.net/browse/CONJ</url>-->
-    <!--  </issueManagement>-->
 
     <distributionManagement>
         <snapshotRepository>
@@ -361,6 +355,7 @@
                     </plugin>
 
                     <plugin>
+                        <!--create an uberjar with BROWSER_SSO dependencies-->
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-shade-plugin</artifactId>
                         <version>3.2.1</version>
@@ -371,8 +366,7 @@
                                     <goal>shade</goal>
                                 </goals>
                                 <configuration>
-                                    <finalName>singlestore-jdbc-client-${version}-uber</finalName>
-<!--                                    <minimizeJar>true</minimizeJar>-->
+                                    <finalName>singlestore-jdbc-client-${version}-browser-sso-uber</finalName>
                                     <filters>
                                         <filter>
                                             <artifact>*:*</artifact>
