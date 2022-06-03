@@ -454,6 +454,26 @@ public class DatabaseMetadataTest extends Common {
     }
   }
 
+  @Test
+  public void testGetColumnsNoTVF() throws SQLException {
+    java.sql.Statement stmt = sharedConn.createStatement();
+    stmt.execute("DROP TABLE IF EXISTS test_table");
+
+    stmt.execute("CREATE TABLE test_table (id INT NOT NULL PRIMARY KEY, " + "val VARCHAR(20))");
+
+    stmt.execute(
+        "CREATE OR REPLACE FUNCTION test_table_func(n int) RETURNS TABLE AS "
+            + "RETURN SELECT val FROM test_table WHERE id=n;");
+
+    DatabaseMetaData dbmd = sharedConn.getMetaData();
+    ResultSet rs = dbmd.getColumns(null, null, "test_table", null);
+    assertTrue(rs.next());
+    assertTrue(rs.next());
+
+    rs = dbmd.getColumns(null, null, "test_table_func", null);
+    assertFalse(rs.next());
+  }
+
   private void testGetColumnstinyInt1isBit(Connection con) throws SQLException {
     try {
       java.sql.Statement stmt = con.createStatement();
