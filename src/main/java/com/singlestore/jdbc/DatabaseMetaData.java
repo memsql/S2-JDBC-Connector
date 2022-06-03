@@ -512,6 +512,11 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
       String catalog, String schemaPattern, String tableNamePattern, String[] types)
       throws SQLException {
 
+    // A FLAGS column was introduced to INFORMATION_SCHEMA.TABLES to distinguish between
+    // TVFs and other table types in order to exclude them from SHOW TABLES.
+    // If we cannot use FLAGS, we have to join ROUTINES to exclude TVFs
+    boolean canUseFlags = getVersion().versionGreaterOrEqual(7, 8, 1);
+
     StringBuilder sql =
         new StringBuilder(
             "SELECT TABLE_SCHEMA TABLE_CAT, NULL  TABLE_SCHEM,  TABLE_NAME,"
@@ -519,7 +524,14 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
                 + " TABLE_COMMENT REMARKS, NULL TYPE_CAT, NULL TYPE_SCHEM, NULL TYPE_NAME, NULL SELF_REFERENCING_COL_NAME, "
                 + " NULL REF_GENERATION"
                 + " FROM INFORMATION_SCHEMA.TABLES "
+                + (canUseFlags
+                    ? ""
+                    : "LEFT JOIN INFORMATION_SCHEMA.ROUTINES ON "
+                        + "(TABLE_NAME=ROUTINE_NAME AND TABLE_SCHEMA=ROUTINE_SCHEMA)")
                 + " WHERE "
+                + (canUseFlags
+                    ? "CAST(FLAGS AS UNSIGNED INTEGER) & 1 = 0 AND "
+                    : "ROUTINE_NAME IS NULL AND ")
                 + catalogCond("TABLE_SCHEMA", catalog)
                 + patternCond("TABLE_NAME", tableNamePattern));
 

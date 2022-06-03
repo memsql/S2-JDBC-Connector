@@ -295,8 +295,7 @@ public class DatabaseMetadataTest extends Common {
     stmt.execute("drop table if exists table_type_test");
 
     stmt.execute(
-        "create table table_type_test (id int not null primary key, "
-            + "val varchar(20)) engine=innodb");
+        "create table table_type_test (id int not null primary key, " + "val varchar(20))");
 
     DatabaseMetaData dbmd = sharedConn.getMetaData();
     ResultSet tableSet = dbmd.getTables(null, null, "table_type_test", null);
@@ -310,6 +309,25 @@ public class DatabaseMetadataTest extends Common {
     assertEquals("TABLE", tableType);
     // see for possible values
     // https://docs.oracle.com/javase/7/docs/api/java/sql/DatabaseMetaData.html#getTableTypes%28%29
+  }
+
+  @Test
+  public void testGetTablesNoTVF() throws SQLException {
+    java.sql.Statement stmt = sharedConn.createStatement();
+    stmt.execute("DROP TABLE IF EXISTS test_table");
+
+    stmt.execute("CREATE TABLE test_table (id INT NOT NULL PRIMARY KEY, " + "val VARCHAR(20))");
+
+    stmt.execute(
+        "CREATE OR REPLACE FUNCTION test_table_func(n int) RETURNS TABLE AS "
+            + "RETURN SELECT val FROM test_table WHERE id=n;");
+
+    DatabaseMetaData dbmd = sharedConn.getMetaData();
+    ResultSet tableSet = dbmd.getTables(null, null, "test_table", null);
+    assertTrue(tableSet.next());
+
+    tableSet = dbmd.getTables(null, null, "test_table_func", null);
+    assertFalse(tableSet.next());
   }
 
   @Test
