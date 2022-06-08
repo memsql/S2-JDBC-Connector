@@ -677,7 +677,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     boolean canUseFlags = getVersion().versionGreaterOrEqual(7, 8, 1);
 
     String sql =
-        "SELECT TABLE_SCHEMA TABLE_CAT, NULL TABLE_SCHEM, TABLE_NAME, COLUMN_NAME,"
+        "SELECT c.TABLE_SCHEMA TABLE_CAT, NULL TABLE_SCHEM, c.TABLE_NAME TABLE_NAME, c.COLUMN_NAME COLUMN_NAME,"
             + dataTypeClause(fullTypeColumnName, "c.")
             + " DATA_TYPE,"
             + DataTypeClause(conf)
@@ -708,16 +708,16 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
             + " FROM INFORMATION_SCHEMA.COLUMNS c "
             + (canUseFlags
                 ? "LEFT JOIN INFORMATION_SCHEMA.TABLES AS t ON "
-                    + "(TABLE_NAME=t.TABLE_NAME AND TABLE_SCHEMA=t.TABLE_SCHEMA)"
+                    + "(c.TABLE_NAME=t.TABLE_NAME AND c.TABLE_SCHEMA=t.TABLE_SCHEMA)"
                 : "LEFT JOIN INFORMATION_SCHEMA.ROUTINES AS r ON "
-                    + "(TABLE_NAME=r.ROUTINE_NAME AND TABLE_SCHEMA=r.ROUTINE_SCHEMA)")
+                    + "(c.TABLE_NAME=r.ROUTINE_NAME AND c.TABLE_SCHEMA=r.ROUTINE_SCHEMA)")
             + " WHERE "
             + (canUseFlags
                 ? "CAST(t.FLAGS AS UNSIGNED INTEGER) & 1 = 0 AND "
                 : "r.ROUTINE_NAME IS NULL AND ")
-            + catalogCond("TABLE_SCHEMA", catalog)
-            + patternCond("TABLE_NAME", tableNamePattern)
-            + patternCond("COLUMN_NAME", columnNamePattern)
+            + catalogCond("c.TABLE_SCHEMA", catalog)
+            + patternCond("c.TABLE_NAME", tableNamePattern)
+            + patternCond("c.COLUMN_NAME", columnNamePattern)
             + " ORDER BY TABLE_CAT, TABLE_SCHEM, TABLE_NAME, ORDINAL_POSITION";
 
     return executeQuery(sql);
@@ -3516,7 +3516,16 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
             + " WHERE "
             + catalogCond("ROUTINE_SCHEMA", catalog)
             + patternCond("ROUTINE_NAME", functionNamePattern)
-            + " AND ROUTINE_TYPE='FUNCTION'";
+            + " AND ROUTINE_TYPE='FUNCTION'"
+            + " UNION"
+            + " SELECT AGGREGATE_SCHEMA FUNCTION_CAT,NULL FUNCTION_SCHEM, AGGREGATE_NAME FUNCTION_NAME,"
+            + " NULL REMARKS, "
+            + functionNoTable
+            + " FUNCTION_TYPE, AGGREGATE_NAME SPECIFIC_NAME "
+            + " FROM INFORMATION_SCHEMA.AGGREGATE_FUNCTIONS "
+            + " WHERE "
+            + catalogCond("AGGREGATE_SCHEMA", catalog)
+            + patternCond("AGGREGATE_NAME", functionNamePattern);
 
     return executeQuery(sql);
   }

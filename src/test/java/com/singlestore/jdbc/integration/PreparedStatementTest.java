@@ -587,6 +587,8 @@ public class PreparedStatementTest extends Common {
   }
 
   private void moreResults(Connection con) throws SQLException {
+    // TODO: PLAT-6236
+    Assumptions.assumeFalse(minVersion(7, 8, 0));
     Statement stmt = con.createStatement();
     ensureRange(stmt);
     stmt.setFetchSize(3);
@@ -617,7 +619,7 @@ public class PreparedStatementTest extends Common {
     rs = prep.executeQuery();
     Assertions.assertFalse(rs.isClosed());
     prep.setFetchSize(0); // force more result to load all remaining result-set
-    Assertions.assertTrue(prep.getMoreResults(java.sql.Statement.KEEP_CURRENT_RESULT));
+    Assertions.assertTrue(prep.getMoreResults());
     Assertions.assertFalse(rs.isClosed());
     i = 1;
     while (rs.next()) {

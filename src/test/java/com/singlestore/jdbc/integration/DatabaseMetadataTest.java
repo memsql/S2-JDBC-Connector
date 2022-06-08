@@ -22,6 +22,11 @@ public class DatabaseMetadataTest extends Common {
     stmt.execute("DROP PROCEDURE IF EXISTS testMetaCatalogProc");
     stmt.execute("DROP FUNCTION IF EXISTS testMetaCatalog");
     stmt.execute("DROP FUNCTION IF EXISTS UDTF");
+    stmt.execute("DROP AGGREGATE IF EXISTS UDAF");
+    stmt.execute("DROP FUNCTION IF EXISTS UDAFinit");
+    stmt.execute("DROP FUNCTION IF EXISTS UDAFiter");
+    stmt.execute("DROP FUNCTION IF EXISTS UDAFmerge");
+    stmt.execute("DROP FUNCTION IF EXISTS UDAFterminate");
     stmt.execute("DROP TABLE IF EXISTS json_test");
     stmt.execute("DROP TABLE IF EXISTS dbpk_test");
     stmt.execute("DROP TABLE IF EXISTS datetime_test");
@@ -59,6 +64,34 @@ public class DatabaseMetadataTest extends Common {
             + "id2))");
     stmt.execute(
         "CREATE FUNCTION UDTF(x int) returns table as return select * from dbpk_test where id1 = x");
+    stmt.execute(
+        "CREATE FUNCTION UDAFinit () RETURNS bigint AS declare s bigint ; BEGIN RETURN s; END");
+    stmt.execute(
+        "CREATE FUNCTION UDAFiter(s bigint , v bigint ) "
+            + "RETURNS bigint AS "
+            + "BEGIN "
+            + "IF (v is not null and s is null) or ( v > s ) THEN "
+            + "return v; "
+            + "END IF; "
+            + "RETURN s; "
+            + "END");
+    stmt.execute(
+        "CREATE FUNCTION UDAFmerge(s1 bigint , s2 bigint ) "
+            + "RETURNS bigint AS "
+            + "BEGIN "
+            + "IF s2 > s1 THEN "
+            + "RETURN s2; "
+            + "END IF; "
+            + "RETURN s1; "
+            + "END");
+    stmt.execute("CREATE FUNCTION UDAFterminate(s bigint) RETURNS bigint AS BEGIN RETURN s; END");
+    stmt.execute(
+        "CREATE AGGREGATE UDAF(bigint) RETURNS bigint "
+            + "WITH STATE bigint "
+            + "INITIALIZE WITH UDAFinit "
+            + "ITERATE WITH UDAFiter "
+            + "MERGE WITH UDAFmerge "
+            + "TERMINATE WITH UDAFterminate;");
     stmt.execute("CREATE TABLE IF NOT EXISTS datetime_test(dt datetime)");
     stmt.execute(
         "CREATE TABLE IF NOT EXISTS `manycols`("
@@ -953,6 +986,29 @@ public class DatabaseMetadataTest extends Common {
     rs = sharedConn.getMetaData().getFunctions(null, null, "testMetaCatalog");
     assertTrue(rs.next());
     assertEquals(DatabaseMetaData.functionNoTable, rs.getInt("FUNCTION_TYPE"));
+    assertFalse(rs.next());
+  }
+
+  @Test
+  public void getFunctionsUDAF() throws SQLException {
+    ResultSet rs = sharedConn.getMetaData().getFunctions(null, null, "UDAF");
+    assertTrue(rs.next());
+
+    assertEquals(sharedConn.getCatalog(), rs.getString("FUNCTION_CAT"));
+    assertNull(rs.getString("FUNCTION_SCHEM"));
+    assertEquals("UDAF", rs.getString("FUNCTION_NAME"));
+    assertNull(rs.getString("REMARKS"));
+    assertEquals(DatabaseMetaData.functionNoTable, rs.getInt("FUNCTION_TYPE"));
+    assertEquals("UDAF", rs.getString("SPECIFIC_NAME"));
+
+    assertFalse(rs.next());
+
+    rs = sharedConn.getMetaData().getFunctions(null, null, "UDAF%");
+    assertTrue(rs.next());
+    assertTrue(rs.next());
+    assertTrue(rs.next());
+    assertTrue(rs.next());
+    assertTrue(rs.next());
     assertFalse(rs.next());
   }
 
