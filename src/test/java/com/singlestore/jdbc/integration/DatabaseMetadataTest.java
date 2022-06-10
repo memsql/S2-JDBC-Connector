@@ -294,7 +294,7 @@ public class DatabaseMetadataTest extends Common {
     java.sql.Statement stmt = sharedConn.createStatement();
     stmt.execute("drop table if exists prim_key");
 
-    stmt.execute("create table prim_key (id int not null primary key, " + "val varchar(20))");
+    stmt.execute("create table prim_key (id int not null primary key, val varchar(20))");
 
     DatabaseMetaData dbmd = sharedConn.getMetaData();
     ResultSet rs = dbmd.getTables(null, null, "prim_key", null);
