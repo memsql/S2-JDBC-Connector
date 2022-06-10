@@ -532,7 +532,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     // A FLAGS column was introduced to INFORMATION_SCHEMA.TABLES to distinguish between
     // TVFs and other table types in order to exclude them from SHOW TABLES.
     // If we cannot use FLAGS, we have to join ROUTINES to exclude TVFs
-    boolean canUseFlags = getVersion().versionGreaterOrEqual(7, 8, 1);
+    boolean canUseFlags = getSingleStoreVersion().versionGreaterOrEqual(7, 8, 1);
 
     StringBuilder sql =
         new StringBuilder(
@@ -674,7 +674,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     // If the flags are available, join information_schema.TABLES and use them.
     // If not, we have to join information_schema.ROUTINES to exclude TVFs.
     // This is because some users may not have access rights to information_schema.ROUTINES
-    boolean canUseFlags = getVersion().versionGreaterOrEqual(7, 8, 1);
+    boolean canUseFlags = getSingleStoreVersion().versionGreaterOrEqual(7, 8, 1);
 
     String sql =
         "SELECT c.TABLE_SCHEMA TABLE_CAT, NULL TABLE_SCHEM, c.TABLE_NAME TABLE_NAME, c.COLUMN_NAME COLUMN_NAME,"
