@@ -619,7 +619,7 @@ public class PreparedStatementTest extends Common {
     rs = prep.executeQuery();
     Assertions.assertFalse(rs.isClosed());
     prep.setFetchSize(0); // force more result to load all remaining result-set
-    Assertions.assertTrue(prep.getMoreResults());
+    Assertions.assertTrue(prep.getMoreResults(java.sql.Statement.KEEP_CURRENT_RESULT));
     Assertions.assertFalse(rs.isClosed());
     i = 1;
     while (rs.next()) {
