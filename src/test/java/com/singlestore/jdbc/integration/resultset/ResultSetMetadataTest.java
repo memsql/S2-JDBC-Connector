@@ -27,6 +27,7 @@ public class ResultSetMetadataTest extends Common {
     stmt.execute("DROP TABLE IF EXISTS resultsetmetadatatest2");
     stmt.execute("DROP TABLE IF EXISTS resultsetmetadatatest3");
     stmt.execute("DROP TABLE IF EXISTS test_rsmd_types");
+    stmt.execute("DROP TABLE IF EXISTS test_rsmd_unsigned");
   }
 
   @BeforeAll
@@ -54,6 +55,15 @@ public class ResultSetMetadataTest extends Common {
             + "null, null, null, null, null, null, null, null, null, null, null, "
             + "null, null, null, null, null, null, null, null, null, null, null, "
             + "null, null, null)");
+    stmt.execute(
+        "CREATE TABLE IF NOT EXISTS test_rsmd_unsigned (s1 TINYINT, s2 SMALLINT, "
+            + "s3 MEDIUMINT, s4 INT, s5 BIGINT, s6 REAL, s7 DOUBLE, s8 DECIMAL, s9 NUMERIC, "
+            + "uns1 TINYINT UNSIGNED, uns2 SMALLINT UNSIGNED, uns3 MEDIUMINT UNSIGNED, "
+            + "uns4 INT UNSIGNED, uns5 BIGINT UNSIGNED, uns6 REAL UNSIGNED,"
+            + " uns7 DOUBLE UNSIGNED, uns8 DECIMAL UNSIGNED, uns9 NUMERIC UNSIGNED)");
+    stmt.execute(
+        "insert into test_rsmd_unsigned values (null, null, null, null, null, null, "
+            + "null, null, null, null, null, null, null, null, null, null, null, null)");
   }
 
   @Test
@@ -145,6 +155,19 @@ public class ResultSetMetadataTest extends Common {
         assertEquals(rsmd.getColumnType(i), cols.getInt("DATA_TYPE"));
         assertEquals(rsmd.getColumnTypeName(i), cols.getString("TYPE_NAME"));
       }
+    }
+  }
+
+  @Test
+  public void unsignedTypes() throws SQLException {
+    Statement stmt = sharedConn.createStatement();
+    ResultSet rs = stmt.executeQuery("select * from test_rsmd_unsigned");
+    assertTrue(rs.next());
+    ResultSetMetaData rsmd = rs.getMetaData();
+
+    for (int i = 1; i <= 9; ++i) {
+      assertTrue(rsmd.isSigned(i));
+      assertFalse(rsmd.isSigned(i + 9));
     }
   }
 

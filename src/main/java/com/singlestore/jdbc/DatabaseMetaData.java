@@ -37,7 +37,10 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
   }
 
   private static String DataTypeClause(Configuration conf) {
-    String upperCaseWithoutSize = " UCASE(c.DATA_TYPE)";
+    String upperCaseWithoutSize =
+        " UCASE(IF( COLUMN_TYPE LIKE '%(%)%', CONCAT(SUBSTRING( COLUMN_TYPE,1, LOCATE('(',"
+            + "COLUMN_TYPE) - 1 ), SUBSTRING(COLUMN_TYPE ,1+locate(')', COLUMN_TYPE))), "
+            + "COLUMN_TYPE))";
 
     if (conf.tinyInt1isBit()) {
       upperCaseWithoutSize =
