@@ -76,7 +76,7 @@ public class DatabaseMetadataTest extends Common {
             + " TABLE IF NOT EXISTS pk_test_rowstore_multi(val varchar(20), id1 int not null, id2 int not null,primary key(id1, "
             + "id2))");
     stmt.execute(
-        "CREATE FUNCTION UDTF(x int) returns table as return select * from dbpk_test where id1 = x");
+        "CREATE FUNCTION UDTF(x int) returns table as return select * from pk_test where id = x");
     stmt.execute(
         "CREATE FUNCTION UDAFinit () RETURNS bigint AS declare s bigint ; BEGIN RETURN s; END");
     stmt.execute(
@@ -418,6 +418,7 @@ public class DatabaseMetadataTest extends Common {
     DatabaseMetaData dbmd = sharedConn.getMetaData();
     ResultSet rs = dbmd.getColumns(null, null, "ta\nble'getcolumns", null);
 
+    assertTrue(rs.next());
     assertEquals(sharedConn.getCatalog(), rs.getString(1)); // TABLE_CAT
     assertEquals(null, rs.getString(2)); // TABLE_SCHEM
     assertEquals("ta\nble'getcolumns", rs.getString(3)); // TABLE_NAME
