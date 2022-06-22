@@ -12,20 +12,9 @@ import java.sql.Clob;
 import java.sql.NClob;
 import java.sql.SQLException;
 
-public class SingleStoreClob implements Clob, NClob, Serializable {
+public class SingleStoreClob extends BlobImpl implements Clob, NClob, Serializable {
 
   private static final long serialVersionUID = -3066501059817815286L;
-
-  protected byte[] data;
-  protected transient int offset;
-  protected transient int length;
-
-  /** Creates an empty Clob. */
-  public SingleStoreClob() {
-    data = new byte[0];
-    offset = 0;
-    length = 0;
-  }
 
   /**
    * Creates a Clob with content.
@@ -33,12 +22,7 @@ public class SingleStoreClob implements Clob, NClob, Serializable {
    * @param bytes the content for the Clob.
    */
   public SingleStoreClob(byte[] bytes) {
-    if (bytes == null) {
-      throw new IllegalArgumentException("byte array is null");
-    }
-    data = bytes;
-    offset = 0;
-    length = bytes.length;
+    super(bytes);
   }
 
   /**
@@ -49,28 +33,18 @@ public class SingleStoreClob implements Clob, NClob, Serializable {
    * @param length length
    */
   public SingleStoreClob(byte[] bytes, int offset, int length) {
-    if (bytes == null) {
-      throw new IllegalArgumentException("byte array is null");
-    }
-    data = bytes;
-    this.offset = offset;
-    this.length = Math.min(bytes.length - offset, length);
+    super(bytes, offset, length);
   }
 
-  private SingleStoreClob(int offset, int length, byte[] bytes) {
-    this.data = bytes;
-    this.offset = offset;
-    this.length = length;
-  }
-
-  public static SingleStoreClob safeSingleStoreClob(byte[] bytes, int offset, int length) {
-    return new SingleStoreClob(offset, length, bytes);
+  /** Creates an empty Clob. */
+  public SingleStoreClob() {
+    super();
   }
 
   /**
    * ToString implementation.
    *
-   * @return string value of clob content.
+   * @return string value of blob content.
    */
   public String toString() {
     return new String(data, offset, length, StandardCharsets.UTF_8);
@@ -186,7 +160,7 @@ public class SingleStoreClob implements Clob, NClob, Serializable {
       throw new SQLException("position must be >= 0");
     }
     int bytePosition = utf8Position((int) pos - 1);
-    this.setBytes(bytePosition + 1 - offset, str.getBytes(StandardCharsets.UTF_8));
+    super.setBytes(bytePosition + 1 - offset, str.getBytes(StandardCharsets.UTF_8));
     return str.length();
   }
 
@@ -320,209 +294,5 @@ public class SingleStoreClob implements Clob, NClob, Serializable {
       if (data[offset + i] != that.data[that.offset + i]) return false;
     }
     return true;
-  }
-
-  /**
-   * Retrieves all or part of the <code>CLOB</code> value that this <code>Clob</code> object
-   * represents, as an array of bytes. This <code>byte</code> array contains up to <code>length
-   * </code> consecutive bytes starting at position <code>pos</code>.
-   *
-   * @param pos the ordinal position of the first byte in the <code>Clob</code> value to be
-   *     extracted; the first byte is at position 1
-   * @param length the number of consecutive bytes to be copied; the value for length must be 0 or
-   *     greater
-   * @return a byte array containing up to <code>length</code> consecutive bytes from the <code>CLOB
-   *     </code> value designated by this <code>Clob</code> object, starting with the byte at
-   *     position <code>pos</code>
-   * @throws SQLException if there is an error accessing the <code>Clob</code> value; if pos is less
-   *     than 1 or length is less than 0
-   * @see #setBytes
-   * @since 1.2
-   */
-  public byte[] getBytes(final long pos, final int length) throws SQLException {
-    if (pos < 1) {
-      throw new SQLException(
-          String.format("Out of range (position should be > 0, but is %s)", pos));
-    }
-    final int offset = this.offset + (int) (pos - 1);
-    byte[] result = new byte[length];
-    System.arraycopy(data, offset, result, 0, Math.min(this.length - (int) (pos - 1), length));
-    return result;
-  }
-
-  /**
-   * Retrieves the <code>CLOB</code> value designated by this <code>Clob</code> instance as a
-   * stream.
-   *
-   * @return a stream containing the <code>CLOB</code> data
-   * @throws SQLException if something went wrong
-   * @see #setBinaryStream
-   */
-  public InputStream getBinaryStream() throws SQLException {
-    return getBinaryStream(1, length);
-  }
-
-  /**
-   * Returns an <code>InputStream</code> object that contains a partial <code>Clob</code> value,
-   * starting with the byte specified by pos, which is length bytes in length.
-   *
-   * @param pos the offset to the first byte of the partial value to be retrieved. The first byte in
-   *     the <code>Clob</code> is at position 1
-   * @param length the length in bytes of the partial value to be retrieved
-   * @return <code>InputStream</code> through which the partial <code>Clob</code> value can be read.
-   * @throws SQLException if pos is less than 1 or if pos is greater than the number of bytes in the
-   *     <code>Clob</code> or if pos + length is greater than the number of bytes in the <code>Clob
-   *     </code>
-   */
-  public InputStream getBinaryStream(final long pos, final long length) throws SQLException {
-    if (pos < 1) {
-      throw new SQLException("Out of range (position should be > 0)");
-    }
-    if (pos - 1 > this.length) {
-      throw new SQLException("Out of range (position > stream size)");
-    }
-    if (pos + length - 1 > this.length) {
-      throw new SQLException("Out of range (position + length - 1 > streamSize)");
-    }
-
-    return new ByteArrayInputStream(data, this.offset + (int) pos - 1, (int) length);
-  }
-
-  /**
-   * Writes the given array of bytes to the <code>CLOB</code> value that this <code>Clob</code>
-   * object represents, starting at position <code>pos</code>, and returns the number of bytes
-   * written. The array of bytes will overwrite the existing bytes in the <code>Clob</code> object
-   * starting at the position <code>pos</code>. If the end of the <code>Clob</code> value is reached
-   * while writing the array of bytes, then the length of the <code>Clob</code> value will be
-   * increased to accommodate the extra bytes.
-   *
-   * @param pos the position in the <code>Clob</code> object at which to start writing; the first
-   *     position is 1
-   * @param bytes the array of bytes to be written to the <code>Clob</code> value that this <code>
-   *     Clob</code> object represents
-   * @return the number of bytes written
-   * @see #getBytes
-   */
-  public int setBytes(final long pos, final byte[] bytes) throws SQLException {
-    if (pos < 1) {
-      throw new SQLException("pos should be > 0, first position is 1.");
-    }
-
-    final int arrayPos = (int) pos - 1;
-
-    if (length > arrayPos + bytes.length) {
-
-      System.arraycopy(bytes, 0, data, offset + arrayPos, bytes.length);
-
-    } else {
-
-      byte[] newContent = new byte[arrayPos + bytes.length];
-      if (Math.min(arrayPos, length) > 0) {
-        System.arraycopy(data, this.offset, newContent, 0, Math.min(arrayPos, length));
-      }
-      System.arraycopy(bytes, 0, newContent, arrayPos, bytes.length);
-      data = newContent;
-      length = arrayPos + bytes.length;
-      offset = 0;
-    }
-    return bytes.length;
-  }
-
-  /**
-   * Retrieves a stream that can be used to write to the <code>Clob</code> value that this <code>
-   * Clob</code> object represents. The stream begins at position <code>pos</code>. The bytes
-   * written to the stream will overwrite the existing bytes in the <code>Clob</code> object
-   * starting at the position <code>pos</code>. If the end of the <code>Clob</code> value is reached
-   * while writing to the stream, then the length of the <code>Clob</code> value will be increased
-   * to accommodate the extra bytes.
-   *
-   * <p><b>Note:</b> If the value specified for <code>pos</code> is greater then the length+1 of the
-   * <code>Clob</code> value then the behavior is undefined. Some JDBC drivers may throw a <code>
-   * SQLException</code> while other drivers may support this operation.
-   *
-   * @param pos the position in the <code>Clob</code> value at which to start writing; the first
-   *     position is 1
-   * @return a <code>java.io.OutputStream</code> object to which data can be written
-   * @throws SQLException if there is an error accessing the <code>Clob</code> value or if pos is
-   *     less than 1
-   * @see #getBinaryStream
-   * @since 1.4
-   */
-  public OutputStream setBinaryStream(final long pos) throws SQLException {
-    if (pos < 1) {
-      throw new SQLException("Invalid position in clob");
-    }
-    if (offset > 0) {
-      byte[] tmp = new byte[length];
-      System.arraycopy(data, offset, tmp, 0, length);
-      data = tmp;
-      offset = 0;
-    }
-    return new ClobOutputStream(this, (int) (pos - 1) + offset);
-  }
-
-  /**
-   * This method frees the <code>Clob</code> object and releases the resources that it holds. The
-   * object is invalid once the <code>free</code> method is called.
-   *
-   * <p>After <code>free</code> has been called, any attempt to invoke a method other than <code>
-   * free</code> will result in a <code>SQLException</code> being thrown. If <code>free</code> is
-   * called multiple times, the subsequent calls to <code>free</code> are treated as a no-op.
-   */
-  public void free() {
-    this.data = new byte[0];
-    this.offset = 0;
-    this.length = 0;
-  }
-
-  static class ClobOutputStream extends OutputStream {
-    private final SingleStoreClob clob;
-    private int pos;
-
-    public ClobOutputStream(SingleStoreClob clob, int pos) {
-      this.clob = clob;
-      this.pos = pos;
-    }
-
-    @Override
-    public void write(int bit) {
-
-      if (this.pos >= clob.length) {
-        byte[] tmp = new byte[2 * clob.length + 1];
-        System.arraycopy(clob.data, clob.offset, tmp, 0, clob.length);
-        clob.data = tmp;
-        pos -= clob.offset;
-        clob.offset = 0;
-        clob.length++;
-      }
-      clob.data[pos++] = (byte) bit;
-    }
-
-    @Override
-    public void write(byte[] buf, int off, int len) throws IOException {
-      if (off < 0) {
-        throw new IOException("Invalid offset " + off);
-      }
-      if (len < 0) {
-        throw new IOException("Invalid len " + len);
-      }
-      int realLen = Math.min(buf.length - off, len);
-      if (pos + realLen >= clob.length) {
-        int newLen = 2 * clob.length + realLen;
-        byte[] tmp = new byte[newLen];
-        System.arraycopy(clob.data, clob.offset, tmp, 0, clob.length);
-        clob.data = tmp;
-        pos -= clob.offset;
-        clob.offset = 0;
-        clob.length = pos + realLen;
-      }
-      System.arraycopy(buf, off, clob.data, pos, realLen);
-      pos += realLen;
-    }
-
-    @Override
-    public void write(byte[] buf) throws IOException {
-      write(buf, 0, buf.length);
-    }
   }
 }
