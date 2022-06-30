@@ -5,7 +5,10 @@
 
 package com.singlestore.jdbc.integration.codec;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.singlestore.jdbc.Statement;
 import com.singlestore.jdbc.client.result.CompleteResult;
@@ -13,8 +16,24 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.sql.*;
-import java.time.*;
+import java.sql.Clob;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.NClob;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLDataException;
+import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.sql.Types;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.TimeZone;
 import org.junit.jupiter.api.AfterAll;
@@ -327,32 +346,55 @@ public class DateTimeCodecTest extends CommonCodecTest {
     getDate(getPrepare(sharedConnBinary));
   }
 
+  private void testDate(ResultSet rs, long dbDateTime, int index) throws SQLException {
+    Calendar cal = Calendar.getInstance();
+    cal.setTimeInMillis(dbDateTime);
+
+    long offset = TimeZone.getDefault().getOffset(cal.getTime().getTime());
+    float offsetDuration =
+        (float) ((offset / (1000 * 60 * 60)) % 24) + (float) ((offset / (1000 * 60)) % 60) / 60;
+
+    float timeInHrsMins = cal.get(Calendar.HOUR_OF_DAY) + (float) cal.get(Calendar.MINUTE) / 100;
+
+    if (timeInHrsMins + Math.abs(offsetDuration) > 24) {
+      assertEquals(
+          new Date(dbDateTime - Math.abs(offset)).toString(),
+          rs.getDate(index, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).toString());
+    } else {
+      assertEquals(
+          new Date(dbDateTime).toString(),
+          rs.getDate(index, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).toString());
+    }
+  }
+
   public void getDate(ResultSet rs) throws SQLException {
-    assertEquals(
-        1263254400000L
-            - TimeZone.getDefault().getOffset(Timestamp.valueOf("2010-01-12 01:55:12").getTime()),
-        rs.getDate(1, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).getTime());
+    testDate(
+        rs,
+        1263261312000l,
+        1); // Passing the millisecond time of the Date which is stored in the database.
     assertFalse(rs.wasNull());
+
     assertEquals(
         1263254400000L
             - TimeZone.getDefault().getOffset(Timestamp.valueOf("2010-01-12 01:55:12").getTime()),
         rs.getDate(1).getTime());
     assertFalse(rs.wasNull());
 
-    assertEquals(
-        -30609792000000L
-            - TimeZone.getDefault().getOffset(Timestamp.valueOf("1000-01-01 01:55:13").getTime()),
-        rs.getDate(2, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).getTime());
+    testDate(rs, -30609785100000l, 2);
     assertFalse(rs.wasNull());
+
     assertEquals(
         -30609792000000L
             - TimeZone.getDefault().getOffset(Timestamp.valueOf("1000-01-01 01:55:13").getTime()),
         rs.getDate(2).getTime());
+
     assertFalse(rs.wasNull());
+
     assertEquals(
         253402214400000L
             - TimeZone.getDefault().getOffset(Timestamp.valueOf("9999-12-31 18:30:12").getTime()),
         rs.getDate(3).getTime());
+
     assertFalse(rs.wasNull());
     assertNull(rs.getDate(4));
     assertTrue(rs.wasNull());
