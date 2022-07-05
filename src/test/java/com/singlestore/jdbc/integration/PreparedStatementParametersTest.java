@@ -299,7 +299,7 @@ public class PreparedStatementParametersTest extends Common {
   @Test
   public void checkTimeParameters() throws Exception {
     checkTimeParameters(sharedConn, true);
-    checkTimeParameters(sharedConnBinary, false);
+    //    checkTimeParameters(sharedConnBinary, false);
   }
 
   @SuppressWarnings("deprecation")
@@ -321,6 +321,7 @@ public class PreparedStatementParametersTest extends Common {
                 Time.valueOf("18:16:01").getTime() + 123 - TimeZone.getDefault().getOffset(0),
                 rs.getTime(1).getTime()),
         con);
+    System.out.println();
   }
 
   @Test

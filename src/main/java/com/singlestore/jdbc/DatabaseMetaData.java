@@ -496,8 +496,6 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
             + patternCond("TABLE_NAME", table)
             + " ORDER BY COLUMN_NAME";
 
-    System.out.println(sql);
-
     return executeQuery(sql);
   }
 

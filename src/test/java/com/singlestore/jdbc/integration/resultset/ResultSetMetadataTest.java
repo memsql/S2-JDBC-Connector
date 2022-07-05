@@ -150,10 +150,19 @@ public class ResultSetMetadataTest extends Common {
       cols.next();
       // TODO PLAT-6202: remove the if
       if (i < 14 || i > 16) {
-        System.out.println(cols.getString("COLUMN_NAME"));
-        System.out.println(cols.getInt("DATA_TYPE"));
         assertEquals(rsmd.getColumnType(i), cols.getInt("DATA_TYPE"));
         assertEquals(rsmd.getColumnTypeName(i), cols.getString("TYPE_NAME"));
+      }
+    }
+
+    cols = md.getColumns(null, null, "test\\_rsmd\\_types", null);
+
+    for (int i = 1; i <= 28; ++i) {
+      cols.next();
+      // Cannot correctly determine precision in the case of DOUBLE(8,3)
+      System.out.println(rsmd.getPrecision(i) + "  |  " + cols.getInt("COLUMN_SIZE"));
+      if (i != 22) {
+        assertEquals(rsmd.getPrecision(i), cols.getInt("COLUMN_SIZE"));
       }
     }
   }
