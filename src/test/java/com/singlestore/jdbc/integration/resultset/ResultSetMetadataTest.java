@@ -13,6 +13,7 @@ import java.sql.*;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.opentest4j.AssertionFailedError;
 
 public class ResultSetMetadataTest extends Common {
 
@@ -160,8 +161,20 @@ public class ResultSetMetadataTest extends Common {
     for (int i = 1; i <= 28; ++i) {
       cols.next();
       // Cannot correctly determine precision in the case of DOUBLE(8,3)
-      if (i != 22) {
+      if (i == 22) {
+        continue;
+      }
+
+      // Versions < 7.8 incorrectly send length of TEXT types
+      if (!minVersion(7, 8, 0) && i >= 6 && i <= 8) {
+        continue;
+      }
+
+      try {
         assertEquals(rsmd.getPrecision(i), cols.getInt("COLUMN_SIZE"));
+      } catch (AssertionFailedError e) {
+        System.out.println("Error at column " + i);
+        throw e;
       }
     }
   }
@@ -190,8 +203,8 @@ public class ResultSetMetadataTest extends Common {
     assertEquals(8, rsmd.getPrecision(2));
     assertEquals(9, rsmd.getPrecision(3));
     assertEquals(10, rsmd.getPrecision(4));
-    assertEquals(0, rsmd.getPrecision(5));
-    assertEquals(0, rsmd.getPrecision(12));
+    assertEquals(1431655765, rsmd.getPrecision(5));
+    assertEquals(2147483647, rsmd.getPrecision(12));
     assertEquals(0, rsmd.getPrecision(13));
   }
 

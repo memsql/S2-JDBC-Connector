@@ -1269,13 +1269,13 @@ public class DatabaseMetadataTest extends Common {
     assertEquals(4, rsmd.getScale(3));
     assertEquals(9, rsmd.getPrecision(4));
     assertEquals(0, rsmd.getScale(4));
-    assertEquals(6, rsmd.getPrecision(5));
+    assertEquals(12, rsmd.getPrecision(5));
     assertEquals(4, rsmd.getScale(5));
-    assertEquals(6, rsmd.getPrecision(6));
+    assertEquals(12, rsmd.getPrecision(6));
     assertEquals(4, rsmd.getScale(6));
-    assertEquals(14, rsmd.getPrecision(7));
+    assertEquals(22, rsmd.getPrecision(7));
     assertEquals(4, rsmd.getScale(7));
-    assertEquals(14, rsmd.getPrecision(8));
+    assertEquals(22, rsmd.getPrecision(8));
     assertEquals(4, rsmd.getScale(8));
   }
 
