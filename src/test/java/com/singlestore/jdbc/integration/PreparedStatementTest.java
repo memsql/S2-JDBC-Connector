@@ -1102,28 +1102,33 @@ public class PreparedStatementTest extends Common {
 
   @Test
   public void clearBatchTest() throws SQLException {
-    Statement stmt = sharedConn.createStatement();
+    clearBatch(sharedConn);
+    clearBatch(sharedConnBinary);
+  }
+
+  public void clearBatch(Connection conn) throws SQLException {
+    Statement stmt = conn.createStatement();
     stmt.executeUpdate("DROP TABLE IF EXISTS clearBatchTest");
     stmt.executeUpdate("CREATE TABLE clearBatchTest (id int)");
-    sharedConn.setAutoCommit(false);
+    conn.setAutoCommit(false);
     String sql = "INSERT INTO clearBatchTest (id) VALUES (?)";
-    PreparedStatement ps = sharedConn.prepareStatement(sql);
+    PreparedStatement ps = conn.prepareStatement(sql);
     for (int i = 1; i <= 3; i++) {
       ps.setInt(1, i);
       ps.addBatch();
       ps.executeBatch();
-      sharedConn.commit();
+      conn.commit();
     }
 
     ps.setInt(1, 4);
     ps.addBatch();
     ps.clearBatch();
-    sharedConn.rollback();
+    conn.rollback();
 
     ps.setInt(1, 5);
     ps.addBatch();
     ps.executeBatch();
-    sharedConn.commit();
+    conn.commit();
     ps.close();
 
     ResultSet rs = stmt.executeQuery("SELECT * FROM clearBatchTest ORDER BY id");
