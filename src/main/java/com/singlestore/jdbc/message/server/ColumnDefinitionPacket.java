@@ -324,7 +324,6 @@ public class ColumnDefinitionPacket implements ServerMessage {
         return getDisplaySize();
 
       default:
-        System.out.println(length);
         return Math.max(length, 0);
     }
   }

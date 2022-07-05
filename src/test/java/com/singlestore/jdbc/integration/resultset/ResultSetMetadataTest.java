@@ -160,7 +160,6 @@ public class ResultSetMetadataTest extends Common {
     for (int i = 1; i <= 28; ++i) {
       cols.next();
       // Cannot correctly determine precision in the case of DOUBLE(8,3)
-      System.out.println(rsmd.getPrecision(i) + "  |  " + cols.getInt("COLUMN_SIZE"));
       if (i != 22) {
         assertEquals(rsmd.getPrecision(i), cols.getInt("COLUMN_SIZE"));
       }
