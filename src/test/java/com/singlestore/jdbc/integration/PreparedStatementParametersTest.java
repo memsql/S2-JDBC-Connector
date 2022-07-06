@@ -315,9 +315,7 @@ public class PreparedStatementParametersTest extends Common {
         rs -> assertEquals("18:16:01", rs.getTime(1, utcCal).toString()),
         con);
     checkSendTime(
-        ps -> {
-          ps.setTime(1, new Time(Time.valueOf("18:16:01").getTime() + 123), utcCal);
-        },
+        ps -> ps.setTime(1, new Time(Time.valueOf("18:16:01").getTime() + 123), utcCal),
         rs -> {
           Time expectedTime =
               new Time(

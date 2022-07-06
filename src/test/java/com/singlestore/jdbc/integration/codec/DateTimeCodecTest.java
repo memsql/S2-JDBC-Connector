@@ -346,23 +346,50 @@ public class DateTimeCodecTest extends CommonCodecTest {
     getDate(getPrepare(sharedConnBinary));
   }
 
-  private void testDate(ResultSet rs, long dbDateTime, int index) throws SQLException {
-    Calendar cal = Calendar.getInstance();
-    cal.setTimeInMillis(dbDateTime);
+  /**
+   * This function is to compare Expected Date and Actual Date which are respectively in system's
+   * time zone and UTC time zone. It should assert equal both dates regardless of the system's time
+   * zone.
+   *
+   * @param rs
+   * @param expectedTime
+   * @param index
+   * @throws SQLException
+   */
+  private void testDate(ResultSet rs, long expectedTime, int index) throws SQLException {
+    long offset = TimeZone.getDefault().getOffset(expectedTime);
+    long time =
+        expectedTime % (1000 * 60 * 60 * 24); // milliseconds value of the 'Time' of expectedTime
+    long ms_of_24_hrs = 24 * 60 * 60 * 1000; // milliseconds value of 24hrs
 
-    long offset = TimeZone.getDefault().getOffset(cal.getTime().getTime());
-    float offsetDuration =
-        (float) ((offset / (1000 * 60 * 60)) % 24) + (float) ((offset / (1000 * 60)) % 60) / 60;
+    /*
+     * While retrieving 'Date' type value from S2 database, it is getting converted into a Date of system's time zone which may result in either
+     * previous Date or next Date or same Date as compare to the Date returned from database. This all depends on the time zone difference between database
+     * stored Date's time zone and system's time zone.
+     *
+     * a. If system's offset is in negative and 'Time' value is less than offset value then converted date will be of previous day.
+     *    For e.g. date stored in database is as 'x 01:00:00' in UTC format. System offset is -2 so returned date will be converted as 'x-1 23:00:00'.
+     *    Hence this returned date needs to be compared against previous date i.e. 'x-1'
+     *
+     * b. If system's offset is in positive and 'Time' value + offset value is greater than 24 hrs then converted date will be of next day.
+     *    For e.g. date stored in database is as 'x 22:00:00' in UTC format. System offset is +4 so returned date will be converted as 'x+1 02:00:00'.
+     *    Hence this returned date needs to be compared against next date i.e. 'x+1'
+     *
+     * c. In all other case, expected and actual date will be of same day.
+     *
+     */
 
-    float timeInHrsMins = cal.get(Calendar.HOUR_OF_DAY) + (float) cal.get(Calendar.MINUTE) / 100;
-
-    if (timeInHrsMins + Math.abs(offsetDuration) > 24) {
+    if (offset < 0 && time < Math.abs(offset)) {
       assertEquals(
-          new Date(dbDateTime - Math.abs(offset)).toString(),
+          new Date(expectedTime - Math.abs(offset)).toString(),
+          rs.getDate(index, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).toString());
+    } else if (offset > 0 && (time + offset) > ms_of_24_hrs) {
+      assertEquals(
+          new Date(expectedTime + Math.abs(offset)).toString(),
           rs.getDate(index, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).toString());
     } else {
       assertEquals(
-          new Date(dbDateTime).toString(),
+          new Date(expectedTime).toString(),
           rs.getDate(index, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).toString());
     }
   }
@@ -371,7 +398,8 @@ public class DateTimeCodecTest extends CommonCodecTest {
     testDate(
         rs,
         1263261312000l,
-        1); // Passing the millisecond time of the Date which is stored in the database.
+        1); // Passing the millisecond time of the UTC Date (2010-01-12 01:55:12) which is stored in
+            // the database at index 1.
     assertFalse(rs.wasNull());
 
     assertEquals(
@@ -380,7 +408,11 @@ public class DateTimeCodecTest extends CommonCodecTest {
         rs.getDate(1).getTime());
     assertFalse(rs.wasNull());
 
-    testDate(rs, -30609785100000l, 2);
+    testDate(
+        rs,
+        -30609785100000l,
+        2); // Passing the millisecond time of the UTC Date (1000-01-01 01:55:13.2) which is stored
+            // in the database at index 2.
     assertFalse(rs.wasNull());
 
     assertEquals(
