@@ -379,13 +379,9 @@ public class DateTimeCodecTest extends CommonCodecTest {
      *
      */
 
-    if (offset < 0 && time < Math.abs(offset)) {
+    if ((offset < 0 && time < Math.abs(offset)) || (offset > 0 && (time + offset) > ms_of_24_hrs)) {
       assertEquals(
-          new Date(expectedTime - Math.abs(offset)).toString(),
-          rs.getDate(index, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).toString());
-    } else if (offset > 0 && (time + offset) > ms_of_24_hrs) {
-      assertEquals(
-          new Date(expectedTime + Math.abs(offset)).toString(),
+          new Date(expectedTime + offset).toString(),
           rs.getDate(index, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).toString());
     } else {
       assertEquals(
@@ -399,7 +395,7 @@ public class DateTimeCodecTest extends CommonCodecTest {
         rs,
         1263261312000l,
         1); // Passing the millisecond time of the UTC Date (2010-01-12 01:55:12) which is stored in
-            // the database at index 1.
+    // the database at index 1.
     assertFalse(rs.wasNull());
 
     assertEquals(
@@ -412,7 +408,7 @@ public class DateTimeCodecTest extends CommonCodecTest {
         rs,
         -30609785100000l,
         2); // Passing the millisecond time of the UTC Date (1000-01-01 01:55:13.2) which is stored
-            // in the database at index 2.
+    // in the database at index 2.
     assertFalse(rs.wasNull());
 
     assertEquals(
