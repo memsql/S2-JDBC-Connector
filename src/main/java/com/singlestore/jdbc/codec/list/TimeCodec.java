@@ -148,6 +148,21 @@ public class TimeCodec implements Codec<Time> {
         return t;
       case TIME:
         // specific case for TIME, to handle value not in 00:00:00-23:59:59
+        int offset = cal.getTimeZone().getOffset(0);
+
+        if (buf.pos() >= buf.buf().length - 1) {
+          // If time is coming as '00:00:00' then corresponding byte value is null. Hence need to
+          // pass default Time value in this case.
+          dayOfMonth = 0;
+          long timeInMillis =
+              ((24 * dayOfMonth + hour) * 3_600_000
+                      + minutes * 60_000
+                      + seconds * 1_000
+                      + microseconds / 1_000)
+                  - offset;
+          return new Time(timeInMillis);
+        }
+
         boolean negate = buf.readByte() == 1;
         dayOfMonth = buf.readUnsignedInt();
         hour = buf.readByte();
@@ -156,7 +171,6 @@ public class TimeCodec implements Codec<Time> {
         if (length > 8) {
           microseconds = buf.readUnsignedInt();
         }
-        int offset = cal.getTimeZone().getOffset(0);
         long timeInMillis =
             ((24 * dayOfMonth + hour) * 3_600_000
                         + minutes * 60_000
