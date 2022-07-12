@@ -153,14 +153,7 @@ public class TimeCodec implements Codec<Time> {
         if (buf.pos() >= buf.buf().length - 1) {
           // If time is coming as '00:00:00' then corresponding byte value is null. Hence need to
           // pass default Time value in this case.
-          dayOfMonth = 0;
-          long timeInMillis =
-              ((24 * dayOfMonth + hour) * 3_600_000
-                      + minutes * 60_000
-                      + seconds * 1_000
-                      + microseconds / 1_000)
-                  - offset;
-          return new Time(timeInMillis);
+          return new Time(-offset);
         }
 
         boolean negate = buf.readByte() == 1;
