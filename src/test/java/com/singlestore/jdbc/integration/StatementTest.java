@@ -416,7 +416,6 @@ public class StatementTest extends Common {
   }
 
   // TODO: PLAT-5876
-  @Disabled
   @Test
   @Timeout(20)
   public void queryTimeout() throws Exception {
@@ -425,16 +424,18 @@ public class StatementTest extends Common {
     assertThrowsContains(
         SQLException.class, () -> stmt.setQueryTimeout(-1), "Query timeout cannot be negative");
 
-    assertThrowsContains(
-        SQLTimeoutException.class,
-        () -> {
-          stmt.setQueryTimeout(1);
-          assertEquals(1, stmt.getQueryTimeout());
-          stmt.execute(
-              "select * from information_schema.columns as c1,  information_schema.tables, information_schema"
-                  + ".tables as t2");
-        },
-        "Query execution was interrupted (max_statement_time exceeded)");
+    SQLNonTransientConnectionException exception =
+        assertThrows(
+            SQLNonTransientConnectionException.class,
+            () -> {
+              stmt.setQueryTimeout(1);
+              assertEquals(1, stmt.getQueryTimeout());
+              stmt.execute(
+                  "select * from information_schema.columns as c1,  information_schema.tables, information_schema"
+                      + ".tables as t2");
+            });
+
+    assertTrue(exception.getMessage().endsWith("Socket error"));
   }
 
   @Test
