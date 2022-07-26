@@ -68,53 +68,54 @@ public class ClientImpl implements Client, AutoCloseable {
   private int socketTimeout;
   private int waitTimeout;
 
-  final TimerTask timerTask =
-      new TimerTask() {
-        @Override
-        public void run() {
-          Thread cancelThread =
-              new Thread() {
-                @Override
-                public void run() {
-                  boolean lockStatus = lock.tryLock();
+  private TimerTask getTimerTask() {
+    return new TimerTask() {
+      @Override
+      public void run() {
+        Thread cancelThread =
+            new Thread() {
+              @Override
+              public void run() {
+                boolean lockStatus = lock.tryLock();
 
-                  if (!closed) {
-                    closed = true;
+                if (!closed) {
+                  closed = true;
 
-                    if (!lockStatus) {
-                      // lock not available : query is running
-                      // force end by executing an KILL connection
-                      try (ClientImpl cli =
-                          new ClientImpl(conf, hostAddress, new ReentrantLock(), true)) {
-                        cli.execute(new QueryPacket("KILL " + context.getThreadId()));
-                      } catch (SQLException e) {
-                        // eat
-                      }
-                    } else {
-                      try {
-                        QuitPacket.INSTANCE.encode(writer, context);
-                      } catch (IOException e) {
-                        // eat
-                      }
+                  if (!lockStatus) {
+                    // lock not available : query is running
+                    // force end by executing an KILL connection
+                    try (ClientImpl cli =
+                        new ClientImpl(conf, hostAddress, new ReentrantLock(), true)) {
+                      cli.execute(new QueryPacket("KILL " + context.getThreadId()));
+                    } catch (SQLException e) {
+                      // eat
                     }
-                    if (streamStmt != null) {
-                      try {
-                        streamStmt.abort();
-                      } catch (SQLException e) {
-                        // eat
-                      }
+                  } else {
+                    try {
+                      QuitPacket.INSTANCE.encode(writer, context);
+                    } catch (IOException e) {
+                      // eat
                     }
-                    closeSocket();
                   }
-
-                  if (lockStatus) {
-                    lock.unlock();
+                  if (streamStmt != null) {
+                    try {
+                      streamStmt.abort();
+                    } catch (SQLException e) {
+                      // eat
+                    }
                   }
+                  closeSocket();
                 }
-              };
-          cancelThread.start();
-        }
-      };
+
+                if (lockStatus) {
+                  lock.unlock();
+                }
+              }
+            };
+        cancelThread.start();
+      }
+    };
+  }
 
   public ClientImpl(
       Configuration conf, HostAddress hostAddress, ReentrantLock lock, boolean skipPostCommands)
@@ -488,14 +489,31 @@ public class ClientImpl implements Client, AutoCloseable {
 
     if (stmt != null && stmt.getQueryTimeout() > 0) {
       Timer cancelTimer = new Timer();
-      cancelTimer.schedule(timerTask, stmt.getQueryTimeout());
-      sendQuery(message);
-      cancelTimer.cancel();
+      try {
+        cancelTimer.schedule(getTimerTask(), stmt.getQueryTimeout());
+        sendQuery(message);
+        return readResponse(
+            stmt,
+            message,
+            fetchSize,
+            maxRows,
+            resultSetConcurrency,
+            resultSetType,
+            closeOnCompletion);
+      } finally {
+        cancelTimer.cancel();
+      }
     } else {
       sendQuery(message);
+      return readResponse(
+          stmt,
+          message,
+          fetchSize,
+          maxRows,
+          resultSetConcurrency,
+          resultSetType,
+          closeOnCompletion);
     }
-    return readResponse(
-        stmt, message, fetchSize, maxRows, resultSetConcurrency, resultSetType, closeOnCompletion);
   }
 
   public List<Completion> readResponse(

@@ -165,6 +165,13 @@ public class Common {
   public void afterEach1() throws SQLException {
     sharedConn.isValid(2000);
     sharedConnBinary.isValid(2000);
+    if (sharedConn.isClosed()) {
+      sharedConn = (Connection) DriverManager.getConnection(mDefUrl);
+    }
+    if (sharedConnBinary.isClosed()) {
+      String binUrl = mDefUrl + (mDefUrl.indexOf("?") > 0 ? "&" : "?") + "useServerPrepStmts=true";
+      sharedConnBinary = (Connection) DriverManager.getConnection(binUrl);
+    }
   }
 
   public static int getMaxAllowedPacket(Connection con) throws SQLException {
