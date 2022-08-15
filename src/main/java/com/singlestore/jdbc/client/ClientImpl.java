@@ -67,6 +67,7 @@ public class ClientImpl implements Client, AutoCloseable {
   private ClientMessage streamMsg = null;
   private int socketTimeout;
   private int waitTimeout;
+  protected boolean timeOut;
 
   private TimerTask getTimerTask() {
     return new TimerTask() {
@@ -80,6 +81,7 @@ public class ClientImpl implements Client, AutoCloseable {
 
                 if (!closed) {
                   closed = true;
+                  timeOut = true;
 
                   if (!lockStatus) {
                     // lock not available : query is running
@@ -373,9 +375,15 @@ public class ClientImpl implements Client, AutoCloseable {
                 "Packet too big for current server max_allowed_packet value", "HZ000", ioException);
       }
       destroySocket();
-      throw exceptionFactory
-          .withSql(message.description())
-          .create("Socket error", "08000", ioException);
+      if (timeOut) {
+        throw exceptionFactory
+            .withSql(message.description())
+            .create("Socket error: query timed out", "08000", ioException);
+      } else {
+        throw exceptionFactory
+            .withSql(message.description())
+            .create("Socket error", "08000", ioException);
+      }
     }
   }
 
@@ -678,9 +686,15 @@ public class ClientImpl implements Client, AutoCloseable {
       return completion;
     } catch (IOException ioException) {
       destroySocket();
-      throw exceptionFactory
-          .withSql(message.description())
-          .create("Socket error", "08000", ioException);
+      if (timeOut) {
+        throw exceptionFactory
+            .withSql(message.description())
+            .create("Socket error: query timed out", "08000", ioException);
+      } else {
+        throw exceptionFactory
+            .withSql(message.description())
+            .create("Socket error", "08000", ioException);
+      }
     }
   }
 
