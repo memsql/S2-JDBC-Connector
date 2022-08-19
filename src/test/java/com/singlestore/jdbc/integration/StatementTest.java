@@ -311,7 +311,7 @@ public class StatementTest extends Common {
 
   @Test
   public void maxRows() throws SQLException {
-    Statement stmt = sharedConn.createStatement();
+    Statement stmt = createCon().createStatement();
     assertEquals(0, stmt.getMaxRows());
     try {
       stmt.setMaxRows(-1);
@@ -344,7 +344,7 @@ public class StatementTest extends Common {
 
   @Test
   public void largeMaxRows() throws SQLException {
-    Statement stmt = sharedConn.createStatement();
+    Statement stmt = createCon().createStatement();
     assertEquals(0L, stmt.getLargeMaxRows());
     try {
       stmt.setLargeMaxRows(-1);
@@ -429,7 +429,7 @@ public class StatementTest extends Common {
                   "select * from information_schema.columns as c1,  information_schema.tables, information_schema"
                       + ".tables as t2");
             });
-    assertTrue(exception.getMessage().endsWith("Socket error: query timed out"));
+    assertTrue(exception.getMessage().endsWith("query timed out"));
   }
 
   public void executeTimeOutQeuryWithPrepareStatement(PreparedStatement stmt) {
@@ -441,7 +441,12 @@ public class StatementTest extends Common {
               assertEquals(1, stmt.getQueryTimeout());
               stmt.executeQuery();
             });
-    assertTrue(exception.getMessage().endsWith("Socket error: query timed out"));
+
+    if (exception != null && !exception.getMessage().endsWith("query timed out")) {
+      exception.printStackTrace();
+    }
+
+    assertTrue(exception.getMessage().endsWith("query timed out"));
   }
 
   // TODO: PLAT-5876
@@ -449,7 +454,7 @@ public class StatementTest extends Common {
   public void queryTimeout() throws Exception {
 
     // Use-case-1 Test Query Timeout implementation with 'Statement' for 'ClientImpl'.
-    Statement stmt = sharedConn.createStatement();
+    Statement stmt = createCon().createStatement();
     assertThrowsContains(
         SQLException.class, () -> stmt.setQueryTimeout(-1), "Query timeout cannot be negative");
 
@@ -530,15 +535,19 @@ public class StatementTest extends Common {
 
   @Test
   public void smallQueryTimeout() throws Exception {
-    Statement stmt = sharedConn.createStatement();
-    stmt.setQueryTimeout(1);
-    stmt.execute("SELECT 1");
+    try (Connection con = createCon()) {
+      Statement stmt = con.createStatement();
+      stmt.setQueryTimeout(0);
+      stmt.execute("SELECT 1");
 
-    stmt.setMaxRows(1);
-    stmt.execute("SELECT 1");
+      stmt.setMaxRows(1);
+      stmt.execute("SELECT 1");
 
-    stmt.setQueryTimeout(0);
-    stmt.execute("SELECT 1");
+      stmt.setQueryTimeout(1);
+      stmt.execute("SELECT 1");
+    } catch (SQLNonTransientConnectionException exception) {
+      assertTrue(exception.getMessage().endsWith("query timed out"));
+    }
   }
 
   @Test

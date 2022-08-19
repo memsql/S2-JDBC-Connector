@@ -700,7 +700,11 @@ public class ClientImpl implements Client, AutoCloseable {
 
   protected void checkNotClosed() throws SQLException {
     if (closed) {
-      throw exceptionFactory.create("Connection is closed", "08000", 1220);
+      if (timeOut) {
+        throw exceptionFactory.create("Connection is closed due to query timed out", "08000", 1220);
+      } else {
+        throw exceptionFactory.create("Connection is closed", "08000", 1220);
+      }
     }
   }
 
