@@ -860,14 +860,20 @@ public class PreparedStatementTest extends Common {
       }
       assertEquals(10, i);
 
-      prep.setQueryTimeout(2);
-      rs = prep.executeQuery();
-      i = 0;
-      while (rs.next()) {
-        i++;
-        assertEquals(i, rs.getInt(1));
+      try (Connection conn = createCon(options)) {
+        PreparedStatement prep2 = conn.prepareStatement("SELECT * FROM largeMaxRows order by id");
+        prep2.setQueryTimeout(2);
+        prep2.setLargeMaxRows(10);
+        rs = prep2.executeQuery();
+        i = 0;
+        while (rs.next()) {
+          i++;
+          assertEquals(i, rs.getInt(1));
+        }
+        assertEquals(10, i);
+      } catch (SQLNonTransientConnectionException ex) {
+        assertTrue(ex.getMessage().endsWith("query timed out"));
       }
-      assertEquals(10, i);
 
       try (Connection conn = createCon(options)) {
         PreparedStatement prep1 = conn.prepareStatement("SELECT * FROM largeMaxRows order by id");
@@ -880,6 +886,8 @@ public class PreparedStatementTest extends Common {
           assertEquals(i, rs.getInt(1));
         }
         assertEquals(50, i);
+      } catch (SQLNonTransientConnectionException ex) {
+        assertTrue(ex.getMessage().endsWith("query timed out"));
       }
 
       prep.setQueryTimeout(0);

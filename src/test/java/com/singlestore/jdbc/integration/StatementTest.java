@@ -442,14 +442,9 @@ public class StatementTest extends Common {
               stmt.executeQuery();
             });
 
-    if (exception != null && !exception.getMessage().endsWith("query timed out")) {
-      exception.printStackTrace();
-    }
-
     assertTrue(exception.getMessage().endsWith("query timed out"));
   }
 
-  // TODO: PLAT-5876
   @Test
   public void queryTimeout() throws Exception {
 
