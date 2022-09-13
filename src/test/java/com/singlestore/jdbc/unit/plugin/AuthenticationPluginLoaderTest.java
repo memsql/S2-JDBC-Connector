@@ -12,7 +12,10 @@ import com.singlestore.jdbc.Configuration;
 import com.singlestore.jdbc.plugin.authentication.AuthenticationPlugin;
 import com.singlestore.jdbc.plugin.authentication.AuthenticationPluginLoader;
 import com.singlestore.jdbc.plugin.authentication.standard.NativePasswordPlugin;
+import java.io.IOException;
+import java.security.AccessControlException;
 import java.sql.SQLException;
+import org.freedesktop.secret.simple.SimpleCollection;
 import org.junit.jupiter.api.Test;
 
 public class AuthenticationPluginLoaderTest extends Common {
@@ -27,5 +30,20 @@ public class AuthenticationPluginLoaderTest extends Common {
         SQLException.class,
         () -> AuthenticationPluginLoader.get("UNKNOWN", conf),
         "Client does not support authentication protocol requested by server");
+  }
+
+  @Test
+  public void createPasswordInDefaultCollection()
+      throws IOException, AccessControlException, IllegalArgumentException {
+    try (SimpleCollection collection = new SimpleCollection()) {
+      String item = collection.createItem("My Item", "secret");
+
+      char[] actual = collection.getSecret(item);
+      assertEquals("secret", new String(actual));
+      assertEquals("My Item", collection.getLabel(item));
+
+      collection.deleteItem(item);
+    } // clears automatically all session secrets in memory, but does not close the D-Bus
+    // connection.
   }
 }
