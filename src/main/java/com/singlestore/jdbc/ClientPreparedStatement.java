@@ -15,14 +15,21 @@ import com.singlestore.jdbc.util.ClientParser;
 import com.singlestore.jdbc.util.ParameterList;
 import com.singlestore.jdbc.util.constants.Capabilities;
 import com.singlestore.jdbc.util.constants.ServerStatus;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
 
 public class ClientPreparedStatement extends BasePreparedStatement {
   private final ClientParser parser;
-
+  
+  private static final Pattern INSERT_STATEMENT_PATTERN =
+	      Pattern.compile(
+	          "^(\\s*\\/\\*([^\\*]|\\*[^\\/])*\\*\\/)*\\s*(INSERT)",
+	          Pattern.CASE_INSENSITIVE);
+    
   public ClientPreparedStatement(
       String sql,
       Connection con,
@@ -85,12 +92,86 @@ public class ClientPreparedStatement extends BasePreparedStatement {
     long serverCapabilities = con.getContext().getServerCapabilities();
     if (!con.getContext().getConf().allowLocalInfile()
         || (serverCapabilities & Capabilities.LOCAL_FILES) == 0) {
-      return executeBatchPipeline();
+    	
+    	// If 'rewriteBatchedStatements' is true and batch is for 'Insert' operation then perform 'RewriteBatchPipeline'.
+    	if(con.getContext().getConf().rewriteBatchedStatements() &&  
+    			INSERT_STATEMENT_PATTERN.matcher(sql).find()) {
+    	      return executeRewriteBatchPipeline();    		
+    	} else {
+    	      return executeBatchPipeline();
+    	}
     } else {
       return executeBatchStd();
     }
   }
 
+  /**
+   * Send 1 packet for all insert queries. 
+   *
+   * @throws SQLException if IOException / Command error
+   */
+  private List<Completion> executeRewriteBatchPipeline() throws SQLException {
+    try {
+      results =
+          con.getClient()
+              .executePipeline(
+            	  getClientMessageForRewriteBatchStatement(),
+                  this,
+                  0,
+                  maxRows,
+                  ResultSet.CONCUR_READ_ONLY,
+                  ResultSet.TYPE_FORWARD_ONLY,
+                  closeOnCompletion);
+      return results;
+    } catch (SQLException bue) {
+      results = null;
+      throw bue;
+    }
+  }
+  
+  private ClientMessage[] getClientMessageForRewriteBatchStatement() {
+	  List<byte[]> partList = new ArrayList<>();
+	  ParameterList parameterList = new ParameterList();
+	  int index = 0;
+	  
+	  byte[] startInsertSectionByte = ", (".getBytes();
+		
+	  // Iterate over the batch, re-create the Client Parser with modified parts, grouped all Parameters values.
+	  for (int batchCount = 0; batchCount < batchParameters.size(); batchCount++) {
+		  if(batchCount == 0) {
+			  partList.add(parser.getQueryParts().get(0));
+		  } 
+		  
+		  for (int paramCount = 0; paramCount < parser.getParamCount(); paramCount++) {
+			  /*
+			   * Insert Query with at least two entries ->  Insert into test (t1, t2) values (1, 1), (2, 2)
+			   * 
+			   * while re-writing the Insert Batch query, two records need to be separated out by ') , ('. 
+			   * Below logic is to add these separators. 
+			   * 
+			   */
+			  if (paramCount == parser.getParamCount() -1 && batchCount < batchParameters.size() - 1) {				  
+				  byte[] a = parser.getQueryParts().get(paramCount + 1);
+				  byte[] c = new byte[parser.getQueryParts().get(paramCount + 1).length + startInsertSectionByte.length];
+				  
+				  System.arraycopy(a, 0, c, 0, a.length);
+				  System.arraycopy(startInsertSectionByte, 0, c, a.length, startInsertSectionByte.length);
+				  
+				  partList.add(c);
+			  } else {
+				  partList.add(parser.getQueryParts().get(paramCount + 1));
+			  }
+			  
+			  parameterList.set(index, batchParameters.get(batchCount).get(paramCount));
+			  index = index +1;
+		  }
+	  }
+	  
+	  int paramCount = parser.getParamCount()*batchParameters.size();		  
+	  ClientParser parser = ClientParser.parameterPartsForRewriteBatchStatement(sql, partList, paramCount);	  
+	  return new ClientMessage[] {new QueryWithParametersPacket(preSqlCmd(), parser, parameterList)};
+  }
+  
   /**
    * Send n * COM_QUERY + n * read answer
    *
