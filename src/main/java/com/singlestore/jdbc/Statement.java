@@ -28,13 +28,6 @@ import java.util.regex.Pattern;
 public class Statement implements java.sql.Statement {
   private static final Logger logger = Loggers.getLogger(Statement.class);
 
-  private static final Pattern INSERT_STATEMENT_PATTERN =
-	      Pattern.compile(
-	          "^(\\s*\\/\\*([^\\*]|\\*[^\\/])*\\*\\/)*\\s*(INSERT)",
-	          Pattern.CASE_INSENSITIVE);
-  
-  private static final String PRECEDS = "values";
-
   protected final int resultSetType;
   protected final int resultSetConcurrency;
   protected final ReentrantLock lock;
@@ -1439,46 +1432,12 @@ public class Statement implements java.sql.Statement {
       lock.unlock();
     }
   }
-
-  private QueryPacket[] getQueryPacketForRewriteBatchStatement() {
-	  String insertQuery = null;
-	  List<QueryPacket> packetList = new ArrayList<QueryPacket>();
-	  
-	  /* When doing Batch operation on 'Statement' then it can be a combination of 'Insert', 'Update' operations etc. As 'rewriteBatchStatement' is applicable only for 'Insert' 
-	   * statement so creating a Single QueryPacket for all 'Insert' statements whereas creating an individual Query Packet for each other type of operations. 
-	  */
-	  for (int i = 0; i < batchQueries.size(); i++) {
-		  if (INSERT_STATEMENT_PATTERN.matcher(batchQueries.get(i)).find()) {
-			  if(insertQuery == null) {
-				  insertQuery = batchQueries.get(i);
-			  } else {
-				  insertQuery += "," + batchQueries.get(i).substring(batchQueries.get(i).toLowerCase().indexOf(PRECEDS) + PRECEDS.length(), 
-						  batchQueries.get(i).length());
-			  }
-		  } else {
-			  String sql = batchQueries.get(i);
-			  packetList.add(new QueryPacket(sql));
-		  }
-	  }
-
-	  if(null != insertQuery) {
-		  packetList.add(new QueryPacket(insertQuery));
-	  }
-
-	  QueryPacket[] packets = new QueryPacket[packetList.size()];
-	  return packetList.toArray(packets);
-  }
   
   private List<Completion> executeInternalBatchPipeline() throws SQLException {
-	  QueryPacket[] packets =  null;
-	  if(con.getContext().getConf().rewriteBatchedStatements()) {
-		  packets = getQueryPacketForRewriteBatchStatement();
-	  } else {
-		  packets = new QueryPacket[batchQueries.size()];
-		  for (int i = 0; i < batchQueries.size(); i++) {
-			  String sql = batchQueries.get(i);
-			  packets[i] = new QueryPacket(sql);
-		  }
+	  QueryPacket[] packets = new QueryPacket[batchQueries.size()];
+	  for (int i = 0; i < batchQueries.size(); i++) {
+		  String sql = batchQueries.get(i);
+		  packets[i] = new QueryPacket(sql);
 	  }
 
 	  return con.getClient()

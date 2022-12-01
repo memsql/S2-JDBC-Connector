@@ -7,6 +7,7 @@ package com.singlestore.jdbc.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.singlestore.jdbc.ClientPreparedStatement;
 import com.singlestore.jdbc.Common;
 import com.singlestore.jdbc.Connection;
 import com.singlestore.jdbc.Statement;
@@ -145,17 +146,28 @@ public class BatchTest extends Common {
       prep.setInt(2, 2);
       prep.addBatch();
       prep.executeLargeBatch();
-      //assertEquals(2, res.length);
-      //assertEquals(1, res[0]);
-      //assertEquals(1, res[1]);
     }
+    
+    try (PreparedStatement prep =
+    		con.prepareStatement("UPDATE BatchTest set t2=? where t1=?")) {
+    	prep.setString(1, "11");
+    	prep.setInt(2, 1);
+    	
+    	prep.addBatch();
+
+    	prep.setInt(1, 22);
+    	prep.setInt(2, 2);
+    	prep.addBatch();
+    	prep.executeLargeBatch();
+    }
+    
     ResultSet rs = stmt.executeQuery("SELECT * FROM BatchTest ORDER BY t1, t2");
     assertTrue(rs.next());
     assertEquals(1, rs.getInt(1));
-    assertEquals("1", rs.getString(2));
+    assertEquals("11", rs.getString(2));
     assertTrue(rs.next());
     assertEquals(2, rs.getInt(1));
-    assertEquals("2", rs.getString(2));
+    assertEquals("22", rs.getString(2));
     assertFalse(rs.next());
     con.commit();
   }
@@ -194,75 +206,37 @@ public class BatchTest extends Common {
     }
   }
   
-  /**
-   * This test case is to test the functionality of Statement's executeBatch method with 'rewriteBatchedStatements'
-   * @throws SQLException
-   */
-  @Test
-  public void testStmtExecuteBatch() throws SQLException {
-	  for (int i = 0; i < 2; i++) {
-		  boolean rewriteBatchedStatements = (i & 1) > 0;
-		  
-		  try (Connection con = createCon(String.format(
-	              "&rewriteBatchedStatements=%s",
-	              rewriteBatchedStatements))) {
-			  
-			  Statement stmt = con.createStatement();
-			  stmt.execute("TRUNCATE BatchTest");
-			  String SQL = "INSERT INTO BatchTest(t1, t2) " +
-					  "VALUES(1,'1')";
-			  stmt.addBatch(SQL);
-			  SQL = "INSERT INTO BatchTest(t1, t2) " +
-					  "VALUES(2,'2')";
-			  stmt.addBatch(SQL);
-			  stmt.executeBatch();
-
-			  ResultSet rs = stmt.executeQuery("SELECT * FROM BatchTest ORDER BY t1, t2");
-			  assertTrue(rs.next());
-			  assertEquals(1, rs.getInt(1));
-			  assertEquals("1", rs.getString(2));
-			  assertTrue(rs.next());
-			  assertEquals(2, rs.getInt(1));
-			  assertEquals("2", rs.getString(2));
-			  assertFalse(rs.next());
-			  con.commit();  
-		  }
-	  }
-  }
   
-  /**
-   * This test case is to test the functionality of Statement's executeLargeBatch method with 'rewriteBatchedStatements'.
-   * @throws SQLException
-   */
   @Test
-  public void testStmtExecuteLargeBatch() throws SQLException {
-	  for (int i = 0; i < 2; i++) {
-		  boolean rewriteBatchedStatements = (i & 1) > 0;
-		  
-		  try (Connection con = createCon(String.format(
-	              "&rewriteBatchedStatements=%s",
-	              rewriteBatchedStatements))) {
-			  
-			  Statement stmt = con.createStatement();
-			  stmt.execute("TRUNCATE BatchTest");
-			  String SQL = "INSERT INTO BatchTest(t1, t2) " +
-					  "VALUES(1,'1')";
-			  stmt.addBatch(SQL);
-			  SQL = "INSERT INTO BatchTest(t1, t2) " +
-					  "VALUES(2,'2')";
-			  stmt.addBatch(SQL);
-			  stmt.executeLargeBatch();
+  public void testInsertRegEx() {
+	  String sql = "INSERT INTO BatchTest(t1, t2) VALUES(2,'2')";
+	  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
 
-			  ResultSet rs = stmt.executeQuery("SELECT * FROM BatchTest ORDER BY t1, t2");
-			  assertTrue(rs.next());
-			  assertEquals(1, rs.getInt(1));
-			  assertEquals("1", rs.getString(2));
-			  assertTrue(rs.next());
-			  assertEquals(2, rs.getInt(1));
-			  assertEquals("2", rs.getString(2));
-			  assertFalse(rs.next());
-			  con.commit();  
-		  }
-	  }
+	  sql = "insert INTO BatchTest(t1, t2) VALUES (?,?)";
+	  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+	  
+	  sql = "Insert INTO BatchTest(t1, t2) /*Comment Section*/ VALUES (?,?)";
+	  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+	  
+	  sql = "/*Comment Section */ inSERT INTO BatchTest(t1, t2) VALUES (?,?)";
+	  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+	  
+	  sql = "inSERT INTO BatchTest(t1, t2) VALUES (?,?) /*Comment Section */ ";
+	  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+
+	  sql = "Select * from BatchTest";
+	  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+	  
+	  sql = "Select * from Insert";
+	  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+
+	  sql = "delete from BatchTest where t1=1";
+	  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+
+	  sql = "update BatchTest set t2=21 where t2=1";
+	  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+	  
+	  sql = "update Insert set insert='insert' where insert='1'";
+	  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
   }
 }

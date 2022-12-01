@@ -25,7 +25,9 @@ import java.util.regex.Pattern;
 public class ClientPreparedStatement extends BasePreparedStatement {
   private final ClientParser parser;
   
-  private static final Pattern INSERT_STATEMENT_PATTERN =
+  
+  // This regex is referred from ServerPreparedStatement. It is used to determine whether input SQL string is of 'Insert' statement or not.
+  public static final Pattern INSERT_STATEMENT_PATTERN =
 	      Pattern.compile(
 	          "^(\\s*\\/\\*([^\\*]|\\*[^\\/])*\\*\\/)*\\s*(INSERT)",
 	          Pattern.CASE_INSENSITIVE);
