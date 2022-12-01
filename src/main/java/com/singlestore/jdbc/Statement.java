@@ -23,7 +23,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.regex.Pattern;
 
 public class Statement implements java.sql.Statement {
   private static final Logger logger = Loggers.getLogger(Statement.class);
