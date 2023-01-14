@@ -208,35 +208,181 @@ public class BatchTest extends Common {
   
   
   @Test
-  public void testInsertRegEx() {
-	  String sql = "INSERT INTO BatchTest(t1, t2) VALUES(2,'2')";
-	  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+  public void testInsertRegEx() throws SQLException {
+	  try (Connection con = createCon("&useServerPrepStmts=false&rewriteBatchedStatements=true")) {
+		  Statement stmt = con.createStatement();
 
-	  sql = "insert INTO BatchTest(t1, t2) VALUES (?,?)";
-	  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
-	  
-	  sql = "Insert INTO BatchTest(t1, t2) /*Comment Section*/ VALUES (?,?)";
-	  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
-	  
-	  sql = "/*Comment Section */ inSERT INTO BatchTest(t1, t2) VALUES (?,?)";
-	  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
-	  
-	  sql = "inSERT INTO BatchTest(t1, t2) VALUES (?,?) /*Comment Section */ ";
-	  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+		  // Testcase-1 -  Having 'INSERT' in the query string with uppercase where 'INSERT' keyword is used for 'INSERT' action
 
-	  sql = "Select * from BatchTest";
-	  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
-	  
-	  sql = "Select * from Insert";
-	  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+		  stmt.execute("DROP TABLE IF EXISTS BatchTest");
+		  stmt.execute(
+				  "CREATE TABLE BatchTest (t1 int not null primary key auto_increment, t2 LONGTEXT)");
 
-	  sql = "delete from BatchTest where t1=1";
-	  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+		  String sql = "INSERT INTO BatchTest(t1, t2) VALUES(1,'testcase-1')";
+		  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
 
-	  sql = "update BatchTest set t2=21 where t2=1";
-	  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
-	  
-	  sql = "update Insert set insert='insert' where insert='1'";
-	  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+		  stmt.execute(sql);
+
+		  ResultSet rs = stmt.executeQuery("SELECT * FROM BatchTest ORDER BY t1, t2");
+		  assertTrue(rs.next());
+		  assertEquals(1, rs.getInt(1));
+		  assertEquals("testcase-1", rs.getString(2));
+
+
+		  // Testcase-2 - Having 'INSERT' in the query string with lowercase where 'INSERT' keyword is used for 'INSERT' action
+		  sql = "insert INTO BatchTest(t1, t2) VALUES (?,?)";
+		  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+
+		  try (PreparedStatement prep = con.prepareStatement(sql)) {
+			  prep.setInt(1, 2);
+			  prep.setString(2, "testcase-2");
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+		  }
+
+		  rs = stmt.executeQuery("SELECT * FROM BatchTest where t1=2");
+		  assertTrue(rs.next());
+		  assertEquals(2, rs.getInt(1));
+		  assertEquals("testcase-2", rs.getString(2));
+
+
+		  // Testcase-3 - Having 'INSERT' in the query string where 'INSERT' keyword is used for 'INSERT' action and query string is having comment into that
+		  sql = "Insert INTO BatchTest(t1, t2) /*Comment Section*/ VALUES (?,?)";
+		  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+
+		  try (PreparedStatement prep = con.prepareStatement(sql)) {
+			  prep.setInt(1, 3);
+			  prep.setString(2, "testcase-3");
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+		  }
+
+		  rs = stmt.executeQuery("SELECT * FROM BatchTest where t1=3");
+		  assertTrue(rs.next());
+		  assertEquals(3, rs.getInt(1));
+		  assertEquals("testcase-3", rs.getString(2));
+
+
+		  // Testcase-4 - Having 'INSERT' in the query string where 'INSERT' keyword is used for 'INSERT' action and query string is having comment into that
+		  sql = "/*Comment Section */ inSERT INTO BatchTest(t1, t2) VALUES (?,?)";
+		  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+
+		  try (PreparedStatement prep = con.prepareStatement(sql)) {
+			  prep.setInt(1, 4);
+			  prep.setString(2, "testcase-4");
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+		  }
+
+		  rs = stmt.executeQuery("SELECT * FROM BatchTest where t1=4");
+		  assertTrue(rs.next());
+		  assertEquals(4, rs.getInt(1));
+		  assertEquals("testcase-4", rs.getString(2));
+
+
+		  // Testcase-5 - Having 'INSERT' in the query string where 'INSERT' keyword is used for 'INSERT' action and query string is having comment into that
+		  sql = "inSERT INTO BatchTest(t1, t2) VALUES (?,?) /*Comment Section */ ";
+		  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+
+		  try (PreparedStatement prep = con.prepareStatement(sql)) {
+			  prep.setInt(1, 5);
+			  prep.setString(2, "testcase-5");
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+		  }
+
+		  rs = stmt.executeQuery("SELECT * FROM BatchTest where t1=5");
+		  assertTrue(rs.next());
+		  assertEquals(5, rs.getInt(1));
+		  assertEquals("testcase-5", rs.getString(2));
+
+
+		  // Testcase-6 - Not Having 'INSERT' keyword in the query string
+		  sql = "Select * from BatchTest where t1=5";
+		  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+		  rs = stmt.executeQuery(sql);
+		  assertTrue(rs.next());
+		  assertEquals(5, rs.getInt(1));
+		  assertEquals("testcase-5", rs.getString(2));
+
+
+		  // Testcase-7 - Table name and Column name can not be 'insert'. So testing a scenario where table name and column name are having 'insert' in their names and value of one 
+		  // of the column is 'insert'
+		  stmt.execute("DROP TABLE IF EXISTS InsertTest");
+		  stmt.execute(
+				  "CREATE TABLE InsertTest (t1 int not null primary key auto_increment, insertTest LONGTEXT)");
+
+		  sql = "insert INTO InsertTest(t1, insertTest) VALUES (?,?)";
+		  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+
+		  try (PreparedStatement prep = con.prepareStatement(sql)) {
+			  prep.setInt(1, 7);
+			  prep.setString(2, "insert");
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+		  }		  
+
+		  sql = "Select * from InsertTest";
+		  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+		  rs = stmt.executeQuery(sql);
+		  assertTrue(rs.next());
+		  assertEquals(7, rs.getInt(1));
+		  assertEquals("insert", rs.getString(2));
+
+		  // Testcase-8 - Update Query having 'insert' as a value in the 'where' clause
+		  sql = "update InsertTest set insertTest=? where insertTest=?";
+		  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+
+		  try (PreparedStatement prep =
+				  con.prepareStatement(sql)) {
+			  prep.setString(1, "testcase-8");
+			  prep.setString(2, "insert");
+
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+		  }
+
+		  sql = "Select * from InsertTest";
+		  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+		  rs = stmt.executeQuery(sql);
+		  assertTrue(rs.next());
+		  assertEquals(7, rs.getInt(1));
+		  assertEquals("testcase-8", rs.getString(2));
+
+		  stmt.execute("DROP TABLE IF EXISTS InsertTest");
+
+
+		  // Testcase-9 - update query without 'insert' keyword
+		  sql = "update BatchTest set t2=? where t1=1";
+		  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+
+		  try (PreparedStatement prep =
+				  con.prepareStatement(sql)) {
+			  prep.setString(1, "testcase-9");
+			  prep.setInt(2, 1);
+
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+		  }
+
+		  sql = "Select * from BatchTest where t1=1";
+		  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+		  rs = stmt.executeQuery(sql);
+		  assertTrue(rs.next());
+		  assertEquals(1, rs.getInt(1));
+		  assertEquals("testcase-9", rs.getString(2));
+
+
+		  //Testcase-10 -  Delete query without 'insert' keyword
+		  sql = "delete from BatchTest where t1=1";
+		  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+		  stmt.execute(sql);
+
+		  sql = "Select * from BatchTest where t1=1";
+		  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+		  rs = stmt.executeQuery(sql);
+		  assertFalse(rs.next());
+	  }
   }
+  
 }
