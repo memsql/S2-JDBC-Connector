@@ -310,14 +310,15 @@ public class BatchTest extends Common {
 		  // of the column is 'insert'
 		  stmt.execute("DROP TABLE IF EXISTS InsertTest");
 		  stmt.execute(
-				  "CREATE TABLE InsertTest (t1 int not null primary key auto_increment, insertTest LONGTEXT)");
+				  "CREATE TABLE InsertTest (t1 int not null primary key auto_increment, insertTest LONGTEXT, INSERTTEST1 LONGTEXT)");
 
-		  sql = "insert INTO InsertTest(t1, insertTest) VALUES (?,?)";
+		  sql = "insert INTO InsertTest(t1, insertTest, INSERTTEST1) VALUES (?,?, ?)";
 		  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
 
 		  try (PreparedStatement prep = con.prepareStatement(sql)) {
 			  prep.setInt(1, 7);
 			  prep.setString(2, "insert");
+			  prep.setString(3, "INSERT");
 			  prep.addBatch();
 			  prep.executeLargeBatch();
 		  }		  
@@ -328,15 +329,16 @@ public class BatchTest extends Common {
 		  assertTrue(rs.next());
 		  assertEquals(7, rs.getInt(1));
 		  assertEquals("insert", rs.getString(2));
+		  assertEquals("INSERT", rs.getString(3));
 
 		  // Testcase-8 - Update Query having 'insert' as a value in the 'where' clause
-		  sql = "update InsertTest set insertTest=? where insertTest=?";
+		  sql = "update InsertTest set insertTest=? where INSERTTEST1=?";
 		  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
 
 		  try (PreparedStatement prep =
 				  con.prepareStatement(sql)) {
 			  prep.setString(1, "testcase-8");
-			  prep.setString(2, "insert");
+			  prep.setString(2, "INSERT");
 
 			  prep.addBatch();
 			  prep.executeLargeBatch();
@@ -348,6 +350,7 @@ public class BatchTest extends Common {
 		  assertTrue(rs.next());
 		  assertEquals(7, rs.getInt(1));
 		  assertEquals("testcase-8", rs.getString(2));
+		  assertEquals("INSERT", rs.getString(3));
 
 		  stmt.execute("DROP TABLE IF EXISTS InsertTest");
 

@@ -95,10 +95,10 @@ public class ClientPreparedStatement extends BasePreparedStatement {
     if (!con.getContext().getConf().allowLocalInfile()
         || (serverCapabilities & Capabilities.LOCAL_FILES) == 0) {
     	
-    	// If 'rewriteBatchedStatements' is true and batch is for 'Insert' operation then perform 'RewriteBatchPipeline'.
+    	// If 'rewriteBatchedStatements' is true and batch is for 'Insert' operation then perform 'RewriteBatchedPipeline'.
     	if(con.getContext().getConf().rewriteBatchedStatements() &&  
     			INSERT_STATEMENT_PATTERN.matcher(sql).find()) {
-    	      return executeRewriteBatchPipeline();    		
+    	      return executeRewriteBatchedPipeline();    		
     	} else {
     	      return executeBatchPipeline();
     	}
@@ -112,12 +112,12 @@ public class ClientPreparedStatement extends BasePreparedStatement {
    *
    * @throws SQLException if IOException / Command error
    */
-  private List<Completion> executeRewriteBatchPipeline() throws SQLException {
+  private List<Completion> executeRewriteBatchedPipeline() throws SQLException {
     try {
       results =
           con.getClient()
               .executePipeline(
-            	  getClientMessageForRewriteBatchStatement(),
+            	  getClientMessageForRewriteBatchedStatement(),
                   this,
                   0,
                   maxRows,
@@ -131,7 +131,7 @@ public class ClientPreparedStatement extends BasePreparedStatement {
     }
   }
   
-  private ClientMessage[] getClientMessageForRewriteBatchStatement() {
+  private ClientMessage[] getClientMessageForRewriteBatchedStatement() {
 	  List<byte[]> partList = new ArrayList<>();
 	  ParameterList parameterList = new ParameterList();
 	  int index = 0;
@@ -170,7 +170,7 @@ public class ClientPreparedStatement extends BasePreparedStatement {
 	  }
 	  
 	  int paramCount = parser.getParamCount()*batchParameters.size();		  
-	  ClientParser parser = ClientParser.parameterPartsForRewriteBatchStatement(sql, partList, paramCount);	  
+	  ClientParser parser = ClientParser.parameterPartsForRewriteBatchedStatement(sql, partList, paramCount);	  
 	  return new ClientMessage[] {new QueryWithParametersPacket(preSqlCmd(), parser, parameterList)};
   }
   

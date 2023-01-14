@@ -26,13 +26,13 @@ public final class ClientParser implements PrepareResult {
 
  
   /**
-   * Create a new Client Parser Object required for the RewriteBatchStatement requirement. 
+   * Create a new Client Parser Object required for the RewriteBatchedStatement requirement. 
    * @param queryString
    * @param queryParts
    * @param paramCount
    * @return
  */
-  public static ClientParser parameterPartsForRewriteBatchStatement(String queryString, List<byte[]> queryParts, int paramCount) {
+  public static ClientParser parameterPartsForRewriteBatchedStatement(String queryString, List<byte[]> queryParts, int paramCount) {
 	  return new ClientParser(queryString, queryParts, paramCount);
   }
   
