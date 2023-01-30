@@ -18,12 +18,24 @@ public final class ClientParser implements PrepareResult {
   private final int paramCount;
   private static Map<String, ClientParser> cache = new LinkedHashMap<>(512);
 
-  private ClientParser(String sql, List<byte[]> queryParts) {
+  private ClientParser(String sql, List<byte[]> queryParts, int paramCount) {
     this.sql = sql;
     this.queryParts = queryParts;
-    this.paramCount = queryParts.size() - 1;
+    this.paramCount = paramCount;
   }
 
+ 
+  /**
+   * Create a new Client Parser Object required for the RewriteBatchedStatement requirement. 
+   * @param queryString
+   * @param queryParts
+   * @param paramCount
+   * @return
+ */
+  public static ClientParser parameterPartsForRewriteBatchedStatement(String queryString, List<byte[]> queryParts, int paramCount) {
+	  return new ClientParser(queryString, queryParts, paramCount);
+  }
+  
   /**
    * Separate query in a String list and set flag isQueryMultipleRewritable. The resulting string
    * list is separed by ? that are not in comments. isQueryMultipleRewritable flag is set if query
@@ -157,7 +169,7 @@ public final class ClientParser implements PrepareResult {
               .getBytes(StandardCharsets.UTF_8));
     }
 
-    ClientParser clientParser = new ClientParser(queryString, partList);
+    ClientParser clientParser = new ClientParser(queryString, partList, partList.size()-1);
     if (queryString.length() < 16384) cache.put(queryString, clientParser);
     return clientParser;
   }

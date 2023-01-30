@@ -1431,22 +1431,23 @@ public class Statement implements java.sql.Statement {
       lock.unlock();
     }
   }
-
+  
   private List<Completion> executeInternalBatchPipeline() throws SQLException {
-    QueryPacket[] packets = new QueryPacket[batchQueries.size()];
-    for (int i = 0; i < batchQueries.size(); i++) {
-      String sql = batchQueries.get(i);
-      packets[i] = new QueryPacket(sql);
-    }
-    return con.getClient()
-        .executePipeline(
-            packets,
-            this,
-            0,
-            0L,
-            ResultSet.CONCUR_READ_ONLY,
-            ResultSet.TYPE_FORWARD_ONLY,
-            closeOnCompletion);
+	  QueryPacket[] packets = new QueryPacket[batchQueries.size()];
+	  for (int i = 0; i < batchQueries.size(); i++) {
+		  String sql = batchQueries.get(i);
+		  packets[i] = new QueryPacket(sql);
+	  }
+
+	  return con.getClient()
+			  .executePipeline(
+					  packets,
+					  this,
+					  0,
+					  0L,
+					  ResultSet.CONCUR_READ_ONLY,
+					  ResultSet.TYPE_FORWARD_ONLY,
+					  closeOnCompletion);
   }
 
   private List<Completion> executeInternalBatchStandard() throws SQLException {
