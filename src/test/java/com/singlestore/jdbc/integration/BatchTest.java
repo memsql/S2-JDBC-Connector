@@ -208,6 +208,105 @@ public class BatchTest extends Common {
   
   
   @Test
+  public void testRewriteBatchedPipelineForInsertOnDuplicateKeyUpdate() throws SQLException {
+	  
+	  try (Connection con = createCon("&useServerPrepStmts=false&rewriteBatchedStatements=true")) {
+		  Statement stmt = con.createStatement();
+		  stmt.execute("DROP TABLE IF EXISTS BatchTest");
+		  stmt.execute(
+				  "CREATE TABLE BatchTest (t1 int not null primary key auto_increment, t2 LONGTEXT)");
+
+		  String sql = "insert INTO BatchTest(t1, t2) VALUES (?,?) ON DUPLICATE KEY UPDATE t1=t1+1";
+		  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+
+		  try (PreparedStatement prep = con.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+			  prep.setInt(1, 1);
+			  prep.setString(2, "entry-1");
+			  prep.addBatch();
+
+			  prep.setInt(1, 2);
+			  prep.setString(2, "entry-2");
+			  prep.addBatch();
+
+			  prep.setInt(1, 3);
+			  prep.setString(2, "entry-3");
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+			  
+			  ResultSet rs = prep.getGeneratedKeys();
+			  assertTrue(rs.next());
+			  assertEquals(1, rs.getInt(1));
+		  }
+
+		  ResultSet rs = stmt.executeQuery("SELECT * FROM BatchTest ORDER BY t1, t2");
+
+		  assertTrue(rs.next());
+		  assertEquals(1, rs.getInt(1));
+		  assertEquals("entry-1", rs.getString(2));
+
+		  assertTrue(rs.next());
+		  assertEquals(2, rs.getInt(1));
+		  assertEquals("entry-2", rs.getString(2));
+
+		  assertTrue(rs.next());
+		  assertEquals(3, rs.getInt(1));
+		  assertEquals("entry-3", rs.getString(2));
+
+		  assertFalse(rs.next());
+	  }
+  }
+  
+  
+  @Test
+  public void testRewriteBatchedPipelineForAllowMultiQueries() throws SQLException {
+	  
+	  try (Connection con = createCon("&useServerPrepStmts=false&rewriteBatchedStatements=true&allowMultiQueries=true")) {
+		  Statement stmt = con.createStatement();
+		  stmt.execute("DROP TABLE IF EXISTS BatchTest");
+		  stmt.execute(
+				  "CREATE TABLE BatchTest (t1 int not null primary key auto_increment, t2 LONGTEXT)");
+
+		  String sql = "insert INTO BatchTest(t1, t2) VALUES (?,?)";
+		  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
+
+		  try (PreparedStatement prep = con.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+			  prep.setInt(1, 1);
+			  prep.setString(2, "entry-1");
+			  prep.addBatch();
+
+			  prep.setInt(1, 2);
+			  prep.setString(2, "entry-2");
+			  prep.addBatch();
+
+			  prep.setInt(1, 3);
+			  prep.setString(2, "entry-3");
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+			  
+			  ResultSet rs = prep.getGeneratedKeys();
+			  assertTrue(rs.next());
+			  assertEquals(1, rs.getInt(1));
+		  }
+
+		  ResultSet rs = stmt.executeQuery("SELECT * FROM BatchTest ORDER BY t1, t2");
+
+		  assertTrue(rs.next());
+		  assertEquals(1, rs.getInt(1));
+		  assertEquals("entry-1", rs.getString(2));
+
+		  assertTrue(rs.next());
+		  assertEquals(2, rs.getInt(1));
+		  assertEquals("entry-2", rs.getString(2));
+
+		  assertTrue(rs.next());
+		  assertEquals(3, rs.getInt(1));
+		  assertEquals("entry-3", rs.getString(2));
+
+		  assertFalse(rs.next());
+	  }
+  }
+  
+  @Test
   public void testInsertRegEx() throws SQLException {
 	  try (Connection con = createCon("&useServerPrepStmts=false&rewriteBatchedStatements=true")) {
 		  Statement stmt = con.createStatement();
