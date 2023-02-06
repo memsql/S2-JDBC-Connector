@@ -13,7 +13,6 @@ import com.singlestore.jdbc.message.server.Completion;
 import com.singlestore.jdbc.message.server.OkPacket;
 import com.singlestore.jdbc.util.ClientParser;
 import com.singlestore.jdbc.util.ParameterList;
-import com.singlestore.jdbc.util.constants.Capabilities;
 import com.singlestore.jdbc.util.constants.ServerStatus;
 
 import java.sql.*;
@@ -93,9 +92,7 @@ public class ClientPreparedStatement extends BasePreparedStatement {
 
   private List<Completion> executeInternalPreparedBatch() throws SQLException {
     checkNotClosed();
-    long serverCapabilities = con.getContext().getServerCapabilities();
-    if (!con.getContext().getConf().allowLocalInfile()
-        || (serverCapabilities & Capabilities.LOCAL_FILES) == 0) {
+    if (!con.getContext().getConf().allowLocalInfile()) {
     	
     	/* Execute Insert Statements with RewriteBatch statement when 
     	 * A 'rewriteBatchedStatements' is true 
@@ -146,7 +143,7 @@ public class ClientPreparedStatement extends BasePreparedStatement {
 	  ParameterList parameterList = new ParameterList();
 	  int index = 0;
 	  
-	  byte[] startInsertSectionByte = ", (".getBytes();
+	  byte[] startInsertSectionByte = ",(".getBytes();
 		
 	  // Iterate over the batch, re-create the Client Parser with modified parts, grouped all Parameters values.
 	  for (int batchCount = 0; batchCount < batchParameters.size(); batchCount++) {
@@ -158,7 +155,7 @@ public class ClientPreparedStatement extends BasePreparedStatement {
 			  /*
 			   * Insert Query with at least two entries ->  Insert into test (t1, t2) values (1, 1), (2, 2)
 			   * 
-			   * while re-writing the Insert Batch query, two records need to be separated out by ') , ('. 
+			   * while re-writing the Insert Batch query, two records need to be separated out by '),('. 
 			   * Below logic is to add these separators. 
 			   * 
 			   */

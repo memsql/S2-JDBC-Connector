@@ -407,11 +407,11 @@ public class BatchTest extends Common {
 
 		  // Testcase-7 - Table name and Column name can not be 'insert'. So testing a scenario where table name and column name are having 'insert' in their names and value of one 
 		  // of the column is 'insert'
-		  stmt.execute("DROP TABLE IF EXISTS InsertTest");
+		  stmt.execute("DROP TABLE IF EXISTS `insert`");
 		  stmt.execute(
-				  "CREATE TABLE InsertTest (t1 int not null primary key auto_increment, insertTest LONGTEXT, INSERTTEST1 LONGTEXT)");
+				  "CREATE TABLE `insert` (`insert` int not null primary key auto_increment, insertTest LONGTEXT, INSERTTEST1 LONGTEXT)");
 
-		  sql = "insert INTO InsertTest(t1, insertTest, INSERTTEST1) VALUES (?,?, ?)";
+		  sql = "insert INTO `insert`(`insert`, insertTest, INSERTTEST1) VALUES (?,?, ?)";
 		  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
 
 		  try (PreparedStatement prep = con.prepareStatement(sql)) {
@@ -422,7 +422,7 @@ public class BatchTest extends Common {
 			  prep.executeLargeBatch();
 		  }		  
 
-		  sql = "Select * from InsertTest";
+		  sql = "Select * from `insert`";
 		  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
 		  rs = stmt.executeQuery(sql);
 		  assertTrue(rs.next());
@@ -431,7 +431,7 @@ public class BatchTest extends Common {
 		  assertEquals("INSERT", rs.getString(3));
 
 		  // Testcase-8 - Update Query having 'insert' as a value in the 'where' clause
-		  sql = "update InsertTest set insertTest=? where INSERTTEST1=?";
+		  sql = "update `insert` set insertTest=? where INSERTTEST1=?";
 		  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
 
 		  try (PreparedStatement prep =
@@ -443,7 +443,7 @@ public class BatchTest extends Common {
 			  prep.executeLargeBatch();
 		  }
 
-		  sql = "Select * from InsertTest";
+		  sql = "Select * from `insert`";
 		  assertFalse(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
 		  rs = stmt.executeQuery(sql);
 		  assertTrue(rs.next());
@@ -451,7 +451,7 @@ public class BatchTest extends Common {
 		  assertEquals("testcase-8", rs.getString(2));
 		  assertEquals("INSERT", rs.getString(3));
 
-		  stmt.execute("DROP TABLE IF EXISTS InsertTest");
+		  stmt.execute("DROP TABLE IF EXISTS `insert`");
 
 
 		  // Testcase-9 - update query without 'insert' keyword
