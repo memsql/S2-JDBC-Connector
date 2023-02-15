@@ -26,7 +26,7 @@ public class BatchTest extends Common {
 
   @AfterAll
   public static void after2() throws SQLException {
-    sharedConn.createStatement().execute("DROP TABLE BatchTest");
+    sharedConn.createStatement().execute("DROP TABLE IF EXISTS BatchTest");
   }
 
   @Test
@@ -205,57 +205,6 @@ public class BatchTest extends Common {
           "Duplicate entry '1' for key 'PRIMARY'");
     }
   }
-  
-  
-  @Test
-  public void testRewriteBatchedPipelineForInsertOnDuplicateKeyUpdate() throws SQLException {
-	  
-	  try (Connection con = createCon("&useServerPrepStmts=false&rewriteBatchedStatements=true")) {
-		  Statement stmt = con.createStatement();
-		  stmt.execute("DROP TABLE IF EXISTS BatchTest");
-		  stmt.execute(
-				  "CREATE TABLE BatchTest (t1 int not null primary key auto_increment, t2 LONGTEXT)");
-
-		  String sql = "insert INTO BatchTest(t1, t2) VALUES (?,?) ON DUPLICATE KEY UPDATE t1=t1+1";
-		  assertTrue(ClientPreparedStatement.INSERT_STATEMENT_PATTERN.matcher(sql).find());
-
-		  try (PreparedStatement prep = con.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
-			  prep.setInt(1, 1);
-			  prep.setString(2, "entry-1");
-			  prep.addBatch();
-
-			  prep.setInt(1, 2);
-			  prep.setString(2, "entry-2");
-			  prep.addBatch();
-
-			  prep.setInt(1, 3);
-			  prep.setString(2, "entry-3");
-			  prep.addBatch();
-			  prep.executeLargeBatch();
-			  
-			  ResultSet rs = prep.getGeneratedKeys();
-			  assertTrue(rs.next());
-			  assertEquals(1, rs.getInt(1));
-		  }
-
-		  ResultSet rs = stmt.executeQuery("SELECT * FROM BatchTest ORDER BY t1, t2");
-
-		  assertTrue(rs.next());
-		  assertEquals(1, rs.getInt(1));
-		  assertEquals("entry-1", rs.getString(2));
-
-		  assertTrue(rs.next());
-		  assertEquals(2, rs.getInt(1));
-		  assertEquals("entry-2", rs.getString(2));
-
-		  assertTrue(rs.next());
-		  assertEquals(3, rs.getInt(1));
-		  assertEquals("entry-3", rs.getString(2));
-
-		  assertFalse(rs.next());
-	  }
-  }
-  
   
   @Test
   public void testRewriteBatchedPipelineForAllowMultiQueries() throws SQLException {
@@ -487,4 +436,121 @@ public class BatchTest extends Common {
 	  }
   }
   
+  
+  @Test
+  public void testRewriteBatchedPipelineForInsertOnDuplicateKeyUpdate() throws SQLException {
+	  try (Connection con = createCon("&useServerPrepStmts=false&rewriteBatchedStatements=true")) {
+		  Statement stmt = con.createStatement();
+
+		  // Testcase-1 -  Having 'ON DUPLICATE KEY UPDATE' clause in the query string
+		  stmt.execute("DROP TABLE IF EXISTS BatchTest");
+		  stmt.execute(
+				  "CREATE TABLE BatchTest (t1 int not null primary key auto_increment, t2 LONGTEXT)");
+
+		  String sql = "insert INTO BatchTest(t1, t2) VALUES (?,?) ON DUPLICATE KEY UPDATE t1=t1+1";
+		  assertTrue(ClientPreparedStatement.INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN.matcher(sql).find());
+		  try (PreparedStatement prep = con.prepareStatement(sql)) {
+			  prep.setInt(1, 1);
+			  prep.setString(2, "testcase-1");
+			  prep.addBatch();
+			  			  
+			  prep.executeLargeBatch();
+		  }
+
+		  ResultSet rs = stmt.executeQuery("SELECT * FROM BatchTest ORDER BY t1, t2");
+		  assertTrue(rs.next());
+		  assertEquals(1, rs.getInt(1));
+		  assertEquals("testcase-1", rs.getString(2));
+		  stmt.execute("DROP TABLE IF EXISTS BatchTest");
+
+		  // Testcase-2-  Having 'ON DUPLICATE KEY UPDATE' as a clause and as a table name in the query string
+		  stmt.execute("DROP TABLE IF EXISTS `ON DUPLICATE KEY UPDATE`");
+		  stmt.execute(
+				  "CREATE TABLE `ON DUPLICATE KEY UPDATE` (t1 int not null primary key auto_increment, t2 LONGTEXT)");
+		  
+		  sql = "INSERT INTO `ON DUPLICATE KEY UPDATE` (`t1`, `t2`) VALUES (?, ?) ON DUPLICATE       KEY UPDATE t1=t1+1";
+		  assertTrue(ClientPreparedStatement.INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN.matcher(sql).find());
+
+		  try (PreparedStatement prep = con.prepareStatement(sql)) {
+			  prep.setInt(1, 2);
+			  prep.setString(2, "testcase-2");
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+		  }
+
+		  rs = stmt.executeQuery("SELECT * FROM `ON DUPLICATE KEY UPDATE` where t1=2");
+		  assertTrue(rs.next());
+		  assertEquals(2, rs.getInt(1));
+		  assertEquals("testcase-2", rs.getString(2));
+
+
+		  // Testcase-3-  Having 'ON DUPLICATE KEY UPDATE' as a clause and as a table name in the query string. Plus having a comment in between the 'ON DUPLICATE KEY UPDATE' clause
+		  sql = "INSERT INTO `ON DUPLICATE KEY UPDATE` (`t1`, `t2`) VALUES (?, ?) ON DUPLICATE  /*Comment Section*/ KEY UPDATE t1=t1+1";	  
+		  assertTrue(ClientPreparedStatement.INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN.matcher(sql).find());
+		 
+		  try (PreparedStatement prep = con.prepareStatement(sql)) {
+			  prep.setInt(1, 3);
+			  prep.setString(2, "testcase-3");
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+		  }
+
+		  rs = stmt.executeQuery("SELECT * FROM `ON DUPLICATE KEY UPDATE` where t1=3");
+		  assertTrue(rs.next());
+		  assertEquals(3, rs.getInt(1));
+		  assertEquals("testcase-3", rs.getString(2));
+
+		  // Testcase-4-  Having 'ON DUPLICATE KEY UPDATE' as a table name in the query string
+		  sql = "INSERT INTO `ON DUPLICATE KEY UPDATE` (`t1`, `t2`) VALUES (?, ?)";
+		  assertFalse(ClientPreparedStatement.INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN.matcher(sql).find());
+		  try (PreparedStatement prep = con.prepareStatement(sql)) {
+			  prep.setInt(1, 4);
+			  prep.setString(2, "testcase-4");
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+		  }
+
+		  rs = stmt.executeQuery("SELECT * FROM `ON DUPLICATE KEY UPDATE` where t1=4");
+		  assertTrue(rs.next());
+		  assertEquals(4, rs.getInt(1));
+		  assertEquals("testcase-4", rs.getString(2));
+		  
+		  // Testcase-5-  Having 'ON DUPLICATE KEY UPDATE' as a clause, as a table name and as a Column Name in the query string. Plus having a comment in between the 'ON DUPLICATE KEY UPDATE' clause
+		  stmt.execute("DROP TABLE IF EXISTS `ON DUPLICATE KEY UPDATE`");
+		  stmt.execute(
+				  "CREATE TABLE `ON DUPLICATE KEY UPDATE` (`ON DUPLICATE KEY UPDATE` int not null primary key auto_increment, t2 LONGTEXT)");
+		  
+		  sql = "INSERT INTO `ON DUPLICATE KEY UPDATE` (`ON DUPLICATE KEY UPDATE`, `t2`) VALUES (?, ?) ON DUPLICATE  /*Comment Section*/ KEY UPDATE t2='dummy'";	  
+		  assertTrue(ClientPreparedStatement.INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN.matcher(sql).find());
+
+		  try (PreparedStatement prep = con.prepareStatement(sql)) {
+			  prep.setInt(1, 5);
+			  prep.setString(2, "testcase-5");
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+		  }
+
+		  rs = stmt.executeQuery("SELECT * FROM `ON DUPLICATE KEY UPDATE` where `ON DUPLICATE KEY UPDATE`=5");
+		  assertTrue(rs.next());
+		  assertEquals(5, rs.getInt(1));
+		  assertEquals("testcase-5", rs.getString(2));
+
+		  
+		  // Testcase-6-  Having 'ON DUPLICATE KEY UPDATE' as a clause, as a table name and as a Column Name in the query string. Plus having a comment in between the 'ON DUPLICATE KEY UPDATE' clause
+		  sql = "INSERT INTO `ON DUPLICATE KEY UPDATE` (`ON DUPLICATE KEY UPDATE`, `t2`) VALUES (?, ?)";	  
+		  assertFalse(ClientPreparedStatement.INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN.matcher(sql).find());
+		  try (PreparedStatement prep = con.prepareStatement(sql)) {
+			  prep.setInt(1, 6);
+			  prep.setString(2, "testcase-6");
+			  prep.addBatch();
+			  prep.executeLargeBatch();
+		  }
+
+		  rs = stmt.executeQuery("SELECT * FROM `ON DUPLICATE KEY UPDATE` where `ON DUPLICATE KEY UPDATE`=6");
+		  assertTrue(rs.next());
+		  assertEquals(6, rs.getInt(1));
+		  assertEquals("testcase-6", rs.getString(2));
+		  stmt.execute("DROP TABLE IF EXISTS `ON DUPLICATE KEY UPDATE`");
+		}
+  }
 }

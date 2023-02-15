@@ -31,8 +31,11 @@ public class ClientPreparedStatement extends BasePreparedStatement {
 	          "^(\\s*\\/\\*([^\\*]|\\*[^\\/])*\\*\\/)*\\s*(INSERT)",
 	          Pattern.CASE_INSENSITIVE);
   
-  public static final String INSERT_ON_DUPLICATE_KEY_UPDATE = "ON DUPLICATE KEY UPDATE";
-    
+  public static final Pattern INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN =
+	      Pattern.compile(
+	          "^.+[^`](ON)\\s.*(DUPLICATE)\\s.*(KEY)\\s.*(UPDATE)[^`].+",
+	          Pattern.CASE_INSENSITIVE);
+
   public ClientPreparedStatement(
       String sql,
       Connection con,
@@ -97,14 +100,14 @@ public class ClientPreparedStatement extends BasePreparedStatement {
     	/* Execute Insert Statements with RewriteBatch statement when 
     	 * A 'rewriteBatchedStatements' is true 
     	 * B. Batch is for 'Insert' operation 
-    	 * C. Batch is not having 'ON DUPLICATE KEY UPDATE'
+    	 * C. Batch is not having 'ON DUPLICATE KEY UPDATE' clause
     	 * D. allowMultiQuery is not enabled
     	 */
     	
     	if(con.getContext().getConf().rewriteBatchedStatements()
     			&& !con.getContext().getConf().allowMultiQueries()
     			&& INSERT_STATEMENT_PATTERN.matcher(sql).find() 
-    			&& !sql.contains(INSERT_ON_DUPLICATE_KEY_UPDATE)) {
+    			&& !INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN.matcher(sql).find()) {
     	      return executeRewriteBatchedPipeline();    		
     	} else {
     	      return executeBatchPipeline();
