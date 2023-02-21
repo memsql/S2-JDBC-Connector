@@ -94,27 +94,24 @@ public class ClientPreparedStatement extends BasePreparedStatement {
   }
 
   private List<Completion> executeInternalPreparedBatch() throws SQLException {
-    checkNotClosed();
-    if (!con.getContext().getConf().allowLocalInfile()) {
-    	
-    	/* Execute Insert Statements with RewriteBatch statement when 
-    	 * A 'rewriteBatchedStatements' is true 
-    	 * B. Batch is for 'Insert' operation 
-    	 * C. Batch is not having 'ON DUPLICATE KEY UPDATE' clause
-    	 * D. allowMultiQuery is not enabled
-    	 */
-    	
-    	if(con.getContext().getConf().rewriteBatchedStatements()
-    			&& !con.getContext().getConf().allowMultiQueries()
-    			&& INSERT_STATEMENT_PATTERN.matcher(sql).find() 
-    			&& !INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN.matcher(sql).find()) {
-    	      return executeRewriteBatchedPipeline();    		
-    	} else {
-    	      return executeBatchPipeline();
-    	}
-    } else {
-      return executeBatchStd();
-    }
+	  checkNotClosed();
+
+	  /* Execute Insert Statements with RewriteBatch statement when 
+	   * A 'rewriteBatchedStatements' is true 
+	   * B. Batch is for 'Insert' operation 
+	   * C. Batch is not having 'ON DUPLICATE KEY UPDATE' clause
+	   * D. allowMultiQuery is not enabled
+	   */
+
+	  if(con.getContext().getConf().rewriteBatchedStatements()
+			  && !con.getContext().getConf().allowMultiQueries()
+			  && INSERT_STATEMENT_PATTERN.matcher(sql).find() 
+			  && !INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN.matcher(sql).find()) {
+		  return executeRewriteBatchedPipeline();    		
+	  } else {
+		  return executeBatchPipeline();
+	  }
+
   }
 
   /**
