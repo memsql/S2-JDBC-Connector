@@ -13,7 +13,6 @@ import com.singlestore.jdbc.message.server.ColumnDefinitionPacket;
 import com.singlestore.jdbc.message.server.Completion;
 import com.singlestore.jdbc.message.server.OkPacket;
 import com.singlestore.jdbc.util.NativeSql;
-import com.singlestore.jdbc.util.constants.Capabilities;
 import com.singlestore.jdbc.util.constants.ServerStatus;
 import com.singlestore.jdbc.util.exceptions.ExceptionFactory;
 import com.singlestore.jdbc.util.log.Logger;
@@ -679,10 +678,8 @@ public class Statement implements java.sql.Statement {
     if (batchQueries == null || batchQueries.isEmpty()) return new int[0];
     lock.lock();
     try {
-      long serverCapabilities = con.getContext().getServerCapabilities();
       List<Completion> res =
-          (!con.getContext().getConf().allowLocalInfile()
-                  || (serverCapabilities & Capabilities.LOCAL_FILES) == 0)
+          (!con.getContext().getConf().allowLocalInfile())
               ? executeInternalBatchPipeline()
               : executeInternalBatchStandard();
       results = res;
@@ -1412,10 +1409,8 @@ public class Statement implements java.sql.Statement {
 
     lock.lock();
     try {
-      long serverCapabilities = con.getContext().getServerCapabilities();
       List<Completion> res =
-          (!con.getContext().getConf().allowLocalInfile()
-                  || (serverCapabilities & Capabilities.LOCAL_FILES) == 0)
+          (!con.getContext().getConf().allowLocalInfile())
               ? executeInternalBatchPipeline()
               : executeInternalBatchStandard();
       results = res;
@@ -1431,22 +1426,23 @@ public class Statement implements java.sql.Statement {
       lock.unlock();
     }
   }
-
+  
   private List<Completion> executeInternalBatchPipeline() throws SQLException {
-    QueryPacket[] packets = new QueryPacket[batchQueries.size()];
-    for (int i = 0; i < batchQueries.size(); i++) {
-      String sql = batchQueries.get(i);
-      packets[i] = new QueryPacket(sql);
-    }
-    return con.getClient()
-        .executePipeline(
-            packets,
-            this,
-            0,
-            0L,
-            ResultSet.CONCUR_READ_ONLY,
-            ResultSet.TYPE_FORWARD_ONLY,
-            closeOnCompletion);
+	  QueryPacket[] packets = new QueryPacket[batchQueries.size()];
+	  for (int i = 0; i < batchQueries.size(); i++) {
+		  String sql = batchQueries.get(i);
+		  packets[i] = new QueryPacket(sql);
+	  }
+
+	  return con.getClient()
+			  .executePipeline(
+					  packets,
+					  this,
+					  0,
+					  0L,
+					  ResultSet.CONCUR_READ_ONLY,
+					  ResultSet.TYPE_FORWARD_ONLY,
+					  closeOnCompletion);
   }
 
   private List<Completion> executeInternalBatchStandard() throws SQLException {
