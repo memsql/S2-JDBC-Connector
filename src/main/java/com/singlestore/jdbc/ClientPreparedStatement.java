@@ -14,7 +14,6 @@ import com.singlestore.jdbc.message.server.OkPacket;
 import com.singlestore.jdbc.util.ClientParser;
 import com.singlestore.jdbc.util.ParameterList;
 import com.singlestore.jdbc.util.constants.ServerStatus;
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,18 +22,16 @@ import java.util.regex.Pattern;
 
 public class ClientPreparedStatement extends BasePreparedStatement {
   private final ClientParser parser;
-  
-  
-  // This regex is referred from ServerPreparedStatement. It is used to determine whether input SQL string is of 'Insert' statement or not.
+
+  // This regex is referred from ServerPreparedStatement. It is used to determine whether input SQL
+  // string is of 'Insert' statement or not.
   public static final Pattern INSERT_STATEMENT_PATTERN =
-	      Pattern.compile(
-	          "^(\\s*\\/\\*([^\\*]|\\*[^\\/])*\\*\\/)*\\s*(INSERT)",
-	          Pattern.CASE_INSENSITIVE);
-  
+      Pattern.compile(
+          "^(\\s*\\/\\*([^\\*]|\\*[^\\/])*\\*\\/)*\\s*(INSERT)", Pattern.CASE_INSENSITIVE);
+
   public static final Pattern INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN =
-	      Pattern.compile(
-	          "^.+[^`](ON)\\s.*(DUPLICATE)\\s.*(KEY)\\s.*(UPDATE)[^`].+",
-	          Pattern.CASE_INSENSITIVE);
+      Pattern.compile(
+          "^.+[^`](ON)\\s.*(DUPLICATE)\\s.*(KEY)\\s.*(UPDATE)[^`].+", Pattern.CASE_INSENSITIVE);
 
   public ClientPreparedStatement(
       String sql,
@@ -93,29 +90,26 @@ public class ClientPreparedStatement extends BasePreparedStatement {
     }
   }
 
+  // isRewriteBatchedApplicable returns true if the parameter sql
+  // represents INSERT operation without 'ON DUPLICATE KEY UPDATE' clause
+  //
+  private boolean isRewriteBatchedApplicable(String sql) {
+    return INSERT_STATEMENT_PATTERN.matcher(sql).find()
+        && !INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN.matcher(sql).find();
+  }
+
   private List<Completion> executeInternalPreparedBatch() throws SQLException {
-	  checkNotClosed();
+    checkNotClosed();
 
-	  /* Execute Insert Statements with RewriteBatch statement when 
-	   * A 'rewriteBatchedStatements' is true 
-	   * B. Batch is for 'Insert' operation 
-	   * C. Batch is not having 'ON DUPLICATE KEY UPDATE' clause
-	   * D. allowMultiQuery is not enabled
-	   */
-
-	  if(con.getContext().getConf().rewriteBatchedStatements()
-			  && !con.getContext().getConf().allowMultiQueries()
-			  && INSERT_STATEMENT_PATTERN.matcher(sql).find() 
-			  && !INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN.matcher(sql).find()) {
-		  return executeRewriteBatchedPipeline();    		
-	  } else {
-		  return executeBatchPipeline();
-	  }
-
+    if (con.getContext().getConf().rewriteBatchedStatements() && isRewriteBatchedApplicable(sql)) {
+      return executeRewriteBatchedPipeline();
+    } else {
+      return executeBatchPipeline();
+    }
   }
 
   /**
-   * Send 1 packet for all insert queries. 
+   * Send 1 packet for all insert queries.
    *
    * @throws SQLException if IOException / Command error
    */
@@ -124,7 +118,7 @@ public class ClientPreparedStatement extends BasePreparedStatement {
       results =
           con.getClient()
               .executePipeline(
-            	  getClientMessageForRewriteBatchedStatement(),
+                  getClientMessageForRewriteBatchedStatement(),
                   this,
                   0,
                   maxRows,
@@ -137,50 +131,55 @@ public class ClientPreparedStatement extends BasePreparedStatement {
       throw bue;
     }
   }
-  
+
   private ClientMessage[] getClientMessageForRewriteBatchedStatement() {
-	  List<byte[]> partList = new ArrayList<>();
-	  ParameterList parameterList = new ParameterList();
-	  int index = 0;
-	  
-	  byte[] startInsertSectionByte = ",(".getBytes();
-		
-	  // Iterate over the batch, re-create the Client Parser with modified parts, grouped all Parameters values.
-	  for (int batchCount = 0; batchCount < batchParameters.size(); batchCount++) {
-		  if(batchCount == 0) {
-			  partList.add(parser.getQueryParts().get(0));
-		  } 
-		  
-		  for (int paramCount = 0; paramCount < parser.getParamCount(); paramCount++) {
-			  /*
-			   * Insert Query with at least two entries ->  Insert into test (t1, t2) values (1, 1), (2, 2)
-			   * 
-			   * while re-writing the Insert Batch query, two records need to be separated out by '),('. 
-			   * Below logic is to add these separators. 
-			   * 
-			   */
-			  if (paramCount == parser.getParamCount() -1 && batchCount < batchParameters.size() - 1) {				  
-				  byte[] a = parser.getQueryParts().get(paramCount + 1);
-				  byte[] c = new byte[parser.getQueryParts().get(paramCount + 1).length + startInsertSectionByte.length];
-				  
-				  System.arraycopy(a, 0, c, 0, a.length);
-				  System.arraycopy(startInsertSectionByte, 0, c, a.length, startInsertSectionByte.length);
-				  
-				  partList.add(c);
-			  } else {
-				  partList.add(parser.getQueryParts().get(paramCount + 1));
-			  }
-			  
-			  parameterList.set(index, batchParameters.get(batchCount).get(paramCount));
-			  index = index +1;
-		  }
-	  }
-	  
-	  int paramCount = parser.getParamCount()*batchParameters.size();		  
-	  ClientParser parser = ClientParser.parameterPartsForRewriteBatchedStatement(sql, partList, paramCount);	  
-	  return new ClientMessage[] {new QueryWithParametersPacket(preSqlCmd(), parser, parameterList)};
+    List<byte[]> partList = new ArrayList<>();
+    ParameterList parameterList = new ParameterList();
+    int index = 0;
+
+    byte[] startInsertSectionByte = ",(".getBytes();
+
+    // Iterate over the batch, re-create the Client Parser with modified parts, grouped all
+    // Parameters values.
+    for (int batchCount = 0; batchCount < batchParameters.size(); batchCount++) {
+      if (batchCount == 0) {
+        partList.add(parser.getQueryParts().get(0));
+      }
+
+      for (int paramCount = 0; paramCount < parser.getParamCount(); paramCount++) {
+        /*
+         * Insert Query with at least two entries ->  Insert into test (t1, t2) values (1, 1), (2, 2)
+         *
+         * while re-writing the Insert Batch query, two records need to be separated out by '),('.
+         * Below logic is to add these separators.
+         *
+         */
+        if (paramCount == parser.getParamCount() - 1 && batchCount < batchParameters.size() - 1) {
+          byte[] a = parser.getQueryParts().get(paramCount + 1);
+          byte[] c =
+              new byte
+                  [parser.getQueryParts().get(paramCount + 1).length
+                      + startInsertSectionByte.length];
+
+          System.arraycopy(a, 0, c, 0, a.length);
+          System.arraycopy(startInsertSectionByte, 0, c, a.length, startInsertSectionByte.length);
+
+          partList.add(c);
+        } else {
+          partList.add(parser.getQueryParts().get(paramCount + 1));
+        }
+
+        parameterList.set(index, batchParameters.get(batchCount).get(paramCount));
+        index = index + 1;
+      }
+    }
+
+    int paramCount = parser.getParamCount() * batchParameters.size();
+    ClientParser parser =
+        ClientParser.parameterPartsForRewriteBatchedStatement(sql, partList, paramCount);
+    return new ClientMessage[] {new QueryWithParametersPacket(preSqlCmd(), parser, parameterList)};
   }
-  
+
   /**
    * Send n * COM_QUERY + n * read answer
    *

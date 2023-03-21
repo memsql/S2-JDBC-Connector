@@ -142,7 +142,7 @@ public class Configuration {
   private Codec<?>[] codecs = null;
 
   private boolean useMysqlVersion = false;
-  private boolean rewriteBatchedStatements = false;
+  private boolean rewriteBatchedStatements = true;
 
   private Configuration() {}
 
@@ -338,7 +338,7 @@ public class Configuration {
       String geometryDefaultType,
       String restrictedAuth,
       Properties nonMappedOptions,
-      Boolean useMysqlVersion, 
+      Boolean useMysqlVersion,
       Boolean rewriteBatchedStatements)
       throws SQLException {
     this.database = database;
@@ -429,7 +429,6 @@ public class Configuration {
     if (keyStoreType != null) this.keyStoreType = keyStoreType;
     if (useMysqlVersion != null) this.useMysqlVersion = useMysqlVersion;
     if (rewriteBatchedStatements != null) this.rewriteBatchedStatements = rewriteBatchedStatements;
-    
 
     // *************************************************************
     // host primary check
@@ -993,9 +992,9 @@ public class Configuration {
   public boolean useMysqlVersion() {
     return useMysqlVersion;
   }
-  
+
   public boolean rewriteBatchedStatements() {
-	  return rewriteBatchedStatements;
+    return rewriteBatchedStatements;
   }
 
   /**
@@ -1232,9 +1231,8 @@ public class Configuration {
     private Boolean useResetConnection;
 
     private Boolean useMysqlVersion;
-    
+
     private Boolean rewriteBatchedStatements;
-    
 
     public Builder user(String user) {
       this.user = nullOrEmpty(user);
@@ -1676,13 +1674,12 @@ public class Configuration {
       this.useMysqlVersion = useMysqlVersion;
       return this;
     }
-    
-    
+
     public Builder rewriteBatchedStatements(Boolean rewriteBatchedStatements) {
-    	this.rewriteBatchedStatements = rewriteBatchedStatements;
-    	return this;
+      this.rewriteBatchedStatements = rewriteBatchedStatements;
+      return this;
     }
-    
+
     public Configuration build() throws SQLException {
       Configuration conf =
           new Configuration(
