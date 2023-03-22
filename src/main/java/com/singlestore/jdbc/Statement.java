@@ -1433,7 +1433,6 @@ public class Statement implements java.sql.Statement {
       String sql = batchQueries.get(i);
       packets[i] = new QueryPacket(sql);
     }
-
     return con.getClient()
         .executePipeline(
             packets,

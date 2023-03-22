@@ -15,27 +15,31 @@ public final class ClientParser implements PrepareResult {
 
   private final String sql;
   private final List<byte[]> queryParts;
+  private final boolean isMultiStatement;
   private final int paramCount;
   private static Map<String, ClientParser> cache = new LinkedHashMap<>(512);
 
-  private ClientParser(String sql, List<byte[]> queryParts, int paramCount) {
+  private ClientParser(
+      String sql, List<byte[]> queryParts, int paramCount, boolean isMultiStatement) {
     this.sql = sql;
     this.queryParts = queryParts;
     this.paramCount = paramCount;
+    this.isMultiStatement = isMultiStatement;
   }
 
- 
   /**
-   * Create a new Client Parser Object required for the RewriteBatchedStatement requirement. 
+   * Create a new Client Parser Object required for the RewriteBatchedStatement requirement.
+   *
    * @param queryString
    * @param queryParts
    * @param paramCount
    * @return
- */
-  public static ClientParser parameterPartsForRewriteBatchedStatement(String queryString, List<byte[]> queryParts, int paramCount) {
-	  return new ClientParser(queryString, queryParts, paramCount);
+   */
+  public static ClientParser parameterPartsForRewriteBatchedStatement(
+      String queryString, List<byte[]> queryParts, int paramCount) {
+    return new ClientParser(queryString, queryParts, paramCount, false);
   }
-  
+
   /**
    * Separate query in a String list and set flag isQueryMultipleRewritable. The resulting string
    * list is separed by ? that are not in comments. isQueryMultipleRewritable flag is set if query
@@ -54,6 +58,7 @@ public final class ClientParser implements PrepareResult {
     LexState state = LexState.Normal;
     char lastChar = '\0';
     boolean endingSemicolon = false;
+    boolean isMultiStatement = false;
 
     boolean singleQuotes = false;
     int lastParameterPosition = 0;
@@ -155,6 +160,7 @@ public final class ClientParser implements PrepareResult {
           // multiple queries
           if (state == LexState.Normal && endingSemicolon && ((byte) car >= 40)) {
             endingSemicolon = false;
+            isMultiStatement = true;
           }
           break;
       }
@@ -169,7 +175,8 @@ public final class ClientParser implements PrepareResult {
               .getBytes(StandardCharsets.UTF_8));
     }
 
-    ClientParser clientParser = new ClientParser(queryString, partList, partList.size()-1);
+    ClientParser clientParser =
+        new ClientParser(queryString, partList, partList.size() - 1, isMultiStatement);
     if (queryString.length() < 16384) cache.put(queryString, clientParser);
     return clientParser;
   }
@@ -184,6 +191,10 @@ public final class ClientParser implements PrepareResult {
 
   public int getParamCount() {
     return paramCount;
+  }
+
+  public boolean isMultiStatement() {
+    return isMultiStatement;
   }
 
   enum LexState {

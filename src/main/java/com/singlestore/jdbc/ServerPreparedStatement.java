@@ -142,7 +142,8 @@ public class ServerPreparedStatement extends BasePreparedStatement {
     long serverCapabilities = con.getContext().getServerCapabilities();
     if (batchParameters.size() > 1
         && (serverCapabilities & Capabilities.MARIADB_CLIENT_STMT_BULK_OPERATIONS) > 0
-        && (!con.getContext().getConf().allowLocalInfile())) {
+        && (!con.getContext().getConf().allowLocalInfile()
+            || (serverCapabilities & Capabilities.LOCAL_FILES) == 0)) {
       return executeBatchPipeline(cmd);
     } else {
       return executeBatchStandard(cmd);
