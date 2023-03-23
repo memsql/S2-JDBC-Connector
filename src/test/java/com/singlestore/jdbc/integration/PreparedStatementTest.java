@@ -336,7 +336,7 @@ public class PreparedStatementTest extends Common {
       preparedStatement.setInt(2, 45);
       preparedStatement.addBatch();
       int[] res = preparedStatement.executeBatch();
-      assertEquals(con.getContext().getConf().useServerPrepStmts() ? 2 : 1, res.length);
+      assertEquals(2, res.length);
     }
 
     try (PreparedStatement preparedStatement =

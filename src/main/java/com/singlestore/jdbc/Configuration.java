@@ -142,7 +142,7 @@ public class Configuration {
   private Codec<?>[] codecs = null;
 
   private boolean useMysqlVersion = false;
-  private boolean rewriteBatchedStatements = true;
+  private boolean rewriteBatchedStatements = false;
 
   private Configuration() {}
 
