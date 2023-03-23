@@ -29,6 +29,7 @@ public class ClientPreparedStatement extends BasePreparedStatement {
       Pattern.compile(
           "^(\\s*\\/\\*([^\\*]|\\*[^\\/])*\\*\\/)*\\s*(INSERT)", Pattern.CASE_INSENSITIVE);
 
+  // TODO: PLAT-6526 move this logic to ClientParser
   public static final Pattern INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN =
       Pattern.compile(
           "^.+[^`](ON)\\s.*(DUPLICATE)\\s.*(KEY)\\s.*(UPDATE)[^`].+", Pattern.CASE_INSENSITIVE);
@@ -149,30 +150,33 @@ public class ClientPreparedStatement extends BasePreparedStatement {
       }
 
       for (int paramCount = 0; paramCount < parser.getParamCount(); paramCount++) {
-        /*
-         * Insert Query with at least two entries ->  Insert into test (t1, t2) values (1, 1), (2, 2)
-         *
-         * while re-writing the Insert Batch query, two records need to be separated out by '),('.
-         * Below logic is to add these separators.
-         *
-         */
+        // When re-writing a query INSERT INTO tbl VALUES (?, ?) with several rows of parameters, we
+        // need to modify
+        // the end of each row (except of the last) - ")" into "),(" (it can be a also a literal
+        // followed by ")"),
+        // so that the query becomes INSERT INTO tbl VALUES (?, ?),(?, ?)...
         if (paramCount == parser.getParamCount() - 1 && batchCount < batchParameters.size() - 1) {
-          byte[] a = parser.getQueryParts().get(paramCount + 1);
-          byte[] c =
+          byte[] queryPartToAppend =
               new byte
                   [parser.getQueryParts().get(paramCount + 1).length
                       + startInsertSectionByte.length];
+          byte[] queryPartOriginal = parser.getQueryParts().get(paramCount + 1);
+          // queryPartToAppend = queryPartOriginal + startInsertSectionByte as strings)
+          System.arraycopy(queryPartOriginal, 0, queryPartToAppend, 0, queryPartOriginal.length);
+          System.arraycopy(
+              startInsertSectionByte,
+              0,
+              queryPartToAppend,
+              queryPartOriginal.length,
+              startInsertSectionByte.length);
 
-          System.arraycopy(a, 0, c, 0, a.length);
-          System.arraycopy(startInsertSectionByte, 0, c, a.length, startInsertSectionByte.length);
-
-          partList.add(c);
+          partList.add(queryPartToAppend);
         } else {
           partList.add(parser.getQueryParts().get(paramCount + 1));
         }
 
         parameterList.set(index, batchParameters.get(batchCount).get(paramCount));
-        index = index + 1;
+        index += 1;
       }
     }
 

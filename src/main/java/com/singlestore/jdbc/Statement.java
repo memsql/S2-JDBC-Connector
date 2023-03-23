@@ -13,6 +13,7 @@ import com.singlestore.jdbc.message.server.ColumnDefinitionPacket;
 import com.singlestore.jdbc.message.server.Completion;
 import com.singlestore.jdbc.message.server.OkPacket;
 import com.singlestore.jdbc.util.NativeSql;
+import com.singlestore.jdbc.util.constants.Capabilities;
 import com.singlestore.jdbc.util.constants.ServerStatus;
 import com.singlestore.jdbc.util.exceptions.ExceptionFactory;
 import com.singlestore.jdbc.util.log.Logger;
@@ -678,8 +679,10 @@ public class Statement implements java.sql.Statement {
     if (batchQueries == null || batchQueries.isEmpty()) return new int[0];
     lock.lock();
     try {
+      long serverCapabilities = con.getContext().getServerCapabilities();
       List<Completion> res =
-          (!con.getContext().getConf().allowLocalInfile())
+          (!con.getContext().getConf().allowLocalInfile()
+                  || (serverCapabilities & Capabilities.LOCAL_FILES) == 0)
               ? executeInternalBatchPipeline()
               : executeInternalBatchStandard();
       results = res;
@@ -1409,8 +1412,10 @@ public class Statement implements java.sql.Statement {
 
     lock.lock();
     try {
+      long serverCapabilities = con.getContext().getServerCapabilities();
       List<Completion> res =
-          (!con.getContext().getConf().allowLocalInfile())
+          (!con.getContext().getConf().allowLocalInfile()
+                  || (serverCapabilities & Capabilities.LOCAL_FILES) == 0)
               ? executeInternalBatchPipeline()
               : executeInternalBatchStandard();
       results = res;

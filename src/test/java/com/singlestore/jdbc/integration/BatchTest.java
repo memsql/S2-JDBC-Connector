@@ -508,7 +508,7 @@ public class BatchTest extends Common {
           "CREATE ROWSTORE TABLE `ON DUPLICATE KEY UPDATE` (t1 int not null primary key auto_increment, t2 LONGTEXT)");
 
       sql =
-          "INSERT INTO `ON DUPLICATE KEY UPDATE` (`t1`, `t2`) VALUES (?, ?) ON DUPLICATE       KEY UPDATE t1=t1+1";
+          "INSERT INTO `ON DUPLICATE KEY UPDATE` (`t1`, `t2`) VALUES (?, ?) ON DUPLICATE       KEY UPDATE `t1`=t1+1";
       assertTrue(
           ClientPreparedStatement.INSERT_ON_DUPLICATE_KEY_UPDATE_STATEMENT_PATTERN
               .matcher(sql)
