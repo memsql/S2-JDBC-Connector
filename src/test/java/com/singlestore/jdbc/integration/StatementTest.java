@@ -510,7 +510,7 @@ public class StatementTest extends Common {
     }
 
     String sql =
-        "select * from information_schema.columns as c1,  information_schema.tables, information_schema.tables as t2";
+        "SELECT SLEEP(10)";
 
     // Use-case-6 Test Query Timeout implementation with 'PreparedStatement'
     try (Connection con = (Connection) DriverManager.getConnection(mDefUrl)) {
