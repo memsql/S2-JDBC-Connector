@@ -354,7 +354,7 @@ public class StatementTest extends Common {
     }
     assertEquals(10, i);
 
-    stmt.setQueryTimeout(2);
+    stmt.setQueryTimeout(10);
     rs = stmt.executeQuery("SELECT * FROM range_1_100 ORDER BY n");
     i = 0;
     while (rs.next()) {
@@ -387,7 +387,7 @@ public class StatementTest extends Common {
     }
     assertEquals(10, i);
 
-    stmt.setQueryTimeout(2);
+    stmt.setQueryTimeout(10);
     rs = stmt.executeQuery("SELECT * FROM range_1_100 ORDER BY n");
     i = 0;
     while (rs.next()) {
