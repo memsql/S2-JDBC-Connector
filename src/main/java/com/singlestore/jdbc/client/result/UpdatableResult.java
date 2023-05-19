@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.sql.*;
+import java.util.logging.Logger;
 
 public class UpdatableResult extends CompleteResult {
   private static final int STATE_STANDARD = 0;
@@ -1038,6 +1039,9 @@ public class UpdatableResult extends CompleteResult {
     state = STATE_STANDARD;
     return super.relative(rows);
   }
+
+  private static final Logger logger =
+      Logger.getLogger("com.singlestore.jdbc.client.result.UpdatableResult");
 
   @Override
   public boolean next() throws SQLException {

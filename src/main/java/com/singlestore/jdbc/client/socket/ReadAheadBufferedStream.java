@@ -5,6 +5,8 @@
 
 package com.singlestore.jdbc.client.socket;
 
+import com.singlestore.jdbc.util.log.Logger;
+import com.singlestore.jdbc.util.log.Loggers;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,6 +16,7 @@ import java.io.InputStream;
  * possible.
  */
 public class ReadAheadBufferedStream extends FilterInputStream {
+  private static final Logger logger = Loggers.getLogger(ReadAheadBufferedStream.class);
 
   private static final int BUF_SIZE = 16384;
   private final byte[] buf;
@@ -66,7 +69,12 @@ public class ReadAheadBufferedStream extends FilterInputStream {
         if (len - totalReads >= buf.length) {
           // buf length is less than asked byte and buf is empty
           // => filling directly into external buf
+          logger.info(
+              String.format(
+                  "SINGELSTORE JDBC: Reading %d bytes from socket (%h)", len - totalReads, this));
           int reads = super.read(externalBuf, off + totalReads, len - totalReads);
+          logger.info(
+              String.format("SINGELSTORE JDBC: Read %d bytes from socket (%h)", reads, this));
           if (reads <= 0) {
             return (totalReads == 0) ? -1 : totalReads;
           }
@@ -102,7 +110,11 @@ public class ReadAheadBufferedStream extends FilterInputStream {
    */
   private void fillbuf(int minNeededBytes) throws IOException {
     int lengthToReallyRead = Math.min(BUF_SIZE, Math.max(super.available(), minNeededBytes));
+    logger.info(
+        String.format(
+            "SINGELSTORE JDBC: Reading %d bytes from socket (%h)", lengthToReallyRead, this));
     end = super.read(buf, 0, lengthToReallyRead);
+    logger.info(String.format("SINGELSTORE JDBC: Read %d bytes from socket (%h)", end, this));
     pos = 0;
   }
 

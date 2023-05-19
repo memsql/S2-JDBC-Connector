@@ -96,7 +96,8 @@ public abstract class Result implements ResultSet, Completion {
 
   @SuppressWarnings("fallthrough")
   protected boolean readNext() throws SQLException, IOException {
-    byte[] buf = reader.readPacket(false, traceEnable).buf();
+
+    byte[] buf = reader.readPacket(false, true).buf();
     switch (buf[0]) {
       case (byte) 0xFF:
         loaded = true;

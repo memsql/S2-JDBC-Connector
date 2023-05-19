@@ -17,6 +17,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Logger;
 
 public class CompleteResult extends Result {
 
@@ -49,7 +50,9 @@ public class CompleteResult extends Result {
       while (readNext() && dataSize < maxRows) {}
       if (!loaded) skipRemaining();
     } else {
-      while (readNext()) {}
+      while (readNext()) {
+        // logger.info("ACTUALY READING ROW");
+      }
     }
     loaded = true;
   }
@@ -112,6 +115,9 @@ public class CompleteResult extends Result {
     }
     return new CompleteResult(columns, rows.toArray(new byte[0][0]), context);
   }
+
+  private static final Logger logger =
+      Logger.getLogger("com.singlestore.jdbc.client.result.CompleteResult");
 
   @Override
   public boolean next() throws SQLException {

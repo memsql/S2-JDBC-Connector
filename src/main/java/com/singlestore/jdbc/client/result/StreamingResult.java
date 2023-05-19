@@ -12,6 +12,7 @@ import com.singlestore.jdbc.message.server.ColumnDefinitionPacket;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Logger;
 
 public class StreamingResult extends Result {
 
@@ -106,6 +107,9 @@ public class StreamingResult extends Result {
       dataFetchTime++;
     }
   }
+
+  private static final Logger logger =
+      Logger.getLogger("com.singlestore.jdbc.client.result.StreamingResult");
 
   @Override
   public boolean next() throws SQLException {

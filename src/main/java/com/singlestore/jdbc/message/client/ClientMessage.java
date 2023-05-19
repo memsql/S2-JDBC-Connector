@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Logger;
 
 public interface ClientMessage {
 
@@ -47,6 +48,9 @@ public interface ClientMessage {
   default boolean canSkipMeta() {
     return false;
   }
+
+  static final Logger logger =
+      Logger.getLogger("com.singlestore.jdbc.message.client.ClientMessage");
 
   default Completion readPacket(
       Statement stmt,
@@ -206,6 +210,7 @@ public interface ClientMessage {
               traceEnable);
         }
 
+        logger.info("FETCH SIZE " + fetchSize);
         if (fetchSize != 0) {
           if ((context.getServerStatus() & ServerStatus.MORE_RESULTS_EXISTS) > 0) {
             context.setServerStatus(context.getServerStatus() - ServerStatus.MORE_RESULTS_EXISTS);
