@@ -72,11 +72,11 @@ public class PacketReader {
     int off = 0;
     do {
       if (traceEnable) {
-        // logger.info(String.format("SINGLESTORE JDBC: reading result packet (%h)", this));
+        logger.info(String.format("SINGLESTORE JDBC: reading result packet (%h)", this));
       }
       int count = inputStream.read(header, off, remaining);
       if (traceEnable) {
-        // logger.info(String.format("SINGLESTORE JDBC: read %d bytes (%h)", count, this));
+        logger.info(String.format("SINGLESTORE JDBC: read %d bytes (%h)", count, this));
       }
       if (count < 0) {
         throw new EOFException(
@@ -107,11 +107,11 @@ public class PacketReader {
     off = 0;
     do {
       if (traceEnable) {
-        // logger.info(String.format("SINGLESTORE JDBC: reading result packet (%h)", this));
+        logger.info(String.format("SINGLESTORE JDBC: reading result packet (%h)", this));
       }
       int count = inputStream.read(rawBytes, off, remaining);
       if (traceEnable) {
-        // logger.info(String.format("SINGLESTORE JDBC: read %d bytes (%h)", count, this));
+        logger.info(String.format("SINGLESTORE JDBC: read %d bytes (%h)", count, this));
       }
       if (count < 0) {
         throw new EOFException(
@@ -142,11 +142,11 @@ public class PacketReader {
         off = 0;
         do {
           if (traceEnable) {
-            // logger.info(String.format("SINGLESTORE JDBC: reading result packet (%h)", this));
+            logger.info(String.format("SINGLESTORE JDBC: reading result packet (%h)", this));
           }
           int count = inputStream.read(header, off, remaining);
           if (traceEnable) {
-            // logger.info(String.format("SINGLESTORE JDBC: read %d bytes (%h)", count, this));
+            logger.info(String.format("SINGLESTORE JDBC: read %d bytes (%h)", count, this));
           }
           if (count < 0) {
             throw new EOFException("unexpected end of stream, read " + off + " bytes from 4");
