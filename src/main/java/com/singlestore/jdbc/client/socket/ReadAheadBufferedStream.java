@@ -5,6 +5,7 @@
 
 package com.singlestore.jdbc.client.socket;
 
+import com.google.common.util.concurrent.RateLimiter;
 import com.singlestore.jdbc.util.log.Logger;
 import com.singlestore.jdbc.util.log.Loggers;
 import java.io.FilterInputStream;
@@ -22,12 +23,17 @@ public class ReadAheadBufferedStream extends FilterInputStream {
   private final byte[] buf;
   private int end;
   private int pos;
+  private RateLimiter rateLimiter = null;
 
-  public ReadAheadBufferedStream(InputStream in) {
+  public ReadAheadBufferedStream(InputStream in, long readAheadInputRateLimit) {
     super(in);
     buf = new byte[BUF_SIZE];
     end = 0;
     pos = 0;
+    // logger.info(String.format("SingleStore JDBC: rate limit %d", readAheadInputRateLimit));
+    if (readAheadInputRateLimit != 0) {
+      rateLimiter = RateLimiter.create(readAheadInputRateLimit);
+    }
   }
 
   /**
@@ -69,12 +75,17 @@ public class ReadAheadBufferedStream extends FilterInputStream {
         if (len - totalReads >= buf.length) {
           // buf length is less than asked byte and buf is empty
           // => filling directly into external buf
-          logger.info(
-              String.format(
-                  "SINGELSTORE JDBC: Reading %d bytes from socket (%h)", len - totalReads, this));
+          // logger.info(
+          //    String.format(
+          //        "SINGELSTORE JDBC: Reading %d bytes from socket (%h)", len - totalReads, this));
           int reads = super.read(externalBuf, off + totalReads, len - totalReads);
-          logger.info(
-              String.format("SINGELSTORE JDBC: Read %d bytes from socket (%h)", reads, this));
+          if (rateLimiter != null) {
+            // logger.info(String.format("SINGELSTORE JDBC: rate limiter %d", reads));
+            rateLimiter.acquire(reads);
+          }
+
+          // logger.info(
+          //    String.format("SINGELSTORE JDBC: Read %d bytes from socket (%h)", reads, this));
           if (reads <= 0) {
             return (totalReads == 0) ? -1 : totalReads;
           }
@@ -110,11 +121,15 @@ public class ReadAheadBufferedStream extends FilterInputStream {
    */
   private void fillbuf(int minNeededBytes) throws IOException {
     int lengthToReallyRead = Math.min(BUF_SIZE, Math.max(super.available(), minNeededBytes));
-    logger.info(
-        String.format(
-            "SINGELSTORE JDBC: Reading %d bytes from socket (%h)", lengthToReallyRead, this));
+    // logger.info(
+    //    String.format(
+    //        "SINGELSTORE JDBC: Reading %d bytes from socket (%h)", lengthToReallyRead, this));
     end = super.read(buf, 0, lengthToReallyRead);
-    logger.info(String.format("SINGELSTORE JDBC: Read %d bytes from socket (%h)", end, this));
+    if (rateLimiter != null) {
+      // logger.info(String.format("SINGELSTORE JDBC: rate limiter %d", end));
+      rateLimiter.acquire(end);
+    }
+    // logger.info(String.format("SINGELSTORE JDBC: Read %d bytes from socket (%h)", end, this));
     pos = 0;
   }
 

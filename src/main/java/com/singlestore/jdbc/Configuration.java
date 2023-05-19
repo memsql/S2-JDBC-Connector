@@ -87,6 +87,7 @@ public class Configuration {
   private String localSocketAddress = null;
   private int socketTimeout = 0;
   private boolean useReadAheadInput = true;
+  private long readAheadInputRateLimit = 0;
   private String tlsSocketType = null;
 
   // SSL
@@ -171,6 +172,7 @@ public class Configuration {
       String localSocketAddress,
       int socketTimeout,
       boolean useReadAheadInput,
+      long readAheadInputRateLimit,
       String tlsSocketType,
       SslMode sslMode,
       String serverSslCert,
@@ -234,6 +236,7 @@ public class Configuration {
     this.localSocketAddress = localSocketAddress;
     this.socketTimeout = socketTimeout;
     this.useReadAheadInput = useReadAheadInput;
+    this.readAheadInputRateLimit = readAheadInputRateLimit;
     this.tlsSocketType = tlsSocketType;
     this.sslMode = sslMode;
     this.serverSslCert = serverSslCert;
@@ -333,6 +336,7 @@ public class Configuration {
       String keyStorePassword,
       String keyStoreType,
       Boolean useReadAheadInput,
+      Long readAheadInputRateLimit,
       Boolean cachePrepStmts,
       Boolean transactionReplay,
       String geometryDefaultType,
@@ -416,6 +420,7 @@ public class Configuration {
     if (poolValidMinDelay != null) this.poolValidMinDelay = poolValidMinDelay;
     if (useResetConnection != null) this.useResetConnection = useResetConnection;
     if (useReadAheadInput != null) this.useReadAheadInput = useReadAheadInput;
+    if (readAheadInputRateLimit != null) this.readAheadInputRateLimit = readAheadInputRateLimit;
     if (cachePrepStmts != null) this.cachePrepStmts = cachePrepStmts;
     if (transactionReplay != null) this.transactionReplay = transactionReplay;
     if (geometryDefaultType != null) this.geometryDefaultType = geometryDefaultType;
@@ -610,6 +615,15 @@ public class Configuration {
                     String.format(
                         "Optional parameter %s must be Integer, was '%s'", keyObj, propertyValue));
               }
+            } else if (field.getGenericType().equals(Long.class)) {
+              try {
+                final Long value = Long.parseLong(propertyValue.toString());
+                field.set(builder, value);
+              } catch (NumberFormatException n) {
+                throw new IllegalArgumentException(
+                    String.format(
+                        "Optional parameter %s must be Long, was '%s'", keyObj, propertyValue));
+              }
             }
           } catch (NoSuchFieldException nfe) {
             // keep unknown option:
@@ -691,6 +705,7 @@ public class Configuration {
         this.localSocketAddress,
         this.socketTimeout,
         this.useReadAheadInput,
+        this.readAheadInputRateLimit,
         this.tlsSocketType,
         this.sslMode,
         this.serverSslCert,
@@ -969,6 +984,10 @@ public class Configuration {
     return useReadAheadInput;
   }
 
+  public long readAheadInputRateLimit() {
+    return readAheadInputRateLimit;
+  }
+
   public boolean cachePrepStmts() {
     return cachePrepStmts;
   }
@@ -1178,6 +1197,7 @@ public class Configuration {
     private String localSocketAddress;
     private Integer socketTimeout;
     private Boolean useReadAheadInput;
+    private Long readAheadInputRateLimit;
     private String tlsSocketType;
 
     // SSL
@@ -1660,6 +1680,11 @@ public class Configuration {
       return this;
     }
 
+    public Builder readAheadInputRateLimit(Long readAheadInputRateLimit) {
+      this.readAheadInputRateLimit = readAheadInputRateLimit;
+      return this;
+    }
+
     public Builder cachePrepStmts(Boolean cachePrepStmts) {
       this.cachePrepStmts = cachePrepStmts;
       return this;
@@ -1739,6 +1764,7 @@ public class Configuration {
               this.keyStorePassword,
               this.keyStoreType,
               this.useReadAheadInput,
+              this.readAheadInputRateLimit,
               this.cachePrepStmts,
               this.transactionReplay,
               this.geometryDefaultType,

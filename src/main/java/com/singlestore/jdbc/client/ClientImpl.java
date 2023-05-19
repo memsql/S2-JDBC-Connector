@@ -166,7 +166,7 @@ public class ClientImpl implements Client, AutoCloseable {
       OutputStream out = socket.getOutputStream();
       InputStream in =
           conf.useReadAheadInput()
-              ? new ReadAheadBufferedStream(socket.getInputStream())
+              ? new ReadAheadBufferedStream(socket.getInputStream(), conf.readAheadInputRateLimit())
               : new BufferedInputStream(socket.getInputStream(), 16384);
 
       assignStream(out, in, conf, null);
@@ -217,7 +217,8 @@ public class ClientImpl implements Client, AutoCloseable {
         out = sslSocket.getOutputStream();
         in =
             conf.useReadAheadInput()
-                ? new ReadAheadBufferedStream(sslSocket.getInputStream())
+                ? new ReadAheadBufferedStream(
+                    sslSocket.getInputStream(), conf.readAheadInputRateLimit())
                 : new BufferedInputStream(sslSocket.getInputStream(), 16384);
         assignStream(out, in, conf, handshake.getThreadId());
       }
