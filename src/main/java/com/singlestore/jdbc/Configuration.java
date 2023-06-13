@@ -146,8 +146,8 @@ public class Configuration {
   private boolean useMysqlVersion = false;
   private boolean rewriteBatchedStatements = false;
   private boolean enableSlf4j = true;
-  private String fallbackLogLevel = null;
-  private String fallbackLogFilepath = null;
+  private String consoleLogLevel = null;
+  private String consoleLogFilepath = null;
 
   private Configuration() {}
 
@@ -216,8 +216,8 @@ public class Configuration {
       boolean useMysqlVersion,
       boolean rewriteBatchedStatements,
       boolean enableSlf4j,
-      String fallbackLogLevel,
-      String fallbackLogFilepath) {
+      String consoleLogLevel,
+      String consoleLogFilepath) {
     this.user = user;
     this.password = password;
     this.database = database;
@@ -283,8 +283,8 @@ public class Configuration {
     this.rewriteBatchedStatements = rewriteBatchedStatements;
     this.initialUrl = buildUrl(this);
     this.enableSlf4j = enableSlf4j;
-    this.fallbackLogLevel = fallbackLogLevel;
-    this.fallbackLogFilepath = fallbackLogFilepath;
+    this.consoleLogLevel = consoleLogLevel;
+    this.consoleLogFilepath = consoleLogFilepath;
   }
 
   private Configuration(
@@ -352,13 +352,13 @@ public class Configuration {
       Boolean useMysqlVersion,
       Boolean rewriteBatchedStatements,
       Boolean enableSlf4j,
-      String fallbackLogLevel,
-      String fallbackLogFilepath)
+      String consoleLogLevel,
+      String consoleLogFilepath)
       throws SQLException {
     if (enableSlf4j != null) this.enableSlf4j = enableSlf4j;
-    this.fallbackLogLevel = fallbackLogLevel;
-    this.fallbackLogFilepath = fallbackLogFilepath;
-    propagateLoggerProperties(this.enableSlf4j, this.fallbackLogLevel, this.fallbackLogFilepath);
+    this.consoleLogLevel = consoleLogLevel;
+    this.consoleLogFilepath = consoleLogFilepath;
+    propagateLoggerProperties(this.enableSlf4j, this.consoleLogLevel, this.consoleLogFilepath);
     this.database = database;
     this.addresses = addresses;
     this.nonMappedOptions = nonMappedOptions;
@@ -582,8 +582,8 @@ public class Configuration {
   }
 
   private static void propagateLoggerProperties(
-      boolean enableSlf4j, String fallbackLogLevel, String fallbackLogFilepath) {
-    Loggers.resetLoggerFactoryProperties(enableSlf4j, fallbackLogLevel, fallbackLogFilepath);
+      boolean enableSlf4j, String consoleLogLevel, String consoleLogFilepath) {
+    Loggers.resetLoggerFactoryProperties(enableSlf4j, consoleLogLevel, consoleLogFilepath);
   }
 
   private static void mapPropertiesToOption(Builder builder, Properties properties) {
@@ -755,8 +755,8 @@ public class Configuration {
         this.useMysqlVersion,
         this.rewriteBatchedStatements,
         this.enableSlf4j,
-        this.fallbackLogLevel,
-        this.fallbackLogFilepath);
+        this.consoleLogLevel,
+        this.consoleLogFilepath);
   }
 
   public String database() {
@@ -1028,12 +1028,12 @@ public class Configuration {
     return enableSlf4j;
   }
 
-  public String getFallbackLogLevel() {
-    return fallbackLogLevel;
+  public String getConsoleLogLevel() {
+    return consoleLogLevel;
   }
 
-  public String getFallbackLogFilepath() {
-    return fallbackLogFilepath;
+  public String getConsoleLogFilepath() {
+    return consoleLogFilepath;
   }
 
   /**
@@ -1273,8 +1273,8 @@ public class Configuration {
 
     private Boolean rewriteBatchedStatements;
     private Boolean enableSlf4j;
-    private String fallbackLogLevel;
-    private String fallbackLogFilepath;
+    private String consoleLogLevel;
+    private String consoleLogFilepath;
 
     public Builder user(String user) {
       this.user = nullOrEmpty(user);
@@ -1727,13 +1727,13 @@ public class Configuration {
       return this;
     }
 
-    public Builder fallbackLogLevel(String fallbackLogLevel) {
-      this.fallbackLogLevel = fallbackLogLevel;
+    public Builder consoleLogLevel(String consoleLogLevel) {
+      this.consoleLogLevel = consoleLogLevel;
       return this;
     }
 
-    public Builder fallbackLogFilepath(String fallbackLogFilepath) {
-      this.fallbackLogFilepath = fallbackLogFilepath;
+    public Builder consoleLogFilepath(String consoleLogFilepath) {
+      this.consoleLogFilepath = consoleLogFilepath;
       return this;
     }
 
@@ -1804,8 +1804,8 @@ public class Configuration {
               this.useMysqlVersion,
               this.rewriteBatchedStatements,
               this.enableSlf4j,
-              this.fallbackLogLevel,
-              this.fallbackLogFilepath);
+              this.consoleLogLevel,
+              this.consoleLogFilepath);
       conf.initialUrl = buildUrl(conf);
       return conf;
     }

@@ -18,8 +18,8 @@ import java.util.function.Function;
 public final class Loggers {
 
   private static Boolean slf4jEnabled;
-  private static CONSOLE_LOG_LEVEL fallbackLogLevel;
-  private static String fallbackLogFilepath;
+  private static CONSOLE_LOG_LEVEL consoleLogLevel;
+  private static String consoleLogFilepath;
   private static PrintStream filePrintStream;
   public static final String FALLBACK_PROPERTY = "singlestore.logging.fallback";
   public static final String CONSOLE_DEBUG_PROPERTY = "singlestore.logging.fallback.console.debug";
@@ -83,7 +83,7 @@ public final class Loggers {
     @Override
     public Logger apply(String name) {
       final ConsoleLoggerKey key =
-          new ConsoleLoggerKey(name, getFallbackLogLevel(), getFallbackLogFilepath());
+          new ConsoleLoggerKey(name, getConsoleLogLevel(), getConsoleLogFilepath());
       synchronized (consoleLoggers) {
         final WeakReference<Logger> ref = consoleLoggers.get(key);
         Logger cached = ref == null ? null : ref.get();
@@ -99,12 +99,12 @@ public final class Loggers {
   public static void resetLoggerFactoryProperties(Boolean enableSlf4j, String level, String path) {
     synchronized (Loggers.class) {
       slf4jEnabled = enableSlf4j;
-      fallbackLogLevel = CONSOLE_LOG_LEVEL.fromLevelName(level);
+      consoleLogLevel = CONSOLE_LOG_LEVEL.fromLevelName(level);
       String error = null;
-      if (path != null && !path.isBlank() && !path.equals(fallbackLogFilepath)) {
-        fallbackLogFilepath = path;
+      if (path != null && !path.isBlank() && !path.equals(consoleLogFilepath)) {
+        consoleLogFilepath = path;
         try {
-          filePrintStream = new PrintStream(new FileOutputStream(fallbackLogFilepath, true), true);
+          filePrintStream = new PrintStream(new FileOutputStream(consoleLogFilepath, true), true);
         } catch (FileNotFoundException e) {
           error = String.format("failed to create log file stream, error: %s", e.getMessage());
         }
@@ -117,8 +117,8 @@ public final class Loggers {
           .info(
               "Set logger factory properties: slf4jEnabled = {}, fallbackLogLevel = {}, fallbackLogFilepath = {}",
               slf4jEnabled,
-              fallbackLogLevel,
-              fallbackLogFilepath);
+              consoleLogLevel,
+              consoleLogFilepath);
     }
   }
 
@@ -138,9 +138,9 @@ public final class Loggers {
         : slf4jEnabled;
   }
 
-  static CONSOLE_LOG_LEVEL getFallbackLogLevel() {
-    if (fallbackLogLevel != null) {
-      return fallbackLogLevel;
+  static CONSOLE_LOG_LEVEL getConsoleLogLevel() {
+    if (consoleLogLevel != null) {
+      return consoleLogLevel;
     } else {
       return Boolean.parseBoolean(System.getProperty(CONSOLE_DEBUG_PROPERTY, "false"))
           ? CONSOLE_LOG_LEVEL.TRACE
@@ -148,8 +148,8 @@ public final class Loggers {
     }
   }
 
-  public static String getFallbackLogFilepath() {
-    return fallbackLogFilepath;
+  public static String getConsoleLogFilepath() {
+    return consoleLogFilepath;
   }
 
   private static void resetLoggerFactory() {
