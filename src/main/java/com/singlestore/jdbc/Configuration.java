@@ -9,13 +9,17 @@ import com.singlestore.jdbc.codec.Codec;
 import com.singlestore.jdbc.plugin.credential.CredentialPlugin;
 import com.singlestore.jdbc.plugin.credential.CredentialPluginLoader;
 import com.singlestore.jdbc.util.constants.HaMode;
-import com.singlestore.jdbc.util.log.Logger;
 import com.singlestore.jdbc.util.log.Loggers;
 import com.singlestore.jdbc.util.options.OptionAliases;
 import java.lang.reflect.Field;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Properties;
+import java.util.ServiceLoader;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,8 +54,6 @@ import java.util.regex.Pattern;
  * <br>
  */
 public class Configuration {
-  private static final Logger logger = Loggers.getLogger(Configuration.class);
-
   private static final Pattern URL_PARAMETER =
       Pattern.compile("(\\/([^\\?]*))?(\\?(.+))*", Pattern.DOTALL);
 
@@ -143,6 +145,9 @@ public class Configuration {
 
   private boolean useMysqlVersion = false;
   private boolean rewriteBatchedStatements = false;
+  private boolean enableSlf4j = true;
+  private String fallbackLogLevel = null;
+  private String fallbackLogFilepath = null;
 
   private Configuration() {}
 
@@ -209,7 +214,10 @@ public class Configuration {
       int poolValidMinDelay,
       boolean useResetConnection,
       boolean useMysqlVersion,
-      boolean rewriteBatchedStatements) {
+      boolean rewriteBatchedStatements,
+      boolean enableSlf4j,
+      String fallbackLogLevel,
+      String fallbackLogFilepath) {
     this.user = user;
     this.password = password;
     this.database = database;
@@ -274,6 +282,9 @@ public class Configuration {
     this.useMysqlVersion = useMysqlVersion;
     this.rewriteBatchedStatements = rewriteBatchedStatements;
     this.initialUrl = buildUrl(this);
+    this.enableSlf4j = enableSlf4j;
+    this.fallbackLogLevel = fallbackLogLevel;
+    this.fallbackLogFilepath = fallbackLogFilepath;
   }
 
   private Configuration(
@@ -339,8 +350,15 @@ public class Configuration {
       String restrictedAuth,
       Properties nonMappedOptions,
       Boolean useMysqlVersion,
-      Boolean rewriteBatchedStatements)
+      Boolean rewriteBatchedStatements,
+      Boolean enableSlf4j,
+      String fallbackLogLevel,
+      String fallbackLogFilepath)
       throws SQLException {
+    if (enableSlf4j != null) this.enableSlf4j = enableSlf4j;
+    this.fallbackLogLevel = fallbackLogLevel;
+    this.fallbackLogFilepath = fallbackLogFilepath;
+    propagateLoggerProperties(this.enableSlf4j, this.fallbackLogLevel, this.fallbackLogFilepath);
     this.database = database;
     this.addresses = addresses;
     this.nonMappedOptions = nonMappedOptions;
@@ -367,11 +385,12 @@ public class Configuration {
     if (this.credentialType != null
         && this.credentialType.mustUseSsl()
         && (sslMode == null || SslMode.from(sslMode) == SslMode.DISABLE)) {
-      logger.warn(
-          "Credential type '"
-              + this.credentialType.type()
-              + "' is required to be used with SSL. "
-              + "Enabling SSL.");
+      Loggers.getLogger(Configuration.class)
+          .warn(
+              "Credential type '"
+                  + this.credentialType.type()
+                  + "' is required to be used with SSL. "
+                  + "Enabling SSL.");
       this.sslMode = SslMode.VERIFY_FULL;
     } else {
       this.sslMode = sslMode != null ? SslMode.from(sslMode) : SslMode.DISABLE;
@@ -562,6 +581,11 @@ public class Configuration {
     }
   }
 
+  private static void propagateLoggerProperties(
+      boolean enableSlf4j, String fallbackLogLevel, String fallbackLogFilepath) {
+    Loggers.resetLoggerFactoryProperties(enableSlf4j, fallbackLogLevel, fallbackLogFilepath);
+  }
+
   private static void mapPropertiesToOption(Builder builder, Properties properties) {
     Properties nonMappedOptions = new Properties();
 
@@ -729,7 +753,10 @@ public class Configuration {
         this.poolValidMinDelay,
         this.useResetConnection,
         this.useMysqlVersion,
-        this.rewriteBatchedStatements);
+        this.rewriteBatchedStatements,
+        this.enableSlf4j,
+        this.fallbackLogLevel,
+        this.fallbackLogFilepath);
   }
 
   public String database() {
@@ -997,6 +1024,18 @@ public class Configuration {
     return rewriteBatchedStatements;
   }
 
+  public boolean isEnableSlf4j() {
+    return enableSlf4j;
+  }
+
+  public String getFallbackLogLevel() {
+    return fallbackLogLevel;
+  }
+
+  public String getFallbackLogFilepath() {
+    return fallbackLogFilepath;
+  }
+
   /**
    * ToString implementation.
    *
@@ -1233,6 +1272,9 @@ public class Configuration {
     private Boolean useMysqlVersion;
 
     private Boolean rewriteBatchedStatements;
+    private Boolean enableSlf4j;
+    private String fallbackLogLevel;
+    private String fallbackLogFilepath;
 
     public Builder user(String user) {
       this.user = nullOrEmpty(user);
@@ -1680,6 +1722,21 @@ public class Configuration {
       return this;
     }
 
+    public Builder enableSlf4j(Boolean enableSlf4j) {
+      this.enableSlf4j = enableSlf4j;
+      return this;
+    }
+
+    public Builder fallbackLogLevel(String fallbackLogLevel) {
+      this.fallbackLogLevel = fallbackLogLevel;
+      return this;
+    }
+
+    public Builder fallbackLogFilepath(String fallbackLogFilepath) {
+      this.fallbackLogFilepath = fallbackLogFilepath;
+      return this;
+    }
+
     public Configuration build() throws SQLException {
       Configuration conf =
           new Configuration(
@@ -1745,7 +1802,10 @@ public class Configuration {
               this.restrictedAuth,
               this._nonMappedOptions,
               this.useMysqlVersion,
-              this.rewriteBatchedStatements);
+              this.rewriteBatchedStatements,
+              this.enableSlf4j,
+              this.fallbackLogLevel,
+              this.fallbackLogFilepath);
       conf.initialUrl = buildUrl(conf);
       return conf;
     }
