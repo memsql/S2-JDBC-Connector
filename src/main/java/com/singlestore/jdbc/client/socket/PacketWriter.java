@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("SameReturnValue")
 public class PacketWriter {
@@ -794,7 +795,12 @@ public class PacketWriter {
       if (logger.isTraceEnabled()) {
         if (permitTrace) {
           logger.trace(
-              "send: {}\n{}", serverThreadLog, LoggerHelper.hex(buf, 0, pos, maxQuerySizeToLog));
+              "send: {}\n{}\n{}",
+              serverThreadLog,
+              LoggerHelper.hex(buf, 0, pos, maxQuerySizeToLog),
+              Arrays.stream(Thread.currentThread().getStackTrace())
+                  .map(StackTraceElement::toString)
+                  .collect(Collectors.joining("\n", "", "")));
         } else {
           logger.trace("send: content length={} {} com=<hidden>", pos - 4, serverThreadLog);
         }

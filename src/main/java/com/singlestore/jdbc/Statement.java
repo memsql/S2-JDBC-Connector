@@ -296,6 +296,7 @@ public class Statement implements java.sql.Statement {
       throw exceptionFactory()
           .create("Query timeout cannot be negative : asked for " + seconds, "42000");
     }
+    logger.trace("Setting query timeout {}", seconds);
     this.queryTimeout = seconds;
   }
 

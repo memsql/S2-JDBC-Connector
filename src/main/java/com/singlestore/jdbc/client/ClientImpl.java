@@ -42,11 +42,13 @@ import java.sql.SQLInvalidAuthorizationSpecException;
 import java.sql.SQLNonTransientConnectionException;
 import java.sql.SQLPermission;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 import javax.net.ssl.SSLSocket;
 
 public class ClientImpl implements Client, AutoCloseable {
@@ -80,6 +82,13 @@ public class ClientImpl implements Client, AutoCloseable {
                 boolean lockStatus = lock.tryLock();
 
                 if (!closed) {
+                  logger.trace(
+                      String.format(
+                          "Killing connection because of the timeout (conn=%d)\n %s",
+                          context.getThreadId(),
+                          Arrays.stream(Thread.currentThread().getStackTrace())
+                              .map(StackTraceElement::toString)
+                              .collect(Collectors.joining("\n", "", ""))));
                   closed = true;
                   timeOut = true;
                   if (!lockStatus) {
@@ -295,6 +304,13 @@ public class ClientImpl implements Client, AutoCloseable {
 
   /** Closing socket in case of Connection error after socket creation. */
   protected void destroySocket() {
+    logger.trace(
+        String.format(
+            "Destroying socket (conn=%d)\n %s",
+            context.getThreadId(),
+            Arrays.stream(Thread.currentThread().getStackTrace())
+                .map(StackTraceElement::toString)
+                .collect(Collectors.joining("\n", "", ""))));
     closed = true;
     try {
       this.reader.close();
@@ -494,10 +510,11 @@ public class ClientImpl implements Client, AutoCloseable {
       boolean closeOnCompletion)
       throws SQLException {
 
+    logger.trace("Running query with timeout {}", stmt.getQueryTimeout());
     if (stmt != null && stmt.getQueryTimeout() > 0) {
       Timer cancelTimer = new Timer();
       try {
-        cancelTimer.schedule(getTimerTask(), stmt.getQueryTimeout());
+        cancelTimer.schedule(getTimerTask(), stmt.getQueryTimeout() * 1000);
         sendQuery(message);
         return readResponse(
             stmt,
@@ -765,6 +782,13 @@ public class ClientImpl implements Client, AutoCloseable {
       this.closed = true;
 
       if (!lockStatus) {
+        logger.trace(
+            String.format(
+                "Aborint connection (conn=%d)\n %s",
+                context.getThreadId(),
+                Arrays.stream(Thread.currentThread().getStackTrace())
+                    .map(StackTraceElement::toString)
+                    .collect(Collectors.joining("\n", "", ""))));
         // lock not available : query is running
         // force end by executing an KILL connection
         try (ClientImpl cli = new ClientImpl(conf, hostAddress, new ReentrantLock(), true)) {
@@ -807,6 +831,13 @@ public class ClientImpl implements Client, AutoCloseable {
     boolean locked = lock.tryLock();
 
     if (!this.closed) {
+      logger.trace(
+          String.format(
+              "Closing connection (conn=%d)\n %s",
+              context.getThreadId(),
+              Arrays.stream(Thread.currentThread().getStackTrace())
+                  .map(StackTraceElement::toString)
+                  .collect(Collectors.joining("\n", "", ""))));
       this.closed = true;
       try {
         QuitPacket.INSTANCE.encode(writer, context);
