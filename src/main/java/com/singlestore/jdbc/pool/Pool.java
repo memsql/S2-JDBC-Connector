@@ -225,9 +225,8 @@ public class Pool implements AutoCloseable, PoolMBean {
           public void connectionErrorOccurred(ConnectionEvent event) {
 
             InternalPoolConnection item = ((InternalPoolConnection) event.getSource());
-            if (idleConnections.remove(item)) {
-              totalConnection.decrementAndGet();
-            }
+            totalConnection.decrementAndGet();
+            idleConnections.remove(item);
             silentCloseConnection(item.getConnection());
             addConnectionRequest();
             logger.debug(
@@ -290,8 +289,6 @@ public class Pool implements AutoCloseable, PoolMBean {
         } catch (SQLException sqle) {
           // eat
         }
-
-        totalConnection.decrementAndGet();
 
         // validation failed
         silentAbortConnection(item.getConnection());
