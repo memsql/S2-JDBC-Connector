@@ -201,6 +201,11 @@ public class Pool implements AutoCloseable, PoolMBean {
                 if (!idleConnections.contains(item)) {
                   item.getConnection().reset();
                   item.lastUsedToNow();
+                  if (item.isFailed()) {
+                    // some connections after error are closing and returns to idle state
+                    item.setFailed(false);
+                    totalConnection.incrementAndGet();
+                  }
                   idleConnections.addFirst(item);
                 }
               } catch (SQLException sqle) {
@@ -225,8 +230,9 @@ public class Pool implements AutoCloseable, PoolMBean {
           public void connectionErrorOccurred(ConnectionEvent event) {
 
             InternalPoolConnection item = ((InternalPoolConnection) event.getSource());
+            item.setFailed(true);
             totalConnection.decrementAndGet();
-            idleConnections.remove(item);
+            boolean unused = idleConnections.remove(item);
             silentCloseConnection(item.getConnection());
             addConnectionRequest();
             logger.debug(
