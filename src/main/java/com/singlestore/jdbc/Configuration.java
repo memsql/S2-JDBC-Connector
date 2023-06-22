@@ -9,6 +9,7 @@ import com.singlestore.jdbc.codec.Codec;
 import com.singlestore.jdbc.plugin.credential.CredentialPlugin;
 import com.singlestore.jdbc.plugin.credential.CredentialPluginLoader;
 import com.singlestore.jdbc.util.constants.HaMode;
+import com.singlestore.jdbc.util.log.Logger;
 import com.singlestore.jdbc.util.log.Loggers;
 import com.singlestore.jdbc.util.options.OptionAliases;
 import java.lang.reflect.Field;
@@ -54,6 +55,8 @@ import java.util.regex.Pattern;
  * <br>
  */
 public class Configuration {
+
+  private final Logger logger;
   private static final Pattern URL_PARAMETER =
       Pattern.compile("(\\/([^\\?]*))?(\\?(.+))*", Pattern.DOTALL);
 
@@ -145,11 +148,12 @@ public class Configuration {
 
   private boolean useMysqlVersion = false;
   private boolean rewriteBatchedStatements = false;
-  private boolean enableSlf4j = true;
   private String consoleLogLevel = null;
   private String consoleLogFilepath = null;
 
-  private Configuration() {}
+  private Configuration() {
+    this.logger = Loggers.getLogger(Configuration.class);
+  }
 
   private Configuration(
       String user,
@@ -215,7 +219,6 @@ public class Configuration {
       boolean useResetConnection,
       boolean useMysqlVersion,
       boolean rewriteBatchedStatements,
-      boolean enableSlf4j,
       String consoleLogLevel,
       String consoleLogFilepath) {
     this.user = user;
@@ -282,9 +285,9 @@ public class Configuration {
     this.useMysqlVersion = useMysqlVersion;
     this.rewriteBatchedStatements = rewriteBatchedStatements;
     this.initialUrl = buildUrl(this);
-    this.enableSlf4j = enableSlf4j;
     this.consoleLogLevel = consoleLogLevel;
     this.consoleLogFilepath = consoleLogFilepath;
+    this.logger = Loggers.getLogger(Configuration.class);
   }
 
   private Configuration(
@@ -351,14 +354,13 @@ public class Configuration {
       Properties nonMappedOptions,
       Boolean useMysqlVersion,
       Boolean rewriteBatchedStatements,
-      Boolean enableSlf4j,
       String consoleLogLevel,
       String consoleLogFilepath)
       throws SQLException {
-    if (enableSlf4j != null) this.enableSlf4j = enableSlf4j;
     this.consoleLogLevel = consoleLogLevel;
     this.consoleLogFilepath = consoleLogFilepath;
-    propagateLoggerProperties(this.enableSlf4j, this.consoleLogLevel, this.consoleLogFilepath);
+    Loggers.resetLoggerFactoryProperties(this.consoleLogLevel, this.consoleLogFilepath);
+    this.logger = Loggers.getLogger(Configuration.class);
     this.database = database;
     this.addresses = addresses;
     this.nonMappedOptions = nonMappedOptions;
@@ -385,12 +387,11 @@ public class Configuration {
     if (this.credentialType != null
         && this.credentialType.mustUseSsl()
         && (sslMode == null || SslMode.from(sslMode) == SslMode.DISABLE)) {
-      Loggers.getLogger(Configuration.class)
-          .warn(
-              "Credential type '"
-                  + this.credentialType.type()
-                  + "' is required to be used with SSL. "
-                  + "Enabling SSL.");
+      logger.warn(
+          "Credential type '"
+              + this.credentialType.type()
+              + "' is required to be used with SSL. "
+              + "Enabling SSL.");
       this.sslMode = SslMode.VERIFY_FULL;
     } else {
       this.sslMode = sslMode != null ? SslMode.from(sslMode) : SslMode.DISABLE;
@@ -581,11 +582,6 @@ public class Configuration {
     }
   }
 
-  private static void propagateLoggerProperties(
-      boolean enableSlf4j, String consoleLogLevel, String consoleLogFilepath) {
-    Loggers.resetLoggerFactoryProperties(enableSlf4j, consoleLogLevel, consoleLogFilepath);
-  }
-
   private static void mapPropertiesToOption(Builder builder, Properties properties) {
     Properties nonMappedOptions = new Properties();
 
@@ -754,7 +750,6 @@ public class Configuration {
         this.useResetConnection,
         this.useMysqlVersion,
         this.rewriteBatchedStatements,
-        this.enableSlf4j,
         this.consoleLogLevel,
         this.consoleLogFilepath);
   }
@@ -1024,10 +1019,6 @@ public class Configuration {
     return rewriteBatchedStatements;
   }
 
-  public boolean isEnableSlf4j() {
-    return enableSlf4j;
-  }
-
   public String getConsoleLogLevel() {
     return consoleLogLevel;
   }
@@ -1272,7 +1263,6 @@ public class Configuration {
     private Boolean useMysqlVersion;
 
     private Boolean rewriteBatchedStatements;
-    private Boolean enableSlf4j;
     private String consoleLogLevel;
     private String consoleLogFilepath;
 
@@ -1722,11 +1712,6 @@ public class Configuration {
       return this;
     }
 
-    public Builder enableSlf4j(Boolean enableSlf4j) {
-      this.enableSlf4j = enableSlf4j;
-      return this;
-    }
-
     public Builder consoleLogLevel(String consoleLogLevel) {
       this.consoleLogLevel = consoleLogLevel;
       return this;
@@ -1803,7 +1788,6 @@ public class Configuration {
               this._nonMappedOptions,
               this.useMysqlVersion,
               this.rewriteBatchedStatements,
-              this.enableSlf4j,
               this.consoleLogLevel,
               this.consoleLogFilepath);
       conf.initialUrl = buildUrl(conf);

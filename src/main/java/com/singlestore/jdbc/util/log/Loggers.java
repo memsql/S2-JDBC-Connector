@@ -96,9 +96,9 @@ public final class Loggers {
     }
   }
 
-  public static void resetLoggerFactoryProperties(Boolean enableSlf4j, String level, String path) {
+  public static void resetLoggerFactoryProperties(String level, String path) {
     synchronized (Loggers.class) {
-      slf4jEnabled = enableSlf4j;
+      slf4jEnabled = level == null && path == null;
       consoleLogLevel = CONSOLE_LOG_LEVEL.fromLevelName(level);
       String error = null;
       if (path != null && !path.isBlank() && !path.equals(consoleLogFilepath)) {
@@ -115,7 +115,7 @@ public final class Loggers {
       }
       getLogger(Loggers.class)
           .info(
-              "Set logger factory properties: slf4jEnabled = {}, fallbackLogLevel = {}, fallbackLogFilepath = {}",
+              "Set logger factory properties: slf4jEnabled = {}, consoleLogLevel = {}, consoleLogFilepath = {}",
               slf4jEnabled,
               consoleLogLevel,
               consoleLogFilepath);
