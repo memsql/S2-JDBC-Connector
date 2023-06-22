@@ -510,7 +510,9 @@ public class ClientImpl implements Client, AutoCloseable {
       boolean closeOnCompletion)
       throws SQLException {
 
-    logger.trace("Running query with timeout {}", stmt.getQueryTimeout());
+    if (stmt != null) {
+      logger.trace("Running query with timeout {}", stmt.getQueryTimeout());
+    }
     if (stmt != null && stmt.getQueryTimeout() > 0) {
       Timer cancelTimer = new Timer();
       try {
