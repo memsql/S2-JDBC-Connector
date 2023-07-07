@@ -272,6 +272,16 @@ public class ConnectionTest extends Common {
   }
 
   @Test
+  public void initSQL() throws SQLException {
+    try (Connection con = createCon("&initSql=SET @myVar='YourVar'")) {
+      Statement stmt = con.createStatement();
+      ResultSet rs = stmt.executeQuery("SELECT @myVar");
+      assertTrue(rs.next());
+      assertEquals("YourVar", rs.getString(1));
+    }
+  }
+
+  @Test
   public void catalog() throws SQLException {
     try (Connection connection = createCon()) {
       try (Statement stmt = connection.createStatement()) {
@@ -870,8 +880,43 @@ public class ConnectionTest extends Common {
 
     assertEquals(0, (capabilities & Capabilities.MARIADB_CLIENT_PROGRESS));
     assertEquals(0, (capabilities & Capabilities.MARIADB_CLIENT_COM_MULTI));
-    assertEquals(0, (capabilities & Capabilities.MARIADB_CLIENT_STMT_BULK_OPERATIONS));
+    assertEquals(0, (capabilities & Capabilities.STMT_BULK_OPERATIONS));
     assertEquals(0, (capabilities & Capabilities.MARIADB_CLIENT_EXTENDED_TYPE_INFO));
     assertEquals(0, (capabilities & Capabilities.MARIADB_CLIENT_CACHE_METADATA));
+  }
+
+  @Test
+  public void createDatabaseIfNotExist() throws SQLException {
+    // ensure connecting without DB
+    String connStr =
+        String.format(
+            "jdbc:singlestore://%s:%s/?user=%s&password=%s&createDatabaseIfNotExist",
+            hostname, port, user, password);
+    try (Connection con = DriverManager.getConnection(connStr)) {
+      con.createStatement().executeQuery("SELECT 1");
+    }
+    sharedConn.createStatement().execute("DROP DATABASE IF EXISTS `blafl`");
+    String nonExistentDatabase = "blafl";
+    connStr =
+        String.format(
+            "jdbc:singlestore://%s:%s/%s?user=%s&password=%s&createDatabaseIfNotExist=true",
+            hostname, port, nonExistentDatabase, user, password);
+    try (Connection con = DriverManager.getConnection(connStr)) {
+      ResultSet rs = con.createStatement().executeQuery("select DATABASE()");
+      assertTrue(rs.next());
+      assertEquals(nonExistentDatabase, rs.getString(1));
+    }
+    nonExistentDatabase = "blafl0";
+    connStr =
+        String.format(
+            "jdbc:singlestore:replication://%s:%s,%s:%s/%s?user=%s&password=%s&createDatabaseIfNotExist",
+            hostname, port, hostname, port, nonExistentDatabase, user, password);
+    try (Connection con = DriverManager.getConnection(connStr)) {
+      ResultSet rs = con.createStatement().executeQuery("select DATABASE()");
+      assertTrue(rs.next());
+      assertEquals(nonExistentDatabase, rs.getString(1));
+    }
+    sharedConn.createStatement().execute("DROP DATABASE IF EXISTS `blafl`");
+    sharedConn.createStatement().execute("DROP DATABASE IF EXISTS `blafl0`");
   }
 }

@@ -73,9 +73,7 @@ public class ServerPreparedStatement extends BasePreparedStatement {
     String cmd = escapeTimeout(sql);
     if (prepareResult == null) prepareResult = con.getContext().getPrepareCache().get(cmd, this);
     try {
-      long serverCapabilities = con.getContext().getServerCapabilities();
-      if (prepareResult == null
-          && (serverCapabilities & Capabilities.MARIADB_CLIENT_STMT_BULK_OPERATIONS) > 0) {
+      if (prepareResult == null && (con.getContext().permitPipeline())) {
         try {
           executePipeline(cmd);
         } catch (BatchUpdateException b) {
@@ -139,11 +137,10 @@ public class ServerPreparedStatement extends BasePreparedStatement {
   private List<Completion> executeInternalPreparedBatch() throws SQLException {
     checkNotClosed();
     String cmd = escapeTimeout(sql);
-    long serverCapabilities = con.getContext().getServerCapabilities();
     if (batchParameters.size() > 1
-        && (serverCapabilities & Capabilities.MARIADB_CLIENT_STMT_BULK_OPERATIONS) > 0
+        && con.getContext().hasServerCapability(Capabilities.STMT_BULK_OPERATIONS)
         && (!con.getContext().getConf().allowLocalInfile()
-            || (serverCapabilities & Capabilities.LOCAL_FILES) == 0)) {
+            || !con.getContext().hasServerCapability(Capabilities.LOCAL_FILES))) {
       return executeBatchPipeline(cmd);
     } else {
       return executeBatchStandard(cmd);

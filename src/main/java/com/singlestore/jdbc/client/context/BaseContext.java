@@ -16,6 +16,7 @@ public class BaseContext implements Context {
 
   private final long threadId;
   private final long serverCapabilities;
+  private final long clientCapabilities;
   private final byte[] seed;
   private final boolean eofDeprecated;
   private final boolean skipMeta;
@@ -38,6 +39,7 @@ public class BaseContext implements Context {
     this.threadId = handshake.getThreadId();
     this.seed = handshake.getSeed();
     this.serverCapabilities = handshake.getCapabilities();
+    this.clientCapabilities = clientCapabilities;
     this.serverStatus = handshake.getServerStatus();
     this.eofDeprecated = (clientCapabilities & Capabilities.CLIENT_DEPRECATE_EOF) > 0;
     this.skipMeta = (serverCapabilities & Capabilities.MARIADB_CLIENT_CACHE_METADATA) > 0;
@@ -54,6 +56,21 @@ public class BaseContext implements Context {
 
   public byte[] getSeed() {
     return seed;
+  }
+
+  @Override
+  public boolean hasServerCapability(long flag) {
+    return (serverCapabilities & flag) > 0;
+  }
+
+  @Override
+  public boolean hasClientCapability(long flag) {
+    return (clientCapabilities & flag) > 0;
+  }
+
+  @Override
+  public boolean permitPipeline() {
+    return !conf.disablePipeline() && hasClientCapability(Capabilities.STMT_BULK_OPERATIONS);
   }
 
   public long getServerCapabilities() {
@@ -115,6 +132,11 @@ public class BaseContext implements Context {
 
   public PrepareCache getPrepareCache() {
     return prepareCache;
+  }
+
+  @Override
+  public void resetPrepareCache() {
+    if (prepareCache != null) prepareCache.reset();
   }
 
   public int getStateFlag() {

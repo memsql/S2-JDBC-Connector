@@ -72,12 +72,13 @@ public class Configuration {
 
   // various
   private boolean autocommit = true;
+  private boolean createDatabaseIfNotExist = false;
   private TransactionIsolation transactionIsolation = TransactionIsolation.READ_COMMITTED;
   private int defaultFetchSize = 0;
   private int maxQuerySizeToLog = 1024;
   private String geometryDefaultType = null;
   private String restrictedAuth = null;
-
+  private String initSql = null;
   // socket
   private String socketFactory = null;
   private int connectTimeout =
@@ -111,6 +112,8 @@ public class Configuration {
   private boolean allowLocalInfile = false;
   private boolean useCompression = false;
   private boolean useAffectedRows = false;
+  private boolean useBulkStmts = true;
+  private boolean disablePipeline = false;
 
   // prepare
   private boolean cachePrepStmts = true;
@@ -163,11 +166,13 @@ public class Configuration {
       HaMode haMode,
       Properties nonMappedOptions,
       boolean autocommit,
+      boolean createDatabaseIfNotExist,
       TransactionIsolation transactionIsolation,
       int defaultFetchSize,
       int maxQuerySizeToLog,
       String geometryDefaultType,
       String restrictedAuth,
+      String initSql,
       String socketFactory,
       int connectTimeout,
       String pipe,
@@ -195,6 +200,8 @@ public class Configuration {
       boolean allowLocalInfile,
       boolean useCompression,
       boolean useAffectedRows,
+      boolean useBulkStmts,
+      boolean disablePipeline,
       boolean cachePrepStmts,
       int prepStmtCacheSize,
       boolean useServerPrepStmts,
@@ -228,11 +235,13 @@ public class Configuration {
     this.haMode = haMode;
     this.nonMappedOptions = nonMappedOptions;
     this.autocommit = autocommit;
+    this.createDatabaseIfNotExist = createDatabaseIfNotExist;
     this.transactionIsolation = transactionIsolation;
     this.defaultFetchSize = defaultFetchSize;
     this.maxQuerySizeToLog = maxQuerySizeToLog;
     this.geometryDefaultType = geometryDefaultType;
     this.restrictedAuth = restrictedAuth;
+    this.initSql = initSql;
     this.socketFactory = socketFactory;
     this.connectTimeout = connectTimeout;
     this.pipe = pipe;
@@ -260,6 +269,8 @@ public class Configuration {
     this.allowLocalInfile = allowLocalInfile;
     this.useCompression = useCompression;
     this.useAffectedRows = useAffectedRows;
+    this.useBulkStmts = useBulkStmts;
+    this.disablePipeline = disablePipeline;
     this.cachePrepStmts = cachePrepStmts;
     this.prepStmtCacheSize = prepStmtCacheSize;
     this.useServerPrepStmts = useServerPrepStmts;
@@ -284,9 +295,9 @@ public class Configuration {
     this.useResetConnection = useResetConnection;
     this.useMysqlVersion = useMysqlVersion;
     this.rewriteBatchedStatements = rewriteBatchedStatements;
-    this.initialUrl = buildUrl(this);
     this.consoleLogLevel = consoleLogLevel;
     this.consoleLogFilepath = consoleLogFilepath;
+    this.initialUrl = buildUrl(this);
     this.logger = Loggers.getLogger(Configuration.class);
   }
 
@@ -322,9 +333,12 @@ public class Configuration {
       Boolean dumpQueriesOnException,
       Integer prepStmtCacheSize,
       Boolean useAffectedRows,
+      Boolean useBulkStmts,
+      Boolean disablePipeline,
       Boolean useServerPrepStmts,
       String connectionAttributes,
       Boolean autocommit,
+      Boolean createDatabaseIfNotExist,
       Boolean includeThreadDumpInDeadlockExceptions,
       String servicePrincipalName,
       Integer defaultFetchSize,
@@ -351,6 +365,7 @@ public class Configuration {
       Boolean transactionReplay,
       String geometryDefaultType,
       String restrictedAuth,
+      String initSql,
       Properties nonMappedOptions,
       Boolean useMysqlVersion,
       Boolean rewriteBatchedStatements,
@@ -405,9 +420,12 @@ public class Configuration {
     if (dumpQueriesOnException != null) this.dumpQueriesOnException = dumpQueriesOnException;
     if (prepStmtCacheSize != null) this.prepStmtCacheSize = prepStmtCacheSize;
     if (useAffectedRows != null) this.useAffectedRows = useAffectedRows;
+    if (useBulkStmts != null) this.useBulkStmts = useBulkStmts;
+    if (disablePipeline != null) this.disablePipeline = disablePipeline;
     if (useServerPrepStmts != null) this.useServerPrepStmts = useServerPrepStmts;
     this.connectionAttributes = connectionAttributes;
     if (autocommit != null) this.autocommit = autocommit;
+    if (createDatabaseIfNotExist != null) this.createDatabaseIfNotExist = createDatabaseIfNotExist;
     if (includeThreadDumpInDeadlockExceptions != null)
       this.includeThreadDumpInDeadlockExceptions = includeThreadDumpInDeadlockExceptions;
     if (servicePrincipalName != null) this.servicePrincipalName = servicePrincipalName;
@@ -440,6 +458,7 @@ public class Configuration {
     if (transactionReplay != null) this.transactionReplay = transactionReplay;
     if (geometryDefaultType != null) this.geometryDefaultType = geometryDefaultType;
     if (restrictedAuth != null) this.restrictedAuth = restrictedAuth;
+    if (initSql != null) this.initSql = initSql;
     if (serverSslCert != null) this.serverSslCert = serverSslCert;
     if (trustStore != null) this.trustStore = trustStore;
     if (trustStorePassword != null) this.trustStorePassword = trustStorePassword;
@@ -694,11 +713,13 @@ public class Configuration {
         this.haMode,
         this.nonMappedOptions,
         this.autocommit,
+        this.createDatabaseIfNotExist,
         this.transactionIsolation,
         this.defaultFetchSize,
         this.maxQuerySizeToLog,
         this.geometryDefaultType,
         this.restrictedAuth,
+        this.initSql,
         this.socketFactory,
         this.connectTimeout,
         this.pipe,
@@ -726,6 +747,8 @@ public class Configuration {
         this.allowLocalInfile,
         this.useCompression,
         this.useAffectedRows,
+        this.useBulkStmts,
+        this.disablePipeline,
         this.cachePrepStmts,
         this.prepStmtCacheSize,
         this.useServerPrepStmts,
@@ -915,6 +938,14 @@ public class Configuration {
     return useAffectedRows;
   }
 
+  public boolean useBulkStmts() {
+    return useBulkStmts;
+  }
+
+  public boolean disablePipeline() {
+    return disablePipeline;
+  }
+
   public boolean useServerPrepStmts() {
     return useServerPrepStmts;
   }
@@ -925,6 +956,10 @@ public class Configuration {
 
   public boolean autocommit() {
     return autocommit;
+  }
+
+  public boolean createDatabaseIfNotExist() {
+    return createDatabaseIfNotExist;
   }
 
   public boolean includeThreadDumpInDeadlockExceptions() {
@@ -1005,6 +1040,15 @@ public class Configuration {
 
   public String restrictedAuth() {
     return restrictedAuth;
+  }
+
+  /**
+   * Execute initial command when connection is established
+   *
+   * @return initial SQL command
+   */
+  public String initSql() {
+    return initSql;
   }
 
   public Codec<?>[] codecs() {
@@ -1189,10 +1233,12 @@ public class Configuration {
 
     // various
     private Boolean autocommit;
+    private Boolean createDatabaseIfNotExist;
     private Integer defaultFetchSize;
     private Integer maxQuerySizeToLog;
     private String geometryDefaultType;
     private String restrictedAuth;
+    private String initSql;
     private String transactionIsolation;
 
     // socket
@@ -1227,6 +1273,8 @@ public class Configuration {
     private Boolean allowLocalInfile;
     private Boolean useCompression;
     private Boolean useAffectedRows;
+    private Boolean useBulkStmts;
+    private Boolean disablePipeline;
 
     // prepare
     private Boolean cachePrepStmts;
@@ -1481,6 +1529,17 @@ public class Configuration {
     }
 
     /**
+     * permit to execute an SQL command on connection creation
+     *
+     * @param initSql initial SQL command
+     * @return this {@link Builder}
+     */
+    public Builder initSql(String initSql) {
+      this.initSql = initSql;
+      return this;
+    }
+
+    /**
      * Indicate Hostname or IP address to bind the connection socket to a local (UNIX domain)
      * socket.
      *
@@ -1601,6 +1660,16 @@ public class Configuration {
       return this;
     }
 
+    public Builder useBulkStmts(Boolean useBulkStmts) {
+      this.useBulkStmts = useBulkStmts;
+      return this;
+    }
+
+    public Builder disablePipeline(Boolean disablePipeline) {
+      this.disablePipeline = disablePipeline;
+      return this;
+    }
+
     public Builder useServerPrepStmts(Boolean useServerPrepStmts) {
       this.useServerPrepStmts = useServerPrepStmts;
       return this;
@@ -1613,6 +1682,11 @@ public class Configuration {
 
     public Builder autocommit(Boolean autocommit) {
       this.autocommit = autocommit;
+      return this;
+    }
+
+    public Builder createDatabaseIfNotExist(Boolean createDatabaseIfNotExist) {
+      this.createDatabaseIfNotExist = createDatabaseIfNotExist;
       return this;
     }
 
@@ -1756,9 +1830,12 @@ public class Configuration {
               this.dumpQueriesOnException,
               this.prepStmtCacheSize,
               this.useAffectedRows,
+              this.useBulkStmts,
+              this.disablePipeline,
               this.useServerPrepStmts,
               this.connectionAttributes,
               this.autocommit,
+              this.createDatabaseIfNotExist,
               this.includeThreadDumpInDeadlockExceptions,
               this.servicePrincipalName,
               this.defaultFetchSize,
@@ -1785,6 +1862,7 @@ public class Configuration {
               this.transactionReplay,
               this.geometryDefaultType,
               this.restrictedAuth,
+              this.initSql,
               this._nonMappedOptions,
               this.useMysqlVersion,
               this.rewriteBatchedStatements,

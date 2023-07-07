@@ -104,6 +104,14 @@ public final class ConnectionHelper {
     return socketFactory.createSocket();
   }
 
+  /**
+   * Connect socket
+   *
+   * @param conf configuration
+   * @param hostAddress host to connect
+   * @return socket
+   * @throws SQLException if hostname is required and not provided, or socket cannot be created
+   */
   public static Socket connectSocket(final Configuration conf, final HostAddress hostAddress)
       throws SQLException {
     Socket socket;
@@ -128,7 +136,9 @@ public final class ConnectionHelper {
   }
 
   public static long initializeClientCapabilities(
-      final Configuration configuration, final long serverCapabilities) {
+      final Configuration configuration,
+      final long serverCapabilities,
+      final HostAddress hostAddress) {
     long capabilities =
         Capabilities.IGNORE_SPACE
             | Capabilities.CLIENT_PROTOCOL_41
@@ -151,6 +161,10 @@ public final class ConnectionHelper {
       capabilities |= Capabilities.FOUND_ROWS;
     }
 
+    if (configuration.useBulkStmts()) {
+      capabilities |= Capabilities.STMT_BULK_OPERATIONS;
+    }
+
     if (configuration.allowMultiQueries()) {
       capabilities |= Capabilities.MULTI_STATEMENTS;
     }
@@ -169,8 +183,12 @@ public final class ConnectionHelper {
     if (configuration.useCompression() && ((serverCapabilities & Capabilities.COMPRESS) != 0)) {
       capabilities |= Capabilities.COMPRESS;
     }
-
-    if (configuration.database() != null) {
+    // connect to database directly if not needed to be created, or if slave, since cannot be
+    // created
+    if (configuration.database() != null
+        && (!configuration.createDatabaseIfNotExist()
+            || (configuration.createDatabaseIfNotExist()
+                && (hostAddress != null && !hostAddress.primary)))) {
       capabilities |= Capabilities.CONNECT_WITH_DB;
     }
     return capabilities;
@@ -254,6 +272,15 @@ public final class ConnectionHelper {
     writer.permitTrace(true);
   }
 
+  /**
+   * Load user/password plugin if configured to.
+   *
+   * @param credentialPlugin configuration credential plugin
+   * @param configuration configuration
+   * @param hostAddress current connection host address
+   * @return credentials
+   * @throws SQLException if configured credential plugin fail
+   */
   public static Credential loadCredential(
       CredentialPlugin credentialPlugin, Configuration configuration, HostAddress hostAddress)
       throws SQLException {
@@ -263,6 +290,19 @@ public final class ConnectionHelper {
     return new Credential(configuration.user(), configuration.password());
   }
 
+  /**
+   * Create SSL wrapper
+   *
+   * @param hostAddress host
+   * @param socket socket
+   * @param clientCapabilities client capabilities
+   * @param exchangeCharset connection charset
+   * @param context connection context
+   * @param writer socket writer
+   * @return SSLsocket
+   * @throws IOException if any socket error occurs
+   * @throws SQLException for any other kind of error
+   */
   public static SSLSocket sslWrapper(
       final HostAddress hostAddress,
       final Socket socket,

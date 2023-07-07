@@ -42,6 +42,7 @@ import java.sql.SQLInvalidAuthorizationSpecException;
 import java.sql.SQLNonTransientConnectionException;
 import java.sql.SQLPermission;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -126,9 +127,7 @@ public class ClientImpl implements Client, AutoCloseable {
     this.lock = lock;
     this.hostAddress = hostAddress;
     this.exceptionFactory = new ExceptionFactory(conf, hostAddress);
-    this.disablePipeline =
-        Boolean.parseBoolean(conf.nonMappedOptions().getProperty("disablePipeline", "false"));
-
+    this.disablePipeline = conf.disablePipeline();
     this.socketTimeout = conf.socketTimeout();
 
     String host = hostAddress != null ? hostAddress.host : null;
@@ -185,7 +184,8 @@ public class ClientImpl implements Client, AutoCloseable {
 
       this.exceptionFactory.setThreadId(handshake.getThreadId());
       long clientCapabilities =
-          ConnectionHelper.initializeClientCapabilities(conf, handshake.getCapabilities());
+          ConnectionHelper.initializeClientCapabilities(
+              conf, handshake.getCapabilities(), hostAddress);
 
       this.context =
           conf.transactionReplay()
@@ -321,8 +321,25 @@ public class ClientImpl implements Client, AutoCloseable {
       commands.add("set " + Security.parseSessionVariables(conf.sessionVariables()));
       resInd++;
     }
+    if (conf.transactionIsolation() != null) {
+      commands.add("set tx_isolation='" + conf.transactionIsolation().getValue() + "'");
+      resInd++;
+    }
     commands.add("SELECT @@max_allowed_packet, @@wait_timeout");
-
+    if (conf.database() != null
+        && conf.createDatabaseIfNotExist()
+        && (hostAddress == null || hostAddress.primary)) {
+      String escapedDb = conf.database().replace("`", "``");
+      commands.add(String.format("CREATE DATABASE IF NOT EXISTS `%s`", escapedDb));
+      commands.add(String.format("USE `%s`", escapedDb));
+    }
+    if (conf.initSql() != null) {
+      commands.add(conf.initSql());
+    }
+    if (conf.nonMappedOptions().containsKey("initSql")) {
+      String[] initialCommands = conf.nonMappedOptions().get("initSql").toString().split(";");
+      commands.addAll(Arrays.asList(initialCommands));
+    }
     try {
       List<Completion> res;
       ClientMessage[] msgs = new ClientMessage[commands.size()];
