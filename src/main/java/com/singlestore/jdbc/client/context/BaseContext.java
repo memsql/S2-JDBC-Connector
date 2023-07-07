@@ -70,7 +70,7 @@ public class BaseContext implements Context {
 
   @Override
   public boolean permitPipeline() {
-    return !conf.disablePipeline() && hasClientCapability(Capabilities.STMT_BULK_OPERATIONS);
+    return !conf.disablePipeline() && hasServerCapability(Capabilities.STMT_BULK_OPERATIONS);
   }
 
   public long getServerCapabilities() {
