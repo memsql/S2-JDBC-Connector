@@ -111,15 +111,10 @@ workflows:
                 - large
               singlestore_password:
                 - password
+                - password1
+                - password2
+                - password3
               singlestore_image:
-                - singlestore/cluster-in-a-box:centos-7.5.10-d6401ae628-4.0.0-1.12.2
-                - singlestore/cluster-in-a-box:centos-7.6.8-ad67e74046-4.0.1-1.13.2
-                - singlestore/cluster-in-a-box:alma-7.8.5-144b69022c-4.0.6-1.13.7
-                - singlestore/cluster-in-a-box:alma-8.0.14-150dead86e-4.0.11-1.15.2
-                - singlestore/cluster-in-a-box:centos-7.5.10-d6401ae628-4.0.0-1.12.2
-                - singlestore/cluster-in-a-box:centos-7.6.8-ad67e74046-4.0.1-1.13.2
-                - singlestore/cluster-in-a-box:alma-7.8.5-144b69022c-4.0.6-1.13.7
-                - singlestore/cluster-in-a-box:alma-8.0.14-150dead86e-4.0.11-1.15.2
                 - singlestore/cluster-in-a-box:centos-7.5.10-d6401ae628-4.0.0-1.12.2
                 - singlestore/cluster-in-a-box:centos-7.6.8-ad67e74046-4.0.1-1.13.2
                 - singlestore/cluster-in-a-box:alma-7.8.5-144b69022c-4.0.6-1.13.7
