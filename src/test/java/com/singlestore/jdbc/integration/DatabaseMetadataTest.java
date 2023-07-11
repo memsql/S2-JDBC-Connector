@@ -587,9 +587,9 @@ public class DatabaseMetadataTest extends Common {
     try {
       java.sql.Statement stmt = con.createStatement();
       stmt.execute(
-          "CREATE TABLE IF NOT EXISTS `tinyInt1\nisBitCols`(id1 tinyint(1), id2 tinyint(2))");
+          "CREATE TABLE IF NOT EXISTS `tinyInt1IsBitCols`(id1 tinyint(1), id2 tinyint(2))");
       DatabaseMetaData dbmd = sharedConn.getMetaData();
-      ResultSet rs = dbmd.getColumns(null, null, "tinyInt1\nisBitCols", null);
+      ResultSet rs = dbmd.getColumns(null, null, "tinyInt1IsBitCols", null);
 
       assertTrue(rs.next());
       assertEquals(Types.BIT, rs.getInt(5));
@@ -597,7 +597,7 @@ public class DatabaseMetadataTest extends Common {
       assertEquals(Types.TINYINT, rs.getInt(5));
 
       dbmd = con.getMetaData();
-      rs = dbmd.getColumns(null, null, "tinyInt1\nisBitCols", null);
+      rs = dbmd.getColumns(null, null, "tinyInt1IsBitCols", null);
 
       assertTrue(rs.next());
       assertEquals(Types.TINYINT, rs.getInt(5));
@@ -605,7 +605,7 @@ public class DatabaseMetadataTest extends Common {
       assertEquals(Types.TINYINT, rs.getInt(5));
 
     } finally {
-      con.createStatement().execute("DROP TABLE IF EXISTS `tinyInt1\nisBitCols`");
+      con.createStatement().execute("DROP TABLE IF EXISTS `tinyInt1IsBitCols`");
     }
   }
 
