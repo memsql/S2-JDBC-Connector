@@ -5,8 +5,10 @@
 
 package com.singlestore.jdbc.util;
 
+import com.amazonaws.util.IOUtils;
 import com.singlestore.jdbc.util.log.Logger;
 import com.singlestore.jdbc.util.log.Loggers;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -26,9 +28,15 @@ public final class VersionFactory {
             if (inputStream == null) {
               logger.warn("Property file 'singlestore.properties' not found in the classpath");
             } else {
+              byte[] bytes = IOUtils.toByteArray(inputStream);
+              logger.info("Content of the properties file: " + new String(bytes));
+              ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+
               Properties prop = new Properties();
-              prop.load(inputStream);
-              tmpVersion = prop.getProperty("version");
+              prop.load(bais);
+              if (prop.containsKey("version")) {
+                tmpVersion = prop.getProperty("version");
+              }
             }
           } catch (IOException e) {
             logger.warn("Failed to retrieve driver version: " + e.getMessage());
