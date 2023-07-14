@@ -5,7 +5,6 @@
 
 package com.singlestore.jdbc.util;
 
-import com.amazonaws.util.IOUtils;
 import com.singlestore.jdbc.util.log.Logger;
 import com.singlestore.jdbc.util.log.Loggers;
 import java.io.ByteArrayInputStream;
@@ -28,7 +27,7 @@ public final class VersionFactory {
             if (inputStream == null) {
               logger.warn("Property file 'singlestore.properties' not found in the classpath");
             } else {
-              byte[] bytes = IOUtils.toByteArray(inputStream);
+              byte[] bytes = inputStream.readAllBytes();
               logger.info("Content of the properties file: " + new String(bytes));
               ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
 
