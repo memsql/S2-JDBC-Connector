@@ -6,16 +6,24 @@
 package com.singlestore.jdbc.plugin.authentication.addon.gssapi;
 
 import com.singlestore.jdbc.client.ReadableByteBuf;
-import com.singlestore.jdbc.client.socket.PacketReader;
-import com.singlestore.jdbc.client.socket.PacketWriter;
-import java.io.*;
+import com.singlestore.jdbc.client.socket.Reader;
+import com.singlestore.jdbc.client.socket.Writer;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.io.UncheckedIOException;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.sql.SQLException;
 import javax.security.auth.Subject;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
-import org.ietf.jgss.*;
+import org.ietf.jgss.GSSContext;
+import org.ietf.jgss.GSSException;
+import org.ietf.jgss.GSSManager;
+import org.ietf.jgss.GSSName;
+import org.ietf.jgss.Oid;
 
 public class StandardGssapiAuthentication implements GssapiAuth {
 
@@ -30,10 +38,7 @@ public class StandardGssapiAuthentication implements GssapiAuth {
    * @throws SQLException in any Exception occur
    */
   public void authenticate(
-      final PacketWriter out,
-      final PacketReader in,
-      final String servicePrincipalName,
-      String mechanisms)
+      final Writer out, final Reader in, final String servicePrincipalName, String mechanisms)
       throws SQLException, IOException {
 
     if ("".equals(servicePrincipalName)) {

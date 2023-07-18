@@ -6,11 +6,12 @@
 package com.singlestore.jdbc.client.context;
 
 import com.singlestore.jdbc.Configuration;
+import com.singlestore.jdbc.client.Context;
 import com.singlestore.jdbc.client.PrepareCache;
+import com.singlestore.jdbc.export.ExceptionFactory;
 import com.singlestore.jdbc.message.server.InitialHandshakePacket;
 import com.singlestore.jdbc.util.constants.Capabilities;
 import com.singlestore.jdbc.util.constants.ConnectionState;
-import com.singlestore.jdbc.util.exceptions.ExceptionFactory;
 
 public class BaseContext implements Context {
 
@@ -70,7 +71,7 @@ public class BaseContext implements Context {
 
   @Override
   public boolean permitPipeline() {
-    return !conf.disablePipeline() && hasServerCapability(Capabilities.STMT_BULK_OPERATIONS);
+    return !conf.disablePipeline();
   }
 
   public long getServerCapabilities() {

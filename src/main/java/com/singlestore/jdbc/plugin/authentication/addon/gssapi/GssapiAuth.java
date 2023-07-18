@@ -5,14 +5,13 @@
 
 package com.singlestore.jdbc.plugin.authentication.addon.gssapi;
 
-import com.singlestore.jdbc.client.socket.PacketReader;
-import com.singlestore.jdbc.client.socket.PacketWriter;
+import com.singlestore.jdbc.client.socket.Reader;
+import com.singlestore.jdbc.client.socket.Writer;
 import java.io.IOException;
 import java.sql.SQLException;
 
 public interface GssapiAuth {
 
-  void authenticate(
-      PacketWriter writer, PacketReader in, String servicePrincipalName, String mechanisms)
+  void authenticate(Writer writer, Reader in, String servicePrincipalName, String mechanisms)
       throws SQLException, IOException;
 }
