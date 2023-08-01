@@ -123,6 +123,7 @@ public class Configuration {
   private String sessionVariables = null;
   private String connectionAttributes = null;
   private String servicePrincipalName = null;
+  private String jaasApplicationName = null;
 
   // meta
   private boolean blankTableNameMeta = false;
@@ -204,6 +205,7 @@ public class Configuration {
       String sessionVariables,
       String connectionAttributes,
       String servicePrincipalName,
+      String jaasApplicationName,
       boolean blankTableNameMeta,
       boolean tinyInt1isBit,
       boolean yearIsDateType,
@@ -270,6 +272,7 @@ public class Configuration {
     this.sessionVariables = sessionVariables;
     this.connectionAttributes = connectionAttributes;
     this.servicePrincipalName = servicePrincipalName;
+    this.jaasApplicationName = jaasApplicationName;
     this.blankTableNameMeta = blankTableNameMeta;
     this.tinyInt1isBit = tinyInt1isBit;
     this.yearIsDateType = yearIsDateType;
@@ -331,6 +334,7 @@ public class Configuration {
       Boolean autocommit,
       Boolean includeThreadDumpInDeadlockExceptions,
       String servicePrincipalName,
+      String jaasApplicationName,
       Integer defaultFetchSize,
       String tlsSocketType,
       Integer maxQuerySizeToLog,
@@ -416,6 +420,7 @@ public class Configuration {
     if (includeThreadDumpInDeadlockExceptions != null)
       this.includeThreadDumpInDeadlockExceptions = includeThreadDumpInDeadlockExceptions;
     if (servicePrincipalName != null) this.servicePrincipalName = servicePrincipalName;
+    if (jaasApplicationName != null) this.jaasApplicationName = jaasApplicationName;
     if (defaultFetchSize != null) this.defaultFetchSize = defaultFetchSize;
     if (tlsSocketType != null) this.tlsSocketType = tlsSocketType;
     if (maxQuerySizeToLog != null) this.maxQuerySizeToLog = maxQuerySizeToLog;
@@ -739,6 +744,7 @@ public class Configuration {
         this.sessionVariables,
         this.connectionAttributes,
         this.servicePrincipalName,
+        this.jaasApplicationName,
         this.blankTableNameMeta,
         this.tinyInt1isBit,
         this.yearIsDateType,
@@ -948,6 +954,10 @@ public class Configuration {
 
   public String servicePrincipalName() {
     return servicePrincipalName;
+  }
+
+  public String jaasApplicationName() {
+    return jaasApplicationName;
   }
 
   public int defaultFetchSize() {
@@ -1254,6 +1264,7 @@ public class Configuration {
     private String sessionVariables;
     private String connectionAttributes;
     private String servicePrincipalName;
+    private String jaasApplicationName;
 
     // meta
     private Boolean blankTableNameMeta;
@@ -1648,6 +1659,11 @@ public class Configuration {
       return this;
     }
 
+    public Builder jaasApplicationName(String jaasApplicationName) {
+      this.jaasApplicationName = nullOrEmpty(jaasApplicationName);
+      return this;
+    }
+
     public Builder defaultFetchSize(Integer defaultFetchSize) {
       this.defaultFetchSize = defaultFetchSize;
       return this;
@@ -1783,6 +1799,7 @@ public class Configuration {
               this.autocommit,
               this.includeThreadDumpInDeadlockExceptions,
               this.servicePrincipalName,
+              this.jaasApplicationName,
               this.defaultFetchSize,
               this.tlsSocketType,
               this.maxQuerySizeToLog,

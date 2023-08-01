@@ -22,11 +22,16 @@ public class WindowsNativeSspiAuthentication implements GssapiAuth {
    * @param out out stream
    * @param in in stream
    * @param servicePrincipalName principal name
+   * @param jaasApplicationName entry name in JAAS Login Configuration File
    * @param mechanisms gssapi mechanism
    * @throws IOException if socket error
    */
   public void authenticate(
-      final Writer out, final Reader in, final String servicePrincipalName, final String mechanisms)
+      final Writer out,
+      final Reader in,
+      final String servicePrincipalName,
+      final String jaasApplicationName,
+      final String mechanisms)
       throws IOException {
 
     // initialize a security context on the client
