@@ -102,9 +102,10 @@ public final class LoggerHelper {
     return sb.toString();
   }
 
-  public static String currentStackTrace() {
+  public static String currentStackTrace(int limit) {
     return Arrays.stream(Thread.currentThread().getStackTrace())
         .skip(3)
+        .limit(limit)
         .map(StackTraceElement::toString)
         .collect(Collectors.joining("\n"));
   }

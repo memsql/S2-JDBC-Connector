@@ -37,6 +37,11 @@ public class ConsoleLogger implements Logger {
   }
 
   @Override
+  public int maxStackTraceSizeToLog() {
+    return this.identifier.maxPrintStackSizeToLog();
+  }
+
+  @Override
   public String getName() {
     return this.identifier.name;
   }
@@ -72,7 +77,7 @@ public class ConsoleLogger implements Logger {
           currentTimestamp(),
           Thread.currentThread().getName(),
           getName(),
-          LoggerHelper.currentStackTrace());
+          LoggerHelper.currentStackTrace(maxStackTraceSizeToLog()));
     }
   }
 
@@ -90,7 +95,7 @@ public class ConsoleLogger implements Logger {
           currentTimestamp(),
           Thread.currentThread().getName(),
           getName(),
-          LoggerHelper.currentStackTrace());
+          LoggerHelper.currentStackTrace(maxStackTraceSizeToLog()));
     }
   }
 
@@ -285,17 +290,27 @@ public class ConsoleLogger implements Logger {
     private final CONSOLE_LOG_LEVEL logLevel;
     private final String logFilePath;
     private final boolean printStackTrace;
+    private final int maxPrintStackSizeToLog;
 
     public ConsoleLoggerKey(
-        String name, CONSOLE_LOG_LEVEL logLevel, String logFilePath, boolean printStackTrace) {
+        String name,
+        CONSOLE_LOG_LEVEL logLevel,
+        String logFilePath,
+        boolean printStackTrace,
+        int maxPrintStackSizeToLog) {
       this.name = name;
       this.logLevel = logLevel;
       this.logFilePath = logFilePath;
       this.printStackTrace = printStackTrace;
+      this.maxPrintStackSizeToLog = maxPrintStackSizeToLog;
     }
 
     public boolean isPrintStackTrace() {
       return printStackTrace;
+    }
+
+    public int maxPrintStackSizeToLog() {
+      return maxPrintStackSizeToLog;
     }
 
     public String getLogFilePath() {

@@ -9,6 +9,8 @@ public interface Logger {
 
   boolean printStackTrace();
 
+  int maxStackTraceSizeToLog();
+
   String getName();
 
   boolean isTraceEnabled();

@@ -12,15 +12,23 @@ public class JdkLogger implements Logger {
 
   private final java.util.logging.Logger logger;
   private final boolean printStackTrace;
+  private final int maxPrintStackSize;
 
-  public JdkLogger(java.util.logging.Logger logger, boolean printStackTrace) {
+  public JdkLogger(
+      java.util.logging.Logger logger, boolean printStackTrace, int maxPrintStackSize) {
     this.logger = logger;
     this.printStackTrace = printStackTrace;
+    this.maxPrintStackSize = maxPrintStackSize;
   }
 
   @Override
   public boolean printStackTrace() {
     return this.printStackTrace;
+  }
+
+  @Override
+  public int maxStackTraceSizeToLog() {
+    return this.maxPrintStackSize;
   }
 
   @Override
@@ -37,7 +45,7 @@ public class JdkLogger implements Logger {
   public void trace(String msg) {
     logger.log(Level.FINEST, msg);
     if (printStackTrace()) {
-      logger.log(Level.FINEST, LoggerHelper.currentStackTrace());
+      logger.log(Level.FINEST, LoggerHelper.currentStackTrace(maxStackTraceSizeToLog()));
     }
   }
 
@@ -45,7 +53,7 @@ public class JdkLogger implements Logger {
   public void trace(String format, Object... arguments) {
     logger.log(Level.FINEST, format(format, arguments));
     if (printStackTrace()) {
-      logger.log(Level.FINEST, LoggerHelper.currentStackTrace());
+      logger.log(Level.FINEST, LoggerHelper.currentStackTrace(maxStackTraceSizeToLog()));
     }
   }
 
