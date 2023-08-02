@@ -154,6 +154,7 @@ public class Configuration {
   private boolean rewriteBatchedStatements = false;
   private String consoleLogLevel = null;
   private String consoleLogFilepath = null;
+  private boolean printStackTrace = false;
 
   private Configuration() {
     this.logger = Loggers.getLogger(Configuration.class);
@@ -228,7 +229,8 @@ public class Configuration {
       boolean useMysqlVersion,
       boolean rewriteBatchedStatements,
       String consoleLogLevel,
-      String consoleLogFilepath) {
+      String consoleLogFilepath,
+      boolean printStackTrace) {
     this.user = user;
     this.password = password;
     this.database = database;
@@ -298,6 +300,7 @@ public class Configuration {
     this.rewriteBatchedStatements = rewriteBatchedStatements;
     this.consoleLogLevel = consoleLogLevel;
     this.consoleLogFilepath = consoleLogFilepath;
+    this.printStackTrace = printStackTrace;
     this.initialUrl = buildUrl(this);
     this.logger = Loggers.getLogger(Configuration.class);
   }
@@ -371,11 +374,14 @@ public class Configuration {
       Boolean useMysqlVersion,
       Boolean rewriteBatchedStatements,
       String consoleLogLevel,
-      String consoleLogFilepath)
+      String consoleLogFilepath,
+      Boolean printStackTrace)
       throws SQLException {
     this.consoleLogLevel = consoleLogLevel;
     this.consoleLogFilepath = consoleLogFilepath;
-    Loggers.resetLoggerFactoryProperties(this.consoleLogLevel, this.consoleLogFilepath);
+    if (printStackTrace != null) this.printStackTrace = printStackTrace;
+    Loggers.resetLoggerFactoryProperties(
+        this.consoleLogLevel, this.consoleLogFilepath, this.printStackTrace);
     this.logger = Loggers.getLogger(Configuration.class);
     this.database = database;
     this.addresses = addresses;
@@ -775,7 +781,8 @@ public class Configuration {
         this.useMysqlVersion,
         this.rewriteBatchedStatements,
         this.consoleLogLevel,
-        this.consoleLogFilepath);
+        this.consoleLogFilepath,
+        this.printStackTrace);
   }
 
   public String database() {
@@ -1082,6 +1089,10 @@ public class Configuration {
     return consoleLogFilepath;
   }
 
+  public boolean printStackTrace() {
+    return printStackTrace;
+  }
+
   /**
    * ToString implementation.
    *
@@ -1324,6 +1335,7 @@ public class Configuration {
     private Boolean rewriteBatchedStatements;
     private String consoleLogLevel;
     private String consoleLogFilepath;
+    private Boolean printStackTrace;
 
     public Builder user(String user) {
       this.user = nullOrEmpty(user);
@@ -1820,6 +1832,11 @@ public class Configuration {
       return this;
     }
 
+    public Builder printStackTrace(Boolean printStackTrace) {
+      this.printStackTrace = printStackTrace;
+      return this;
+    }
+
     public Configuration build() throws SQLException {
       Configuration conf =
           new Configuration(
@@ -1891,7 +1908,8 @@ public class Configuration {
               this.useMysqlVersion,
               this.rewriteBatchedStatements,
               this.consoleLogLevel,
-              this.consoleLogFilepath);
+              this.consoleLogFilepath,
+              this.printStackTrace);
       conf.initialUrl = buildUrl(conf);
       return conf;
     }

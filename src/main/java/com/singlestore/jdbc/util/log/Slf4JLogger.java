@@ -10,9 +10,16 @@ import org.slf4j.Logger;
 public class Slf4JLogger implements com.singlestore.jdbc.util.log.Logger {
 
   private final Logger logger;
+  private final boolean printStackTrace;
 
-  public Slf4JLogger(Logger logger) {
+  public Slf4JLogger(Logger logger, boolean printStackTrace) {
     this.logger = logger;
+    this.printStackTrace = printStackTrace;
+  }
+
+  @Override
+  public boolean printStackTrace() {
+    return this.printStackTrace;
   }
 
   @Override
@@ -28,11 +35,17 @@ public class Slf4JLogger implements com.singlestore.jdbc.util.log.Logger {
   @Override
   public void trace(String msg) {
     logger.trace(msg);
+    if (printStackTrace()) {
+      logger.trace(LoggerHelper.currentStackTrace());
+    }
   }
 
   @Override
   public void trace(String format, Object... arguments) {
     logger.trace(format, arguments);
+    if (printStackTrace()) {
+      logger.trace(LoggerHelper.currentStackTrace());
+    }
   }
 
   @Override

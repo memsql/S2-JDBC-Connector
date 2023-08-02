@@ -32,6 +32,11 @@ public class ConsoleLogger implements Logger {
   }
 
   @Override
+  public boolean printStackTrace() {
+    return this.identifier.isPrintStackTrace();
+  }
+
+  @Override
   public String getName() {
     return this.identifier.name;
   }
@@ -61,6 +66,14 @@ public class ConsoleLogger implements Logger {
     this.log.format(
         "%s [%s] TRACE %s %s\n",
         currentTimestamp(), Thread.currentThread().getName(), getName(), msg);
+    if (printStackTrace()) {
+      log.format(
+          "%s [%s] TRACE %s %s\n",
+          currentTimestamp(),
+          Thread.currentThread().getName(),
+          getName(),
+          LoggerHelper.currentStackTrace());
+    }
   }
 
   @Override
@@ -71,6 +84,14 @@ public class ConsoleLogger implements Logger {
     this.log.format(
         "%s [%s] TRACE %s %s\n",
         currentTimestamp(), Thread.currentThread().getName(), getName(), format(format, arguments));
+    if (printStackTrace()) {
+      log.format(
+          "%s [%s] TRACE %s %s\n",
+          currentTimestamp(),
+          Thread.currentThread().getName(),
+          getName(),
+          LoggerHelper.currentStackTrace());
+    }
   }
 
   @Override
@@ -263,11 +284,18 @@ public class ConsoleLogger implements Logger {
     private final String name;
     private final CONSOLE_LOG_LEVEL logLevel;
     private final String logFilePath;
+    private final boolean printStackTrace;
 
-    public ConsoleLoggerKey(String name, CONSOLE_LOG_LEVEL logLevel, String logFilePath) {
+    public ConsoleLoggerKey(
+        String name, CONSOLE_LOG_LEVEL logLevel, String logFilePath, boolean printStackTrace) {
       this.name = name;
       this.logLevel = logLevel;
       this.logFilePath = logFilePath;
+      this.printStackTrace = printStackTrace;
+    }
+
+    public boolean isPrintStackTrace() {
+      return printStackTrace;
     }
 
     public String getLogFilePath() {

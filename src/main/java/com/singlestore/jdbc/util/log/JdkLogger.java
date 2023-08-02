@@ -11,9 +11,16 @@ import java.util.regex.Matcher;
 public class JdkLogger implements Logger {
 
   private final java.util.logging.Logger logger;
+  private final boolean printStackTrace;
 
-  public JdkLogger(java.util.logging.Logger logger) {
+  public JdkLogger(java.util.logging.Logger logger, boolean printStackTrace) {
     this.logger = logger;
+    this.printStackTrace = printStackTrace;
+  }
+
+  @Override
+  public boolean printStackTrace() {
+    return this.printStackTrace;
   }
 
   @Override
@@ -29,11 +36,17 @@ public class JdkLogger implements Logger {
   @Override
   public void trace(String msg) {
     logger.log(Level.FINEST, msg);
+    if (printStackTrace()) {
+      logger.log(Level.FINEST, LoggerHelper.currentStackTrace());
+    }
   }
 
   @Override
   public void trace(String format, Object... arguments) {
     logger.log(Level.FINEST, format(format, arguments));
+    if (printStackTrace()) {
+      logger.log(Level.FINEST, LoggerHelper.currentStackTrace());
+    }
   }
 
   @Override

@@ -6,6 +6,9 @@
 package com.singlestore.jdbc.util.log;
 
 public interface Logger {
+
+  boolean printStackTrace();
+
   String getName();
 
   boolean isTraceEnabled();
