@@ -56,7 +56,6 @@ jobs:
       SINGLESTORE_IMAGE: << parameters.singlestore_image >>
       SINGLESTORE_PASSWORD: << parameters.singlestore_password >>
       TEST_ENVIRON: CIRCLE_CI
-#      JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64 //java 11 is used by default
     steps:
       - setup_environment:
           java_version: '8'
@@ -158,11 +157,8 @@ workflows:
               singlestore_password:
                 - password
               singlestore_image:
-                - singlestore/cluster-in-a-box:centos-7.5.10-d6401ae628-4.0.0-1.12.2
-                - singlestore/cluster-in-a-box:centos-7.6.8-ad67e74046-4.0.1-1.13.2
                 - singlestore/cluster-in-a-box:alma-7.8.5-144b69022c-4.0.6-1.13.7
                 - singlestore/cluster-in-a-box:alma-8.0.14-150dead86e-4.0.11-1.15.2
-                - singlestore/cluster-in-a-box:alma-8.1.8-967dab3a92-4.0.12-1.16.1
                 - singlestore/cluster-in-a-box:alma-8.1.8-967dab3a92-4.0.12-1.16.1
 
   publish:
