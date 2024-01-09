@@ -100,6 +100,7 @@ jobs:
       SINGLESTORE_PASSWORD: << parameters.singlestore_password >>
       TEST_ENVIRON: CIRCLE_CI
       JAVA_HOME: /usr/lib/jvm/java-<< parameters.java_version >>-openjdk-amd64
+      JAVA_VERSION: << parameters.java_version >>
     steps:
       - setup_environment:
           java_version: << parameters.java_version >>
@@ -115,7 +116,15 @@ jobs:
           paths:
             - ~/.m2
           key: singlestore-jdbc-client-{{ checksum "pom.xml" }}
-      - run: mvn test
+      - run:
+          name: Run tests
+          command: |
+            echo "Use JDK ${JAVA_VERSION}"
+            if [ "${JAVA_VERSION}" = "8" ]; then
+              mvn compile -P java8
+            else
+              mvn compile
+            fi
       - store_test_results: # uploads the test metadata from the `target/surefire-reports` directory so that it can show up in the CircleCI dashboard.
           # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
           path: target/surefire-reports
