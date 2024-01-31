@@ -1178,6 +1178,30 @@ public class StatementTest extends Common {
   }
 
   @Test
+  public void testRewriteMultiValuesGeneratedIds() throws SQLException {
+    try (Connection conn = createCon("&returnMultiValuesGeneratedIds&rewriteBatchedStatements")) {
+      Statement stmt = conn.createStatement();
+      stmt.execute("DROP TABLE IF EXISTS executeGeneratedMultiValues");
+      stmt.execute(
+          "CREATE TABLE executeGeneratedMultiValues (t1 int not null primary key auto_increment, t2 int)");
+      PreparedStatement prep =
+          conn.prepareStatement(
+              "INSERT INTO executeGeneratedMultiValues(t2) values (?)",
+              Statement.RETURN_GENERATED_KEYS);
+      for (int i = 0; i < 5; i++) {
+        prep.setInt(1, 120 + i);
+        prep.addBatch();
+      }
+      prep.executeBatch();
+      ResultSet keySet = prep.getGeneratedKeys();
+      for (int i = 0; i < 5; i++) {
+        assertTrue(keySet.next());
+        assertEquals(i + 1, keySet.getInt(1));
+      }
+    }
+  }
+
+  @Test
   public void generatedKey() throws SQLException {
     java.sql.Statement stmt = sharedConn.createStatement();
     stmt.execute("DROP TABLE IF EXISTS tt");

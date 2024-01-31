@@ -5,12 +5,28 @@
 
 package com.singlestore.jdbc.integration;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.singlestore.jdbc.Configuration;
 import com.singlestore.jdbc.Statement;
-import java.sql.*;
-import org.junit.jupiter.api.*;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.Date;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.RowIdLifetime;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
+import java.sql.Types;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class DatabaseMetadataTest extends Common {
 
@@ -1073,20 +1089,14 @@ public class DatabaseMetadataTest extends Common {
 
   @Test
   public void getImportedKeysBasic() throws SQLException {
-    try {
-      sharedConn.getMetaData().getImportedKeys(null, null, "");
-      fail("Should have thrown an SQLFeatureNotSupportedException exception");
-    } catch (SQLFeatureNotSupportedException ignored) {
-    }
+    ResultSet rs = sharedConn.getMetaData().getImportedKeys(null, null, "");
+    assertFalse(rs.next());
   }
 
   @Test
   public void getExportedKeysBasic() throws SQLException {
-    try {
-      sharedConn.getMetaData().getImportedKeys(null, null, "");
-      fail("Should have thrown an SQLFeatureNotSupportedException exception");
-    } catch (SQLFeatureNotSupportedException ignored) {
-    }
+    ResultSet rs = sharedConn.getMetaData().getImportedKeys(null, null, "");
+    assertFalse(rs.next());
   }
 
   @Test

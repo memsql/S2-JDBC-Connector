@@ -481,7 +481,7 @@ public class BatchTest extends Common {
 
     try (Connection con =
         createCon(
-            "&useServerPrepStmts=false&rewriteBatchedStatements=true&allowMultiQueries=true")) {
+            "&useServerPrepStmts=false&rewriteBatchedStatements=true&returnMultiValuesGeneratedIds=true&allowMultiQueries=true")) {
       boolean noBackslashEscapes =
           (con.getContext().getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) > 0;
       Statement stmt = con.createStatement();
@@ -489,22 +489,19 @@ public class BatchTest extends Common {
       stmt.execute(
           "CREATE TABLE BatchTest (t1 int not null primary key auto_increment, t2 LONGTEXT)");
 
-      String sql = "insert INTO BatchTest(t1, t2) VALUES (?,?)";
+      String sql = "insert INTO BatchTest(t2) VALUES (?)";
       ClientParser parser = ClientParser.parameterParts(sql, noBackslashEscapes);
       assertTrue(parser.isInsert());
 
       try (PreparedStatement prep =
           con.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
-        prep.setInt(1, 1);
-        prep.setString(2, "entry-1");
+        prep.setString(1, "entry-1");
         prep.addBatch();
 
-        prep.setInt(1, 2);
-        prep.setString(2, "entry-2");
+        prep.setString(1, "entry-2");
         prep.addBatch();
 
-        prep.setInt(1, 3);
-        prep.setString(2, "entry-3");
+        prep.setString(1, "entry-3");
         prep.addBatch();
         prep.executeLargeBatch();
 
