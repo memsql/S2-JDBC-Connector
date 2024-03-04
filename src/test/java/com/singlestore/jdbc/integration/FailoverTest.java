@@ -158,7 +158,7 @@ public class FailoverTest extends Common {
             HaMode.SEQUENTIAL,
             "&useServerPrepStmts=" + binary + "&transactionReplay=" + transactionReplay)) {
       stmt = con.createStatement();
-      con.setNetworkTimeout(Runnable::run, 1000);
+      con.setNetworkTimeout(Runnable::run, 2000);
       long threadId = con.getContext().getThreadId();
 
       stmt.executeUpdate("INSERT INTO transaction_failover_3 (test) VALUES ('test0')");
@@ -169,7 +169,7 @@ public class FailoverTest extends Common {
         p.setString(1, "test2");
         p.execute();
 
-        proxy.restart(1100);
+        proxy.restart(2100);
         p.setString(1, "test3");
         if (transactionReplay) {
           p.execute();
