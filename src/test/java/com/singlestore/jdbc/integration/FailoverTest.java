@@ -58,14 +58,14 @@ public class FailoverTest extends Common {
         createProxyCon(HaMode.SEQUENTIAL, "&transactionReplay=" + transactionReplay)) {
       assertEquals(Connection.TRANSACTION_READ_COMMITTED, con.getTransactionIsolation());
       final Statement stmt = con.createStatement();
-      con.setNetworkTimeout(Runnable::run, 1000);
+      con.setNetworkTimeout(Runnable::run, 2000);
       long threadId = con.getContext().getThreadId();
 
       stmt.executeUpdate("INSERT INTO transaction_failover (test) VALUES ('test0')");
       con.setAutoCommit(false);
       stmt.executeUpdate("INSERT INTO transaction_failover (test) VALUES ('test1')");
       stmt.executeUpdate("INSERT INTO transaction_failover (test) VALUES ('test2')");
-      proxy.restart(1100);
+      proxy.restart(2100);
       if (transactionReplay) {
         stmt.executeUpdate("INSERT INTO transaction_failover (test) VALUES ('test3')");
         con.commit();
