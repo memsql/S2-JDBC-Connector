@@ -406,7 +406,7 @@ public class StandardClient implements Client, AutoCloseable {
       if (timeOut) {
         throw exceptionFactory
             .withSql(message.description())
-            .create("Socket error: query timed out", "08000", ioException);
+            .create("Query execution was interrupted", "70100", ioException);
       } else {
         throw exceptionFactory
             .withSql(message.description())
@@ -497,7 +497,7 @@ public class StandardClient implements Client, AutoCloseable {
         results.add(null);
         // read remaining results
         perMsgCounter++;
-        for (; perMsgCounter < responseMsg[readCounter - 1]; perMsgCounter++) {
+        for (; readCounter > 0 && perMsgCounter < responseMsg[readCounter - 1]; perMsgCounter++) {
           try {
             results.addAll(
                 readResponse(
@@ -594,7 +594,7 @@ public class StandardClient implements Client, AutoCloseable {
   private void checkCancelTimeout() throws SQLException {
     if (timeOut) {
       SQLException cause =
-          exceptionFactory.create("Connection is closed due to query timed out", "08000", 1220);
+          exceptionFactory.create("Query execution was interrupted", "70100", 1220);
       timeOut = false;
       throw cause;
     }
@@ -886,7 +886,7 @@ public class StandardClient implements Client, AutoCloseable {
       if (timeOut) {
         throw exceptionFactory
             .withSql(message.description())
-            .create("Socket error: query timed out", "08000", ioException);
+            .create("Query execution was interrupted", "70100", ioException);
       } else {
         throw exceptionFactory
             .withSql(message.description())
@@ -903,7 +903,7 @@ public class StandardClient implements Client, AutoCloseable {
   protected void checkNotClosed() throws SQLException {
     if (closed) {
       if (timeOut) {
-        throw exceptionFactory.create("Connection is closed due to query timed out", "08000", 1220);
+        throw exceptionFactory.create("Query execution was interrupted", "70100", 1220);
       } else {
         throw exceptionFactory.create("Connection is closed", "08000", 1220);
       }
