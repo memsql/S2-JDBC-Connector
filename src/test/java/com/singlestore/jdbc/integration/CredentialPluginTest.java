@@ -28,16 +28,13 @@ public class CredentialPluginTest extends Common {
    */
   @BeforeAll
   public static void beforeTest() throws SQLException {
+    Assumptions.assumeTrue(getJavaVersion() < 17);
     drop();
     Statement stmt = sharedConn.createStatement();
-    stmt.execute(
-        "GRANT SELECT ON "
-            + sharedConn.getCatalog()
-            + ".* TO 'identityUser'@'localhost' IDENTIFIED BY '!Passw0rd3Works'");
-    stmt.execute(
-        "GRANT SELECT ON "
-            + sharedConn.getCatalog()
-            + ".* TO 'identityUser'@'%' IDENTIFIED BY '!Passw0rd3Works'");
+    stmt.execute("CREATE USER 'identityUser'@'localhost' IDENTIFIED BY '!Passw0rd3Works'");
+    stmt.execute("GRANT SELECT ON " + sharedConn.getCatalog() + ".* TO 'identityUser'@'localhost'");
+    stmt.execute("CREATE USER 'identityUser'@'%' IDENTIFIED BY '!Passw0rd3Works'");
+    stmt.execute("GRANT SELECT ON " + sharedConn.getCatalog() + ".* TO 'identityUser'@'%'");
     stmt.execute("FLUSH PRIVILEGES");
   }
 
