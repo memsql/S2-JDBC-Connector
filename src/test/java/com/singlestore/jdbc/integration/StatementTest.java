@@ -26,6 +26,7 @@ import java.sql.SQLException;
 import java.sql.SQLNonTransientConnectionException;
 import java.sql.SQLSyntaxErrorException;
 import java.sql.SQLTimeoutException;
+import java.sql.SQLTransientException;
 import java.sql.SQLWarning;
 import java.sql.Types;
 import java.util.concurrent.ExecutorService;
@@ -570,15 +571,15 @@ public class StatementTest extends Common {
     assertEquals(2, stmt.getQueryTimeout());
     stmt.execute("SELECT SLEEP(1)");
 
-    SQLNonTransientConnectionException exception =
+    SQLTransientException exception =
         assertThrows(
-            SQLNonTransientConnectionException.class,
+            SQLTimeoutException.class,
             () -> {
               stmt.setQueryTimeout(1);
               assertEquals(1, stmt.getQueryTimeout());
               stmt.execute("SELECT SLEEP(2)");
             });
-    assertTrue(exception.getMessage().endsWith("query timed out"));
+    assertTrue(exception.getMessage().endsWith("Query execution was interrupted"));
   }
 
   public void executeTimeOutQeuryWithPrepareStatement(PreparedStatement stmt) throws SQLException {
@@ -586,16 +587,16 @@ public class StatementTest extends Common {
     assertEquals(3, stmt.getQueryTimeout());
     stmt.executeQuery();
 
-    SQLNonTransientConnectionException exception =
+    SQLTransientException exception =
         assertThrows(
-            SQLNonTransientConnectionException.class,
+            SQLTimeoutException.class,
             () -> {
               stmt.setQueryTimeout(1);
               assertEquals(1, stmt.getQueryTimeout());
               stmt.executeQuery();
             });
 
-    assertTrue(exception.getMessage().endsWith("query timed out"));
+    assertTrue(exception.getMessage().endsWith("Query execution was interrupted"));
   }
 
   @Test
