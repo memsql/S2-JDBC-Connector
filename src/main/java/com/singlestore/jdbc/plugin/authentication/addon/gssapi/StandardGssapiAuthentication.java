@@ -11,25 +11,21 @@ import com.singlestore.jdbc.client.socket.Writer;
 import com.singlestore.jdbc.util.ThreadUtils;
 import com.singlestore.jdbc.util.log.Logger;
 import com.singlestore.jdbc.util.log.Loggers;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.security.PrivilegedExceptionAction;
 import java.sql.SQLException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.security.auth.Subject;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
-import org.ietf.jgss.GSSContext;
-import org.ietf.jgss.GSSException;
-import org.ietf.jgss.GSSManager;
-import org.ietf.jgss.GSSName;
-import org.ietf.jgss.Oid;
+import org.ietf.jgss.*;
 
 public class StandardGssapiAuthentication implements GssapiAuth {
 
-  private final Logger logger = Loggers.getLogger(StandardGssapiAuthentication.class);;
+  private final Logger logger = Loggers.getLogger(StandardGssapiAuthentication.class);
+
+  private final Map<String, LoginContext> LOGIN_CONTEXT = new ConcurrentHashMap<>();
 
   /**
    * Process default GSS plugin authentication.
@@ -86,7 +82,7 @@ public class StandardGssapiAuthentication implements GssapiAuth {
           System.getProperty("java.security.auth.login.config"));
     }
     try {
-      LoginContext loginContext = new LoginContext(jaasEntryName);
+      LoginContext loginContext = initializeLoginContextAndGet(jaasEntryName);
       // attempt authentication
       loginContext.login();
       final Subject mySubject = loginContext.getSubject();
@@ -139,6 +135,21 @@ public class StandardGssapiAuthentication implements GssapiAuth {
 
     } catch (LoginException le) {
       throw new SQLException("GSS-API authentication exception", "28000", 1045, le);
+    }
+  }
+
+  private LoginContext initializeLoginContextAndGet(String jaasEntryName) throws LoginException {
+    final LoginContext loginContext = LOGIN_CONTEXT.get(jaasEntryName);
+    if (loginContext != null) {
+      return loginContext;
+    } else {
+      logger.debug("Create LoginContext for {}", jaasEntryName);
+      LoginContext newLoginContext = new LoginContext(jaasEntryName);
+      final LoginContext previous = LOGIN_CONTEXT.putIfAbsent(jaasEntryName, newLoginContext);
+      if (previous != null) {
+        return previous;
+      }
+      return newLoginContext;
     }
   }
 }
