@@ -18,6 +18,8 @@ import java.io.PrintStream;
 import java.io.UncheckedIOException;
 import java.security.PrivilegedExceptionAction;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 import javax.security.auth.Subject;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
@@ -29,7 +31,9 @@ import org.ietf.jgss.Oid;
 
 public class StandardGssapiAuthentication implements GssapiAuth {
 
-  private final Logger logger = Loggers.getLogger(StandardGssapiAuthentication.class);;
+  private final Logger logger = Loggers.getLogger(StandardGssapiAuthentication.class);
+
+  private final Map<String, LoginContext> LOGIN_CONTEXT = new HashMap<>();
 
   /**
    * Process default GSS plugin authentication.
@@ -86,7 +90,7 @@ public class StandardGssapiAuthentication implements GssapiAuth {
           System.getProperty("java.security.auth.login.config"));
     }
     try {
-      LoginContext loginContext = new LoginContext(jaasEntryName);
+      LoginContext loginContext = initializeLoginContextAndGet(jaasEntryName);
       // attempt authentication
       loginContext.login();
       final Subject mySubject = loginContext.getSubject();
@@ -140,5 +144,16 @@ public class StandardGssapiAuthentication implements GssapiAuth {
     } catch (LoginException le) {
       throw new SQLException("GSS-API authentication exception", "28000", 1045, le);
     }
+  }
+
+  private synchronized LoginContext initializeLoginContextAndGet(String jaasEntryName)
+      throws LoginException {
+    LoginContext loginContext = LOGIN_CONTEXT.get(jaasEntryName);
+    if (loginContext == null) {
+      logger.debug("Create LoginContext for {}", jaasEntryName);
+      loginContext = new LoginContext(jaasEntryName);
+      LOGIN_CONTEXT.put(jaasEntryName, loginContext);
+    }
+    return loginContext;
   }
 }
