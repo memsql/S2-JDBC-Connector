@@ -1452,8 +1452,6 @@ public class DatabaseMetadataTest extends Common {
 
     DatabaseMetaData dmd = sharedConn.getMetaData();
     ResultSet rs = dmd.getProcedureColumns(null, null, "getProcTimePrecision2", null);
-    // return type
-    assertTrue(rs.next());
     // date
     assertTrue(rs.next());
     assertEquals(10, rs.getInt(precisionField));
@@ -1494,8 +1492,6 @@ public class DatabaseMetadataTest extends Common {
 
     DatabaseMetaData dmd = sharedConn.getMetaData();
     ResultSet rs = dmd.getProcedureColumns(null, null, "getProcTimePrecision", null);
-    // return type
-    assertTrue(rs.next());
     // date
     assertTrue(rs.next());
     assertEquals(10, rs.getInt(precisionField));

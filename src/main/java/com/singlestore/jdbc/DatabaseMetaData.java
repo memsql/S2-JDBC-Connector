@@ -1887,7 +1887,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
             + catalogCond("ROUTINE_SCHEMA", catalog)
             + patternCond("SPECIFIC_NAME", procedureNamePattern)
             + patternCond("ROUTINE_NAME", columnNamePattern)
-            + " AND ROUTINE_TYPE='PROCEDURE'"
+            + " AND ROUTINE_TYPE='PROCEDURE' AND DATA_TYPE != ''"
             + " ORDER BY PROCEDURE_CAT, SPECIFIC_NAME"
             + " UNION "
             + parameterClause(
