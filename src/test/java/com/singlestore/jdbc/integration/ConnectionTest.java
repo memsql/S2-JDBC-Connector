@@ -260,16 +260,14 @@ public class ConnectionTest extends Common {
 
   @Test
   public void nativeSqlTest() throws SQLException {
-    // TODO: PLAT-5859
-    // Extend with additional test cases if :> is implemented
     String exp =
-        "SELECT convert(foo(a,b,c), SIGNED INTEGER)"
-            + ", convert(convert(?, CHAR), SIGNED INTEGER)"
-            + ", 1=?"
-            + ", 1=?"
-            + ", convert(?,   SIGNED INTEGER   )"
-            + ",  convert (?,   SIGNED INTEGER   )"
-            + ", convert(?, UNSIGNED INTEGER)"
+        "SELECT foo(a,b,c) :> BIGINT"
+            + ", convert(?, CHAR) :> BIGINT"
+            + ", ? :> BOOLEAN"
+            + ", ? :> BOOLEAN"
+            + ", ? :> SMALLINT"
+            + ", ? :> TINYINT"
+            + ", ? :> BIT"
             + ", convert(?, BINARY)"
             + ", convert(?, BINARY)"
             + ", convert(?, BINARY)"
@@ -286,8 +284,8 @@ public class ConnectionTest extends Common {
             + ", convert(?, CHAR)"
             + ", convert(?, CHAR)"
             + ", convert(?, CHAR)"
-            + ", 0.0+?"
-            + ", 0.0+?"
+            + ", ? :> FLOAT"
+            + ", ? :> DOUBLE"
             + ", convert(?, DECIMAL)"
             + ", convert(?, DECIMAL)"
             + ", convert(?, DECIMAL)"

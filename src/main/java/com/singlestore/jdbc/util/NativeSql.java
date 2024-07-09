@@ -262,17 +262,13 @@ public final class NativeSql {
 
         switch (typeParam) {
           case "BOOLEAN":
-            return "1=" + value;
-
+          case "DOUBLE":
+          case "FLOAT":
           case "BIGINT":
           case "SMALLINT":
-          case "TINYINT":
-            typeParam = "SIGNED INTEGER";
-            break;
-
           case "BIT":
-            typeParam = "UNSIGNED INTEGER";
-            break;
+          case "TINYINT":
+            return String.format("%s :> %s", value, typeParam);
 
           case "BLOB":
           case "VARBINARY":
@@ -293,12 +289,6 @@ public final class NativeSql {
           case "LONGNCHAR":
             typeParam = "CHAR";
             break;
-
-          case "DOUBLE":
-          case "FLOAT":
-            // SingleStore does not support converting to DOUBLE or FLOAT
-            // TODO: PLAT-5859
-            return "0.0+" + value;
 
           case "REAL":
           case "NUMERIC":
