@@ -2030,7 +2030,10 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
   }
 
   public ResultSet getCatalogs() throws SQLException {
-    return executeQuery("SELECT SCHEMA_NAME TABLE_CAT FROM INFORMATION_SCHEMA.SCHEMATA ORDER BY 1");
+    return executeQuery(
+        "SELECT DATABASE_NAME TABLE_CAT FROM INFORMATION_SCHEMA.DISTRIBUTED_DATABASES ORDER BY 1 UNION "
+            + "SELECT s.SCHEMA_NAME TABLE_CAT FROM INFORMATION_SCHEMA.SCHEMATA s LEFT JOIN INFORMATION_SCHEMA.DISTRIBUTED_DATABASES_ON_SITES d "
+            + "ON s.SCHEMA_NAME = d.DATABASE_NAME where d.DATABASE_NAME is NULL;");
   }
 
   public ResultSet getTableTypes() throws SQLException {
