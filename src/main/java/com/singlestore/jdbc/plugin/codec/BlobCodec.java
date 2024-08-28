@@ -13,7 +13,6 @@ import com.singlestore.jdbc.client.ReadableByteBuf;
 import com.singlestore.jdbc.client.socket.Writer;
 import com.singlestore.jdbc.client.util.MutableInt;
 import com.singlestore.jdbc.plugin.Codec;
-import com.singlestore.jdbc.util.constants.ServerStatus;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -112,16 +111,12 @@ public class BlobCodec implements Codec<Blob> {
 
     if (maxLength == null) {
       while ((len = is.read(array)) > 0) {
-        encoder.writeBytesEscaped(
-            array, len, (context.getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) != 0);
+        encoder.writeBytesEscaped(array, len);
       }
     } else {
       long maxLen = maxLength;
       while (maxLen > 0 && (len = is.read(array)) > 0) {
-        encoder.writeBytesEscaped(
-            array,
-            Math.min(len, (int) maxLen),
-            (context.getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) != 0);
+        encoder.writeBytesEscaped(array, Math.min(len, (int) maxLen));
         maxLen -= len;
       }
     }

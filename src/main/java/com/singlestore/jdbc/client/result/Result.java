@@ -6,11 +6,7 @@
 package com.singlestore.jdbc.client.result;
 
 import com.singlestore.jdbc.Configuration;
-import com.singlestore.jdbc.client.Column;
-import com.singlestore.jdbc.client.ColumnDecoder;
-import com.singlestore.jdbc.client.Completion;
-import com.singlestore.jdbc.client.Context;
-import com.singlestore.jdbc.client.ReadableByteBuf;
+import com.singlestore.jdbc.client.*;
 import com.singlestore.jdbc.client.impl.StandardReadableByteBuf;
 import com.singlestore.jdbc.client.result.rowdecoder.BinaryRowDecoder;
 import com.singlestore.jdbc.client.result.rowdecoder.RowDecoder;
@@ -19,14 +15,7 @@ import com.singlestore.jdbc.client.util.MutableInt;
 import com.singlestore.jdbc.export.ExceptionFactory;
 import com.singlestore.jdbc.message.server.ErrorPacket;
 import com.singlestore.jdbc.plugin.Codec;
-import com.singlestore.jdbc.plugin.codec.BigDecimalCodec;
-import com.singlestore.jdbc.plugin.codec.BigIntegerCodec;
-import com.singlestore.jdbc.plugin.codec.BlobCodec;
-import com.singlestore.jdbc.plugin.codec.ByteArrayCodec;
-import com.singlestore.jdbc.plugin.codec.ClobCodec;
-import com.singlestore.jdbc.plugin.codec.ReaderCodec;
-import com.singlestore.jdbc.plugin.codec.StreamCodec;
-import com.singlestore.jdbc.plugin.codec.StringCodec;
+import com.singlestore.jdbc.plugin.codec.*;
 import com.singlestore.jdbc.util.constants.ServerStatus;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,27 +25,9 @@ import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.net.URI;
 import java.net.URL;
-import java.sql.Array;
-import java.sql.Blob;
-import java.sql.Clob;
+import java.sql.*;
 import java.sql.Date;
-import java.sql.NClob;
-import java.sql.Ref;
-import java.sql.ResultSet;
-import java.sql.RowId;
-import java.sql.SQLDataException;
-import java.sql.SQLException;
-import java.sql.SQLType;
-import java.sql.SQLWarning;
-import java.sql.SQLXML;
-import java.sql.Statement;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class Result implements ResultSet, Completion {
@@ -106,9 +77,6 @@ public abstract class Result implements ResultSet, Completion {
 
   /** is fully loaded */
   protected boolean loaded;
-
-  /** is an output parameter result-set */
-  protected boolean outputParameter;
 
   /** current row pointer */
   protected int rowPointer = -1;
@@ -251,7 +219,6 @@ public abstract class Result implements ResultSet, Completion {
             serverStatus = readBuf.readUnsignedShort();
             warnings = readBuf.readUnsignedShort();
           }
-          outputParameter = (serverStatus & ServerStatus.PS_OUT_PARAMETERS) != 0;
           context.setServerStatus(serverStatus);
           context.setWarning(warnings);
           loaded = true;
@@ -309,7 +276,6 @@ public abstract class Result implements ResultSet, Completion {
               serverStatus = buf.readUnsignedShort();
               warnings = buf.readUnsignedShort();
             }
-            outputParameter = (serverStatus & ServerStatus.PS_OUT_PARAMETERS) != 0;
             context.setServerStatus(serverStatus);
             context.setWarning(warnings);
             loaded = true;
@@ -357,15 +323,6 @@ public abstract class Result implements ResultSet, Completion {
    */
   public boolean loaded() {
     return loaded;
-  }
-
-  /**
-   * Does result-set contain output parameters
-   *
-   * @return true if containing output parameters
-   */
-  public boolean isOutputParameter() {
-    return outputParameter;
   }
 
   /**

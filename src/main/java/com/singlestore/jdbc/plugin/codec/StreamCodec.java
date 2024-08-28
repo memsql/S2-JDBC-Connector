@@ -12,7 +12,6 @@ import com.singlestore.jdbc.client.ReadableByteBuf;
 import com.singlestore.jdbc.client.socket.Writer;
 import com.singlestore.jdbc.client.util.MutableInt;
 import com.singlestore.jdbc.plugin.Codec;
-import com.singlestore.jdbc.util.constants.ServerStatus;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -108,15 +107,11 @@ public class StreamCodec implements Codec<InputStream> {
 
     if (maxLen == null) {
       while ((len = stream.read(array)) > 0) {
-        encoder.writeBytesEscaped(
-            array, len, (context.getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) != 0);
+        encoder.writeBytesEscaped(array, len);
       }
     } else {
       while ((len = stream.read(array)) > 0 && maxLen > 0) {
-        encoder.writeBytesEscaped(
-            array,
-            Math.min(len, maxLen.intValue()),
-            (context.getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) != 0);
+        encoder.writeBytesEscaped(array, Math.min(len, maxLen.intValue()));
         maxLen -= len;
       }
     }

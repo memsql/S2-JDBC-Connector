@@ -102,20 +102,18 @@ public interface Writer {
    * Write string to socket.
    *
    * @param str string
-   * @param noBackslashEscapes escape method
    * @throws IOException if socket error occur
    */
-  void writeStringEscaped(String str, boolean noBackslashEscapes) throws IOException;
+  void writeStringEscaped(String str) throws IOException;
 
   /**
    * Write escape bytes to socket.
    *
    * @param bytes bytes
    * @param len len to write
-   * @param noBackslashEscapes escape method
    * @throws IOException if socket error occur
    */
-  void writeBytesEscaped(byte[] bytes, int len, boolean noBackslashEscapes) throws IOException;
+  void writeBytesEscaped(byte[] bytes, int len) throws IOException;
 
   /**
    * Send empty packet.

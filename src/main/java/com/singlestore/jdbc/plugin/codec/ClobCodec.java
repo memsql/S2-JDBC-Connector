@@ -13,7 +13,6 @@ import com.singlestore.jdbc.client.ReadableByteBuf;
 import com.singlestore.jdbc.client.socket.Writer;
 import com.singlestore.jdbc.client.util.MutableInt;
 import com.singlestore.jdbc.plugin.Codec;
-import com.singlestore.jdbc.util.constants.ServerStatus;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Reader;
@@ -110,8 +109,7 @@ public class ClobCodec implements Codec<Clob> {
     while (remainingLen > 0 && (len = reader.read(buf)) >= 0) {
       byte[] data =
           new String(buf, 0, (int) Math.min(len, remainingLen)).getBytes(StandardCharsets.UTF_8);
-      encoder.writeBytesEscaped(
-          data, data.length, (context.getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) != 0);
+      encoder.writeBytesEscaped(data, data.length);
       remainingLen -= len;
     }
     encoder.writeByte('\'');

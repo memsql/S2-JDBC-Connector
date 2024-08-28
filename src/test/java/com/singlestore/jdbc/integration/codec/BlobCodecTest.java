@@ -687,11 +687,6 @@ public class BlobCodecTest extends CommonCodecTest {
     try (Connection con = createCon("transactionReplay=true&useServerPrepStmts=true")) {
       sendParam(con);
     }
-    try (Connection con = createCon()) {
-      java.sql.Statement stmt = con.createStatement();
-      stmt.execute("SET sql_mode = concat(@@sql_mode,',NO_BACKSLASH_ESCAPES')");
-      sendParam(con);
-    }
   }
 
   private void sendParam(Connection con) throws Exception {

@@ -452,18 +452,17 @@ public class PacketWriter implements Writer {
    * Write string to socket.
    *
    * @param str string
-   * @param noBackslashEscapes escape method
    * @throws IOException if socket error occur
    */
   @Override
-  public void writeStringEscaped(String str, boolean noBackslashEscapes) throws IOException {
+  public void writeStringEscaped(String str) throws IOException {
 
     int charsLength = str.length();
 
     // not enough space remaining
     if (charsLength * 3 >= buf.length - pos) {
       byte[] arr = str.getBytes(StandardCharsets.UTF_8);
-      writeBytesEscaped(arr, arr.length, noBackslashEscapes);
+      writeBytesEscaped(arr, arr.length);
       return;
     }
 
@@ -478,35 +477,20 @@ public class PacketWriter implements Writer {
     char currChar;
 
     // quick loop if only ASCII chars for faster escape
-    if (noBackslashEscapes) {
-      for (;
-          charsOffset < charsLength && (currChar = str.charAt(charsOffset)) < 0x80;
-          charsOffset++) {
-        if (currChar == QUOTE) {
-          buf[pos++] = QUOTE;
-        }
-        buf[pos++] = (byte) currChar;
+    for (;
+        charsOffset < charsLength && (currChar = str.charAt(charsOffset)) < 0x80;
+        charsOffset++) {
+      if (currChar == BACKSLASH || currChar == QUOTE || currChar == 0 || currChar == DBL_QUOTE) {
+        buf[pos++] = BACKSLASH;
       }
-    } else {
-      for (;
-          charsOffset < charsLength && (currChar = str.charAt(charsOffset)) < 0x80;
-          charsOffset++) {
-        if (currChar == BACKSLASH || currChar == QUOTE || currChar == 0 || currChar == DBL_QUOTE) {
-          buf[pos++] = BACKSLASH;
-        }
-        buf[pos++] = (byte) currChar;
-      }
+      buf[pos++] = (byte) currChar;
     }
 
     // if quick loop not finished
     while (charsOffset < charsLength) {
       currChar = str.charAt(charsOffset++);
       if (currChar < 0x80) {
-        if (noBackslashEscapes) {
-          if (currChar == QUOTE) {
-            buf[pos++] = QUOTE;
-          }
-        } else if (currChar == BACKSLASH
+        if (currChar == BACKSLASH
             || currChar == QUOTE
             || currChar == ZERO_BYTE
             || currChar == DBL_QUOTE) {
@@ -555,11 +539,10 @@ public class PacketWriter implements Writer {
    *
    * @param bytes bytes
    * @param len len to write
-   * @param noBackslashEscapes escape method
    * @throws IOException if socket error occur
    */
-  public void writeBytesEscaped(byte[] bytes, int len, boolean noBackslashEscapes)
-      throws IOException {
+  @Override
+  public void writeBytesEscaped(byte[] bytes, int len) throws IOException {
     if (len * 2 > buf.length - pos) {
 
       // makes buf bigger (up to 16M)
@@ -583,34 +566,19 @@ public class PacketWriter implements Writer {
           if (buf.length <= pos) {
             writeSocket(false);
           }
-          if (noBackslashEscapes) {
-            for (int i = 0; i < len; i++) {
-              if (QUOTE == bytes[i]) {
-                buf[pos++] = QUOTE;
-                if (buf.length <= pos) {
-                  writeSocket(false);
-                }
-              }
-              buf[pos++] = bytes[i];
+          for (int i = 0; i < len; i++) {
+            if (bytes[i] == QUOTE
+                || bytes[i] == BACKSLASH
+                || bytes[i] == DBL_QUOTE
+                || bytes[i] == ZERO_BYTE) {
+              buf[pos++] = '\\';
               if (buf.length <= pos) {
                 writeSocket(false);
               }
             }
-          } else {
-            for (int i = 0; i < len; i++) {
-              if (bytes[i] == QUOTE
-                  || bytes[i] == BACKSLASH
-                  || bytes[i] == DBL_QUOTE
-                  || bytes[i] == ZERO_BYTE) {
-                buf[pos++] = '\\';
-                if (buf.length <= pos) {
-                  writeSocket(false);
-                }
-              }
-              buf[pos++] = bytes[i];
-              if (buf.length <= pos) {
-                writeSocket(false);
-              }
+            buf[pos++] = bytes[i];
+            if (buf.length <= pos) {
+              writeSocket(false);
             }
           }
           return;
@@ -619,23 +587,11 @@ public class PacketWriter implements Writer {
     }
 
     // sure to have enough place filling buf directly
-    if (noBackslashEscapes) {
-      for (int i = 0; i < len; i++) {
-        if (QUOTE == bytes[i]) {
-          buf[pos++] = QUOTE;
-        }
-        buf[pos++] = bytes[i];
+    for (int i = 0; i < len; i++) {
+      if (bytes[i] == QUOTE || bytes[i] == BACKSLASH || bytes[i] == '"' || bytes[i] == ZERO_BYTE) {
+        buf[pos++] = BACKSLASH; // add escape slash
       }
-    } else {
-      for (int i = 0; i < len; i++) {
-        if (bytes[i] == QUOTE
-            || bytes[i] == BACKSLASH
-            || bytes[i] == '"'
-            || bytes[i] == ZERO_BYTE) {
-          buf[pos++] = BACKSLASH; // add escape slash
-        }
-        buf[pos++] = bytes[i];
-      }
+      buf[pos++] = bytes[i];
     }
   }
 

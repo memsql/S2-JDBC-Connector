@@ -12,7 +12,6 @@ import com.singlestore.jdbc.client.ReadableByteBuf;
 import com.singlestore.jdbc.client.socket.Writer;
 import com.singlestore.jdbc.client.util.MutableInt;
 import com.singlestore.jdbc.plugin.Codec;
-import com.singlestore.jdbc.util.constants.ServerStatus;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.Reader;
@@ -99,20 +98,14 @@ public class ReaderCodec implements Codec<Reader> {
     if (maxLen == null) {
       while ((len = reader.read(buf)) >= 0) {
         byte[] data = new String(buf, 0, len).getBytes(StandardCharsets.UTF_8);
-        encoder.writeBytesEscaped(
-            data,
-            data.length,
-            (context.getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) != 0);
+        encoder.writeBytesEscaped(data, data.length);
       }
     } else {
       while ((len = reader.read(buf)) >= 0) {
         byte[] data =
             new String(buf, 0, Math.min(len, maxLen.intValue())).getBytes(StandardCharsets.UTF_8);
         maxLen -= len;
-        encoder.writeBytesEscaped(
-            data,
-            data.length,
-            (context.getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) != 0);
+        encoder.writeBytesEscaped(data, data.length);
       }
     }
     encoder.writeByte('\'');

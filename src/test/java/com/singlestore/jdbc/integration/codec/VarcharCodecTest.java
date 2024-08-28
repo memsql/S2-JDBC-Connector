@@ -882,8 +882,6 @@ public class VarcharCodecTest extends CommonCodecTest {
     sendParam(sharedConn);
     sendParam(sharedConnBinary);
     try (Connection con = createCon()) {
-      java.sql.Statement stmt = con.createStatement();
-      stmt.execute("SET sql_mode = concat(@@sql_mode,',NO_BACKSLASH_ESCAPES')");
       sendParam(con);
     }
   }

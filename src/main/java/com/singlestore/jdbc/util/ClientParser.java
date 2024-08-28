@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
 // Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.util;
 
@@ -34,10 +34,9 @@ public final class ClientParser implements PrepareResult {
    * Parse prepared statement query.
    *
    * @param queryString query
-   * @param noBackslashEscapes escape mode
    * @return ClientPrepareResult
    */
-  public static ClientParser parameterParts(String queryString, boolean noBackslashEscapes) {
+  public static ClientParser parameterParts(String queryString) {
 
     List<Integer> paramPositions = new ArrayList<>();
     LexState state = LexState.Normal;
@@ -153,9 +152,6 @@ public final class ClientParser implements PrepareResult {
           }
           break;
         case (byte) '\\':
-          if (noBackslashEscapes) {
-            break;
-          }
           if (state == LexState.String) {
             state = LexState.Escape;
           }

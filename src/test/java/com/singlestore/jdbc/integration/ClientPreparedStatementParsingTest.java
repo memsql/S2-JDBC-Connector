@@ -8,16 +8,13 @@ package com.singlestore.jdbc.integration;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.singlestore.jdbc.util.ClientParser;
-import com.singlestore.jdbc.util.constants.ServerStatus;
 import java.sql.*;
 import org.junit.jupiter.api.Test;
 
 public class ClientPreparedStatementParsingTest extends Common {
 
   private void checkParsing(String sql, int paramNumber, String[] partsMulti) throws Exception {
-    boolean noBackslashEscapes =
-        (sharedConn.getContext().getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) > 0;
-    ClientParser parser = ClientParser.parameterParts(sql, noBackslashEscapes);
+    ClientParser parser = ClientParser.parameterParts(sql);
     assertEquals(paramNumber, parser.getParamCount());
     int pos = 0;
     int paramPos = parser.getQuery().length;

@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.singlestore.jdbc.Connection;
 import com.singlestore.jdbc.Statement;
-import com.singlestore.jdbc.util.constants.ServerStatus;
 import java.sql.BatchUpdateException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -529,8 +528,6 @@ public class BatchTest extends Common {
   public void testInsertRegEx() throws SQLException {
     try (Connection con = createCon("&useServerPrepStmts=false&rewriteBatchedStatements=true")) {
       Statement stmt = con.createStatement();
-      boolean noBackslashEscapes =
-          (con.getContext().getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) > 0;
 
       // Testcase-1 -  Having 'INSERT' in the query string with uppercase where 'INSERT' keyword is
       // used for 'INSERT' action
@@ -688,9 +685,6 @@ public class BatchTest extends Common {
   public void testRewriteBatchedPipelineForInsertOnDuplicateKeyUpdate() throws SQLException {
     try (Connection con = createCon("&useServerPrepStmts=false&rewriteBatchedStatements=true")) {
       Statement stmt = con.createStatement();
-
-      boolean noBackslashEscapes =
-          (con.getContext().getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) > 0;
       // Testcase-1 -  Having 'ON DUPLICATE KEY UPDATE' clause in the query string
       stmt.execute("DROP TABLE IF EXISTS BatchTest");
       stmt.execute(
