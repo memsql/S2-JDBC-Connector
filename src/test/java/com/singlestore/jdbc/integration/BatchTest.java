@@ -14,13 +14,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.singlestore.jdbc.Connection;
+import com.singlestore.jdbc.SingleStoreBlob;
 import com.singlestore.jdbc.Statement;
-import java.sql.BatchUpdateException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLTransientConnectionException;
-import java.sql.Types;
+import java.io.ByteArrayInputStream;
+import java.sql.*;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -400,6 +397,43 @@ public class BatchTest extends Common {
     assertEquals("22", rs2.getString(2));
     assertFalse(rs2.next());
     con.commit();
+  }
+
+  @Test
+  public void batchWithZeroByteData() throws SQLException {
+    try (Connection con = createCon("&rewriteBatchedStatements=true")) {
+      Statement stmt = con.createStatement();
+      stmt.execute("DROP TABLE IF EXISTS RewriteBatchZeroByteTest");
+      stmt.execute(
+          "CREATE TABLE RewriteBatchZeroByteTest (t1 int not null primary key auto_increment, t2 TINYBLOB, t3 BLOB, t4 MEDIUMBLOB)");
+
+      final int batches = 3;
+      byte[] zeroByte1 = {0};
+      Blob blob = new SingleStoreBlob(zeroByte1);
+      byte[] zeroByte2 = {0, 0, 0};
+      byte[] zeroByte3 = {30, 0, 0, 45};
+      try (PreparedStatement prep =
+          con.prepareStatement(
+              "INSERT INTO RewriteBatchZeroByteTest(t1, t2, t3, t4) VALUES (?,?,?,?)")) {
+        for (int i = 1; i < batches; i++) {
+          prep.setInt(1, i);
+          prep.setBlob(2, new SingleStoreBlob(zeroByte1));
+          prep.setBytes(3, zeroByte2);
+          prep.setBinaryStream(4, new ByteArrayInputStream(zeroByte3));
+          prep.addBatch();
+        }
+        prep.executeBatch();
+      }
+      ResultSet rs1 = stmt.executeQuery("SELECT * FROM RewriteBatchZeroByteTest ORDER BY t1");
+      for (int i = 1; i < batches; i++) {
+        assertTrue(rs1.next());
+        assertEquals(i, rs1.getInt(1));
+        assertEquals(blob, rs1.getBlob(2));
+        assertArrayEquals(zeroByte2, rs1.getBytes(3));
+        assertArrayEquals(zeroByte3, rs1.getBytes(4));
+        assertEquals((byte) 0, rs1.getByte(3));
+      }
+    }
   }
 
   @Test
