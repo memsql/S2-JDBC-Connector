@@ -69,11 +69,9 @@ public class RewriteClientParser implements PrepareResult {
    * param1_2, 8)][ ON DUPLICATE KEY UPDATE col2=col2+10]
    *
    * @param queryString query String
-   * @param noBackslashEscapes must backslash be escaped.
    * @return List of query part.
    */
-  public static RewriteClientParser rewritableParts(
-      String queryString, boolean noBackslashEscapes) {
+  public static RewriteClientParser rewritableParts(String queryString) {
     boolean reWritablePrepare = true;
     List<byte[]> partList = new ArrayList<>();
     LexState state = LexState.Normal;
@@ -165,9 +163,6 @@ public class RewriteClientParser implements PrepareResult {
           break;
 
         case '\\':
-          if (noBackslashEscapes) {
-            break;
-          }
           if (state == LexState.String) {
             state = LexState.Escape;
           }

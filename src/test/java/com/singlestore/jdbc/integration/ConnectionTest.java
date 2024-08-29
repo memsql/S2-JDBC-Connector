@@ -250,15 +250,6 @@ public class ConnectionTest extends Common {
   }
 
   @Test
-  public void nativeSQLNoBackSlash() throws SQLException {
-    try (Connection con = createCon()) {
-      java.sql.Statement stmt = con.createStatement();
-      stmt.execute("SET sql_mode = concat(@@sql_mode,',NO_BACKSLASH_ESCAPES')");
-      assertEquals("call foo('{' now())", con.nativeSQL("{call foo({fn '{' now()})}"));
-    }
-  }
-
-  @Test
   public void nativeSqlTest() throws SQLException {
     String exp =
         "SELECT foo(a,b,c) :> BIGINT"

@@ -9,7 +9,6 @@ import com.singlestore.jdbc.client.DataType;
 import com.singlestore.jdbc.client.result.CompleteResult;
 import com.singlestore.jdbc.util.Version;
 import com.singlestore.jdbc.util.VersionFactory;
-import com.singlestore.jdbc.util.constants.ServerStatus;
 import java.sql.PseudoColumnUsage;
 import java.sql.ResultSet;
 import java.sql.RowIdLifetime;
@@ -244,13 +243,9 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * Escape String.
    *
    * @param value value to escape
-   * @param noBackslashEscapes must backslash be escaped
    * @return escaped string.
    */
-  public static String escapeString(String value, boolean noBackslashEscapes) {
-    if (noBackslashEscapes) {
-      return value.replace("'", "''");
-    }
+  public static String escapeString(String value) {
     return value
         .replace("\\", "\\\\")
         .replace("'", "\\'")
@@ -414,20 +409,11 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
   }
 
   private String escapeQuote(String value) {
-    return "'"
-        + escapeString(
-            value,
-            (connection.getContext().getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) > 0)
-        + "'";
+    return "'" + escapeString(value) + "'";
   }
 
   private String tableEscapeQuote(String value) throws SQLException {
-    String escapedValue =
-        "'"
-            + escapeString(
-                value,
-                (connection.getContext().getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) > 0)
-            + "'";
+    String escapedValue = "'" + escapeString(value) + "'";
     return supportsMixedCaseIdentifiers() ? escapedValue : "LOWER(" + escapedValue + ")";
   }
 
@@ -461,15 +447,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     }
     String predicate =
         (columnValue.indexOf('%') == -1 && columnValue.indexOf('_') == -1) ? "=" : "LIKE";
-    return " AND "
-        + columnName
-        + " "
-        + predicate
-        + " '"
-        + escapeString(
-            columnValue,
-            (connection.getContext().getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) != 0)
-        + "' ";
+    return " AND " + columnName + " " + predicate + " '" + escapeString(columnValue) + "' ";
   }
 
   private String tablePatternCond(String columnName, String tableNameValue) throws SQLException {
@@ -479,13 +457,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     String predicate =
         (tableNameValue.indexOf('%') == -1 && tableNameValue.indexOf('_') == -1) ? "=" : "LIKE";
     columnName = supportsMixedCaseIdentifiers() ? columnName : "LOWER(" + columnName + ")";
-    String escapedTableName =
-        "'"
-            + escapeString(
-                tableNameValue,
-                (connection.getContext().getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES)
-                    != 0)
-            + "'";
+    String escapedTableName = "'" + escapeString(tableNameValue) + "'";
     String value =
         supportsMixedCaseIdentifiers() ? escapedTableName : "LOWER(" + escapedTableName + ")";
     return " AND " + columnName + " " + predicate + " " + value + " ";

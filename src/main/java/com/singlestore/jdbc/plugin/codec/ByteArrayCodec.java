@@ -12,7 +12,6 @@ import com.singlestore.jdbc.client.ReadableByteBuf;
 import com.singlestore.jdbc.client.socket.Writer;
 import com.singlestore.jdbc.client.util.MutableInt;
 import com.singlestore.jdbc.plugin.Codec;
-import com.singlestore.jdbc.util.constants.ServerStatus;
 import java.io.IOException;
 import java.sql.SQLDataException;
 import java.sql.SQLException;
@@ -99,9 +98,7 @@ public class ByteArrayCodec implements Codec<byte[]> {
 
     encoder.writeBytes(BINARY_PREFIX);
     encoder.writeBytesEscaped(
-        ((byte[]) value),
-        maxLength == null ? length : Math.min(length, maxLength.intValue()),
-        (context.getServerStatus() & ServerStatus.NO_BACKSLASH_ESCAPES) != 0);
+        ((byte[]) value), maxLength == null ? length : Math.min(length, maxLength.intValue()));
     encoder.writeByte('\'');
   }
 

@@ -5,7 +5,7 @@
 
 package com.singlestore.jdbc.util.constants;
 
-@SuppressWarnings("unused")
+/** The list of Server status flags supported in SingleStore. */
 public class ServerStatus {
 
   /** is in transaction */
@@ -14,24 +14,4 @@ public class ServerStatus {
   public static final short AUTOCOMMIT = 2;
   /** more result exists (packet follows) */
   public static final short MORE_RESULTS_EXISTS = 8;
-  /** no good index was used */
-  public static final short QUERY_NO_GOOD_INDEX_USED = 16;
-  /** no index was used */
-  public static final short QUERY_NO_INDEX_USED = 32;
-  /** cursor exists */
-  public static final short CURSOR_EXISTS = 64;
-  /** last row sent */
-  public static final short LAST_ROW_SENT = 128;
-  /** database dropped */
-  public static final short DB_DROPPED = 256;
-  /** escape type */
-  public static final short NO_BACKSLASH_ESCAPES = 512;
-  /** metadata changed */
-  public static final short METADATA_CHANGED = 1024;
-  /** query was slow */
-  public static final short QUERY_WAS_SLOW = 2048;
-  /** resultset contains output parameters */
-  public static final short PS_OUT_PARAMETERS = 4096;
-  /** session state change (OK_Packet contains additional data) */
-  public static final short SERVER_SESSION_STATE_CHANGED = 1 << 14;
 }

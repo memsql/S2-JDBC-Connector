@@ -584,11 +584,6 @@ public class DatabaseMetadataTest extends Common {
     try (Connection con = createCon("tinyInt1isBit=false")) {
       testGetColumnstinyInt1isBit(con);
     }
-    try (Connection con = createCon("tinyInt1isBit=false")) {
-      java.sql.Statement stmt = con.createStatement();
-      stmt.execute("SET sql_mode = concat(@@sql_mode,',NO_BACKSLASH_ESCAPES')");
-      testGetColumnstinyInt1isBit(con);
-    }
   }
 
   @Test
