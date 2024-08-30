@@ -22,6 +22,7 @@ import java.util.List;
  */
 public class RewriteQueryMultiPacket implements RedoableClientMessage {
 
+  private static final int MAX_PARAMETERS_SIZE = 1048576;
   private final Configuration config;
   private final RewriteClientParser parser;
   private List<Parameters> batchParameters;
@@ -83,6 +84,7 @@ public class RewriteQueryMultiPacket implements RedoableClientMessage {
   private int sendRewriteCmd(Writer encoder, Context context, int currentIndex)
       throws IOException, SQLException {
     int batchIndex = currentIndex;
+    int totalParametersCount = paramCount;
 
     encoder.initPacket();
     encoder.writeByte(0x03);
@@ -109,8 +111,10 @@ public class RewriteQueryMultiPacket implements RedoableClientMessage {
         parameters = batchParameters.get(batchIndex);
 
         // check packet length so to separate in multiple packet
-        packetLength += getApproximateParametersLength(parameters);
-        if (!encoder.throwMaxAllowedLength(packetLength)) {
+        packetLength += getApproximateParametersLength(parameters) + parser.getParamPartsLength();
+        totalParametersCount += paramCount;
+        if (!encoder.throwMaxAllowedLength(packetLength)
+            && totalParametersCount < MAX_PARAMETERS_SIZE) {
           encoder.writeByte((byte) ',');
           encoder.writeBytes(secondPart, 0, secondPart.length);
 
@@ -123,9 +127,10 @@ public class RewriteQueryMultiPacket implements RedoableClientMessage {
         } else {
           Loggers.getLogger(RewriteQueryMultiPacket.class)
               .debug(
-                  "split multi values rewrite batch query on {} batch with size {}",
+                  "split multi values rewrite batch query on {} batch with size {} and parameter count {}",
                   batchIndex,
-                  packetLength);
+                  packetLength,
+                  totalParametersCount);
           break;
         }
       }
