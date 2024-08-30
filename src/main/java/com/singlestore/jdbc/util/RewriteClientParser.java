@@ -16,16 +16,19 @@ public class RewriteClientParser implements PrepareResult {
   private final List<byte[]> queryParts;
   private final int paramCount;
   private final int queryPartsLength;
+  private final int paramPartsLength;
   private final boolean isQueryMultiValuesRewritable;
 
   private RewriteClientParser(
       String sql,
       List<byte[]> queryParts,
       int queryPartsLength,
+      int paramPartsLength,
       boolean isQueryMultiValuesRewritable) {
     this.sql = sql;
     this.queryParts = queryParts;
     this.queryPartsLength = queryPartsLength;
+    this.paramPartsLength = paramPartsLength;
     this.isQueryMultiValuesRewritable = isQueryMultiValuesRewritable;
     this.paramCount = queryParts.size() - 3;
   }
@@ -343,11 +346,18 @@ public class RewriteClientParser implements PrepareResult {
     }
     partList.add(sb.toString().getBytes(StandardCharsets.UTF_8));
 
-    int staticLength = 1;
-    for (byte[] queryPart : partList) {
-      staticLength += queryPart.length;
+    int queryPartsLength = 1; // query length
+    int paramPartsLength = 1; // length of parameters part in braces
+
+    for (int i = 0; i < partList.size(); i++) {
+      byte[] queryPart = partList.get(i);
+      queryPartsLength += queryPart.length;
+      if (i > 0 && i < partList.size() - 1) {
+        paramPartsLength += queryPart.length;
+      }
     }
-    return new RewriteClientParser(queryString, partList, staticLength, reWritablePrepare);
+    return new RewriteClientParser(
+        queryString, partList, queryPartsLength, paramPartsLength, reWritablePrepare);
   }
 
   @Override
@@ -370,5 +380,9 @@ public class RewriteClientParser implements PrepareResult {
 
   public int getQueryPartsLength() {
     return queryPartsLength;
+  }
+
+  public int getParamPartsLength() {
+    return paramPartsLength;
   }
 }

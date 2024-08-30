@@ -436,6 +436,29 @@ public class BatchTest extends Common {
     }
   }
 
+  // test rewriteBatchedStatements to split packets by maximum number of parameters
+  @Test
+  public void batchWithLimitedNumberOfParameters() throws SQLException {
+    try (Connection con = createCon("&rewriteBatchedStatements=true")) {
+      Statement stmt = con.createStatement();
+      stmt.execute("DROP TABLE IF EXISTS RewriteBatchParamTest");
+      stmt.execute(
+          "CREATE TABLE RewriteBatchParamTest (t1 VARCHAR(35), t2 VARCHAR(35), t3 VARCHAR(35))");
+      final int batches =
+          1048576; // max number of parameters allowed is 1048576, should split in 3 insert queries
+      try (PreparedStatement prep =
+          con.prepareStatement("INSERT INTO RewriteBatchParamTest(t1, t2, t3) VALUES (?,?,?)")) {
+        for (int i = 1; i < batches; i++) {
+          prep.setString(1, null);
+          prep.setString(2, null);
+          prep.setString(3, null);
+          prep.addBatch();
+        }
+        prep.executeBatch();
+      }
+    }
+  }
+
   @Test
   public void batchWithAllowedPacketSize() throws SQLException {
     batchWithAllowedPacketSize(22, 104857600);
