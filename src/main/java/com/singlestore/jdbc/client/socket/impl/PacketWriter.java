@@ -591,7 +591,11 @@ public class PacketWriter implements Writer {
       if (bytes[i] == QUOTE || bytes[i] == BACKSLASH || bytes[i] == '"' || bytes[i] == ZERO_BYTE) {
         buf[pos++] = BACKSLASH; // add escape slash
       }
-      buf[pos++] = bytes[i];
+      if (bytes[i] == ZERO_BYTE) {
+        buf[pos++] = 0x30;
+      } else {
+        buf[pos++] = bytes[i];
+      }
     }
   }
 
