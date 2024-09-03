@@ -6,12 +6,16 @@
 package com.singlestore.jdbc;
 
 import java.io.PrintWriter;
-import java.sql.*;
 import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.SQLTimeoutException;
 import java.util.logging.Logger;
-import javax.sql.*;
+import javax.sql.ConnectionPoolDataSource;
+import javax.sql.DataSource;
+import javax.sql.PooledConnection;
 
-public class SingleStoreDataSource implements DataSource, ConnectionPoolDataSource, XADataSource {
+public class SingleStoreDataSource implements DataSource, ConnectionPoolDataSource {
 
   private Configuration conf = null;
 
@@ -207,19 +211,6 @@ public class SingleStoreDataSource implements DataSource, ConnectionPoolDataSour
   @Override
   public PooledConnection getPooledConnection(String username, String password)
       throws SQLException {
-    if (conf == null) config();
-    Configuration conf = this.conf.clone(username, password);
-    return new SingleStorePoolConnection(Driver.connect(conf));
-  }
-
-  @Override
-  public XAConnection getXAConnection() throws SQLException {
-    if (conf == null) config();
-    return new SingleStorePoolConnection(Driver.connect(conf));
-  }
-
-  @Override
-  public XAConnection getXAConnection(String username, String password) throws SQLException {
     if (conf == null) config();
     Configuration conf = this.conf.clone(username, password);
     return new SingleStorePoolConnection(Driver.connect(conf));

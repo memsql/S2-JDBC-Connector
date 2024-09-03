@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration;
 
@@ -23,8 +23,10 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import javax.sql.ConnectionPoolDataSource;
 import javax.sql.PooledConnection;
-import javax.sql.XAConnection;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class PoolDataSourceTest extends Common {
 
@@ -96,26 +98,6 @@ public class PoolDataSourceTest extends Common {
       if (con1 != null) con1.getConnection().close();
       if (con2 != null) con2.getConnection().close();
     }
-
-    XAConnection conx1 = null;
-    XAConnection conx2 = null;
-    try {
-      conx1 = ds.getXAConnection();
-      conx2 = ds.getXAConnection();
-
-      ResultSet rs1 = conx1.getConnection().createStatement().executeQuery("SELECT 1");
-      ResultSet rs2 = conx2.getConnection().createStatement().executeQuery("SELECT 2");
-      while (rs1.next()) {
-        assertEquals(1, rs1.getInt(1));
-      }
-      while (rs2.next()) {
-        assertEquals(2, rs2.getInt(1));
-      }
-
-    } finally {
-      if (conx1 != null) conx1.close();
-      if (conx2 != null) conx2.close();
-    }
   }
 
   @Test
@@ -135,8 +117,6 @@ public class PoolDataSourceTest extends Common {
     assertThrows(SQLException.class, () -> ds.getConnection("user", "password"));
     assertThrows(SQLException.class, () -> ds.getPooledConnection());
     assertThrows(SQLException.class, () -> ds.getPooledConnection("user", "password"));
-    assertThrows(SQLException.class, () -> ds.getXAConnection());
-    assertThrows(SQLException.class, () -> ds.getXAConnection("user", "password"));
 
     ds.setUser("dd");
     assertEquals("dd", ds.getUser());
