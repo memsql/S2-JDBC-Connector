@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration;
 
@@ -11,7 +11,6 @@ import com.singlestore.jdbc.SingleStoreDataSource;
 import java.sql.*;
 import javax.sql.DataSource;
 import javax.sql.PooledConnection;
-import javax.sql.XAConnection;
 import org.junit.jupiter.api.Test;
 
 public class DataSourceTest extends Common {
@@ -66,26 +65,6 @@ public class DataSourceTest extends Common {
       if (con1 != null) con1.close();
       if (con2 != null) con2.close();
     }
-
-    XAConnection conx1 = null;
-    XAConnection conx2 = null;
-    try {
-      conx1 = ds.getXAConnection();
-      conx2 = ds.getXAConnection();
-
-      ResultSet rs1 = conx1.getConnection().createStatement().executeQuery("SELECT 1");
-      ResultSet rs2 = conx2.getConnection().createStatement().executeQuery("SELECT 2");
-      while (rs1.next()) {
-        assertEquals(1, rs1.getInt(1));
-      }
-      while (rs2.next()) {
-        assertEquals(2, rs2.getInt(1));
-      }
-
-    } finally {
-      if (conx1 != null) con1.close();
-      if (conx2 != null) con2.close();
-    }
   }
 
   @Test
@@ -104,8 +83,6 @@ public class DataSourceTest extends Common {
     assertThrows(SQLException.class, () -> ds.getConnection("user", "password"));
     assertThrows(SQLException.class, () -> ds.getPooledConnection());
     assertThrows(SQLException.class, () -> ds.getPooledConnection("user", "password"));
-    assertThrows(SQLException.class, () -> ds.getXAConnection());
-    assertThrows(SQLException.class, () -> ds.getXAConnection("user", "password"));
 
     ds.setUser("dd");
     assertEquals("dd", ds.getUser());

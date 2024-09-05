@@ -18,11 +18,9 @@ import java.util.List;
 import java.util.logging.Logger;
 import javax.sql.ConnectionPoolDataSource;
 import javax.sql.DataSource;
-import javax.sql.XAConnection;
-import javax.sql.XADataSource;
 
 public class SingleStorePoolDataSource
-    implements DataSource, ConnectionPoolDataSource, XADataSource, Closeable, AutoCloseable {
+    implements DataSource, ConnectionPoolDataSource, Closeable, AutoCloseable {
 
   private Pool pool;
   private Configuration conf = null;
@@ -205,18 +203,6 @@ public class SingleStorePoolDataSource
   @Override
   public InternalPoolConnection getPooledConnection(String username, String password)
       throws SQLException {
-    if (conf == null) config();
-    return pool.getPoolConnection(username, password);
-  }
-
-  @Override
-  public XAConnection getXAConnection() throws SQLException {
-    if (conf == null) config();
-    return pool.getPoolConnection();
-  }
-
-  @Override
-  public XAConnection getXAConnection(String username, String password) throws SQLException {
     if (conf == null) config();
     return pool.getPoolConnection(username, password);
   }
