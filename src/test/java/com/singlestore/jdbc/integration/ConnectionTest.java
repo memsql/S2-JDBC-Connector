@@ -919,7 +919,7 @@ public class ConnectionTest extends Common {
   public void connectionCapabilities() {
     com.singlestore.jdbc.Connection con = sharedConn;
     long capabilities = con.getContext().getServerCapabilities();
-    assertTrue((capabilities & Capabilities.CLIENT_MYSQL) > 0);
+    assertTrue((capabilities & Capabilities.LONG_PASSWORD) > 0);
     assertTrue((capabilities & Capabilities.FOUND_ROWS) > 0);
     assertTrue((capabilities & Capabilities.LONG_FLAG) > 0);
     assertTrue((capabilities & Capabilities.CONNECT_WITH_DB) > 0);
@@ -945,7 +945,6 @@ public class ConnectionTest extends Common {
     assertEquals(0, (capabilities & Capabilities.CLIENT_DEPRECATE_EOF));
     assertEquals(0, (capabilities & Capabilities.COMPRESS));
 
-    assertEquals(0, (capabilities & Capabilities.PROGRESS));
     assertEquals(0, (capabilities & Capabilities.EXTENDED_TYPE_INFO));
     assertEquals(0, (capabilities & Capabilities.CACHE_METADATA));
 

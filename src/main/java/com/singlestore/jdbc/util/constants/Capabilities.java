@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.util.constants;
 
 @SuppressWarnings("unused")
 public final class Capabilities {
 
-  /** Is client mysql */
-  public static final int CLIENT_MYSQL = 1;
+  /** new more secure passwords */
+  public static final int LONG_PASSWORD = 1;
   /** use Found rowd instead of affected rows */
   public static final int FOUND_ROWS = 2;
   /** Get all column flags */
@@ -52,15 +52,18 @@ public final class Capabilities {
   public static final int CONNECT_ATTRS = 1 << 20;
   /** authentication data length is a length auth integer */
   public static final int PLUGIN_AUTH_LENENC_CLIENT_DATA = 1 << 21;
+  /** Don't close the connection for a connection with expired password. */
+  public static final int CAN_HANDLE_EXPIRED_PASSWORDS = 1 << 22;
   /** server send session tracking info */
   public static final int CLIENT_SESSION_TRACK = 1 << 23;
+
+  public static final int SSL_VERIFY_SERVER_CERT = 1 << 30;
+  public static final int REMEMBER_OPTIONS = 1 << 31;
+
+  // not used in SingleStore always 0
   /** EOF packet deprecated */
   public static final int CLIENT_DEPRECATE_EOF = 1 << 24;
-  /** Client support progress indicator (before 10.2) */
-  public static final int PROGRESS_OLD = 1 << 29;
-
   /* Specific capabilities */
-  public static final long PROGRESS = 1L << 32;
   /** metadata extended information */
   public static final long EXTENDED_TYPE_INFO = 1L << 35;
   /** permit metadata caching */
