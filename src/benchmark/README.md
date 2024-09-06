@@ -27,7 +27,7 @@ java -DTEST_PORT=3307 -Duser.country=US -Duser.language=en -jar target/benchmark
 ### Test plan description
 
 **Drivers used for test execution:**
-* singlestore (1.2.3)
+* singlestore (1.2.4)
 * mariadb (3.3.0)
 * mysql (8.0.33) 
 
