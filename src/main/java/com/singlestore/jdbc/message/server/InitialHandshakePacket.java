@@ -63,7 +63,7 @@ public final class InitialHandshakePacket implements ServerMessage {
     reader.readBytes(seed1);
     reader.skip();
     int serverCapabilities2FirstBytes = reader.readUnsignedShort();
-    short defaultCollation = reader.readUnsignedByte();
+    short defaultCollation = reader.readUnsignedByte(); // UTF8_CHARSET_NUM=33
     short serverStatus = reader.readShort();
     int serverCapabilities4FirstBytes = serverCapabilities2FirstBytes + (reader.readShort() << 16);
     int saltLength = 0;
@@ -73,10 +73,7 @@ public final class InitialHandshakePacket implements ServerMessage {
     } else {
       reader.skip();
     }
-    reader.skip(6);
-
-    // SingleStoreDB additional capabilities.
-    long singleStoreDbAdditionalCapacities = reader.readInt();
+    reader.skip(10); // 10 bytes of junk
     byte[] seed;
     if ((serverCapabilities4FirstBytes & Capabilities.SECURE_CONNECTION) != 0) {
       final byte[] seed2;
@@ -93,14 +90,7 @@ public final class InitialHandshakePacket implements ServerMessage {
       seed = seed1;
     }
     reader.skip();
-
-    long serverCapabilities;
-    if ((serverCapabilities4FirstBytes & Capabilities.CLIENT_MYSQL) == 0) {
-      serverCapabilities =
-          (serverCapabilities4FirstBytes & 0xffffffffL) + (singleStoreDbAdditionalCapacities << 32);
-    } else {
-      serverCapabilities = serverCapabilities4FirstBytes & 0xffffffffL;
-    }
+    long serverCapabilities = serverCapabilities4FirstBytes & 0xffffffffL;
 
     String authenticationPluginType = null;
     if ((serverCapabilities4FirstBytes & Capabilities.PLUGIN_AUTH) != 0) {
