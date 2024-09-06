@@ -21,7 +21,7 @@
         <server>
             <id>ossrh</id>
             <username>${env.SONATYPE_USER}</username>
-            <password>${env.SONATYPE_PASSOWRD}</password>
+            <password>${env.SONATYPE_PASSWORD}</password>
         </server>
     </servers>
 </settings>
