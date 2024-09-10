@@ -890,6 +890,42 @@ public class PreparedStatementTest extends Common {
   }
 
   @Test
+  public void sqlSelectLimitedResults() throws SQLException {
+    try (Connection con = createCon("&useServerPrepStmts=false")) {
+      sqlSelectLimitedResults(con);
+    }
+    try (Connection con = createCon("&useServerPrepStmts")) {
+      sqlSelectLimitedResults(con);
+    }
+  }
+
+  private void sqlSelectLimitedResults(Connection con) throws SQLException {
+    Statement stmt = con.createStatement();
+    stmt.execute("DROP PROCEDURE IF EXISTS multi");
+    stmt.execute(
+        "CREATE PROCEDURE multi() AUTHORIZE AS CURRENT_USER AS BEGIN  ECHO SELECT * FROM prepare4 order by t1; ECHO SELECT * FROM prepare4 order by t1; ECHO SELECT 2;  END");
+    stmt.execute("CALL multi()");
+    Assertions.assertTrue(stmt.getMoreResults());
+    ResultSet rs = stmt.getResultSet();
+    int i = 1;
+    while (rs.next()) {
+      Assertions.assertEquals(i++, rs.getInt(1));
+    }
+    Assertions.assertEquals(6, i);
+
+    con.setSqlSelectLimit(3);
+
+    stmt.execute("CALL multi()");
+    Assertions.assertTrue(stmt.getMoreResults());
+    rs = stmt.getResultSet();
+    i = 1;
+    while (rs.next()) {
+      Assertions.assertEquals(i++, rs.getInt(1));
+    }
+    Assertions.assertEquals(4, i);
+  }
+
+  @Test
   public void prepareWithError() throws SQLException {
     try (Connection con = createCon("&useServerPrepStmts=false")) {
       prepareWithError(con);

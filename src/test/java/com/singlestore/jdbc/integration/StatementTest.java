@@ -451,6 +451,50 @@ public class StatementTest extends Common {
   }
 
   @Test
+  public void sqlSelectLimit() throws SQLException {
+    Connection connection = createCon();
+    Connection connection2 = createCon();
+    Statement stmt = connection.createStatement();
+    Statement stmt2 = connection2.createStatement();
+    try {
+      connection.setSqlSelectLimit(-1);
+      Assertions.fail();
+    } catch (SQLException e) {
+      assertTrue(e.getMessage().contains("sql_select_limit cannot be negative"));
+    }
+    connection.setSqlSelectLimit(10);
+    connection2.setSqlSelectLimit(50);
+
+    ensureRange(stmt);
+    ResultSet rs = stmt.executeQuery("SELECT * FROM range_1_100 ORDER BY n");
+    int i = 0;
+    while (rs.next()) {
+      i++;
+      assertEquals(i, rs.getInt(1));
+    }
+    assertEquals(10, i);
+
+    // check sql select limit is applied per connection
+    rs = stmt2.executeQuery("SELECT * FROM range_1_100 ORDER BY n");
+    i = 0;
+    while (rs.next()) {
+      i++;
+      assertEquals(i, rs.getInt(1));
+    }
+    assertEquals(50, i);
+
+    stmt.setQueryTimeout(10);
+    stmt.setMaxRows(20); // ignored because sql_select_limit is applied
+    rs = stmt.executeQuery("SELECT * FROM range_1_100 ORDER BY n");
+    i = 0;
+    while (rs.next()) {
+      i++;
+      assertEquals(i, rs.getInt(1));
+    }
+    assertEquals(10, i);
+  }
+
+  @Test
   public void getGeneratedKeysType() throws SQLException {
     try (java.sql.Statement stmt =
         sharedConn.createStatement(

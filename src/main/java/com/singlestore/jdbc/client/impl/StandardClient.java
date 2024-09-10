@@ -82,6 +82,7 @@ public class StandardClient implements Client, AutoCloseable {
   private int socketTimeout;
   protected boolean timeOut;
   private BigInteger aggregatorId;
+  private BigInteger initialSqlSelectLimit;
   private transient Timer cancelTimer;
 
   /**
@@ -335,7 +336,7 @@ public class StandardClient implements Client, AutoCloseable {
       commands.addAll(Arrays.asList(initialCommands));
       resInd += initialCommands.length;
     }
-    commands.add("SELECT @@max_allowed_packet, @@aggregator_id");
+    commands.add("SELECT @@max_allowed_packet, @@aggregator_id, @@sql_select_limit");
     try {
       List<Completion> res;
       ClientMessage[] msgs = new ClientMessage[commands.size()];
@@ -358,6 +359,7 @@ public class StandardClient implements Client, AutoCloseable {
       if (result.next()) {
         this.writer.setMaxAllowedPacket(result.getInt(1));
         this.aggregatorId = result.getBigInteger(2);
+        this.initialSqlSelectLimit = result.getBigInteger(3);
       }
     } catch (SQLException sqlException) {
       throw exceptionFactory.create("Initialization command fail", "08000", sqlException);
@@ -1037,6 +1039,11 @@ public class StandardClient implements Client, AutoCloseable {
   @Override
   public BigInteger getAggregatorId() {
     return this.aggregatorId;
+  }
+
+  @Override
+  public BigInteger getInitialSqlSelectLimit() {
+    return this.initialSqlSelectLimit;
   }
 
   public void reset() {
