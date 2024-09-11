@@ -161,7 +161,7 @@ public class ColumnDefinitionPacket implements Column, ServerMessage {
           return Integer.MAX_VALUE;
         }
         return (int)
-            Long.max(Long.divideUnsigned(columnLength, maxWidth.longValue()), Integer.MAX_VALUE);
+            Long.min(Long.divideUnsigned(columnLength, maxWidth.longValue()), Integer.MAX_VALUE);
 
       case DATE:
         return 10;

@@ -202,7 +202,7 @@ public class ResultSetMetadataTest extends Common {
     assertEquals(8, rsmd.getPrecision(2));
     assertEquals(9, rsmd.getPrecision(3));
     assertEquals(10, rsmd.getPrecision(4));
-    assertEquals(1431655765, rsmd.getPrecision(5));
+    assertEquals(1073741823, rsmd.getPrecision(5));
     assertEquals(2147483647, rsmd.getPrecision(12));
     assertEquals(0, rsmd.getPrecision(13));
   }
