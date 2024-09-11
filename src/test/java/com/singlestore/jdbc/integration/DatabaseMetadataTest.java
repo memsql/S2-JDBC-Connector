@@ -503,7 +503,11 @@ public class DatabaseMetadataTest extends Common {
     assertEquals("", rs.getString(12)); // REMARKS
 
     assertTrue("null".equalsIgnoreCase(rs.getString(13)) || rs.getString(13) == null); // COLUMN_DEF
-    assertEquals(32 * 3, rs.getInt(16)); // CHAR_OCTET_LENGTH
+    if (minVersion(8, 7, 0)) {
+      assertEquals(32 * 4, rs.getInt(16)); // CHAR_OCTET_LENGTH
+    } else {
+      assertEquals(32 * 3, rs.getInt(16)); // CHAR_OCTET_LENGTH
+    }
     assertEquals(2, rs.getInt(17)); // ORDINAL_POSITION
     assertEquals("YES", rs.getString(18)); // IS_NULLABLE
     assertEquals(null, rs.getString(19)); // SCOPE_CATALOG
