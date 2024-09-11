@@ -1835,4 +1835,14 @@ public class DatabaseMetadataTest extends Common {
     assertEquals("java.lang.String", meta.getColumnClassName(1));
     assertEquals(Types.LONGVARCHAR, meta.getColumnType(1));
   }
+
+  @Test
+  public void getDatabaseVersionsWithDefaultFetchSize() throws SQLException {
+    try (com.singlestore.jdbc.Connection con = createCon("&defaultFetchSize=10")) {
+      // Should not give ClassCastException
+      con.getMetaData().getDatabaseProductVersion();
+      con.getMetaData().getDatabaseMajorVersion();
+      con.getMetaData().getDatabaseMinorVersion();
+    }
+  }
 }
