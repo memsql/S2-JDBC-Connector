@@ -7,7 +7,6 @@ package com.singlestore.jdbc;
 
 import com.singlestore.jdbc.client.DataType;
 import com.singlestore.jdbc.client.result.CompleteResult;
-import com.singlestore.jdbc.client.result.StreamingResult;
 import com.singlestore.jdbc.util.Version;
 import com.singlestore.jdbc.util.VersionFactory;
 import java.sql.PseudoColumnUsage;
@@ -172,13 +171,10 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
   private ResultSet executeQuery(String sql) throws SQLException {
     Statement stmt =
         connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-    ResultSet rs = stmt.executeQuery(sql);
-    if (rs instanceof CompleteResult) {
-      ((CompleteResult) rs).setStatement(null); // bypass Hibernate statement tracking (CONJ-49)
-      ((CompleteResult) rs).useAliasAsName();
-    } else if (rs instanceof StreamingResult) {
-      ((StreamingResult) rs).setStatement(null); // bypass Hibernate statement tracking (CONJ-49)
-    }
+    stmt.setFetchSize(0);
+    CompleteResult rs = (CompleteResult) stmt.executeQuery(sql);
+    rs.setStatement(null); // bypass Hibernate statement tracking (CONJ-49)
+    rs.useAliasAsName();
     return rs;
   }
 
