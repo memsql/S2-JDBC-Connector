@@ -171,6 +171,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
   private ResultSet executeQuery(String sql) throws SQLException {
     Statement stmt =
         connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+    stmt.setFetchSize(0);
     CompleteResult rs = (CompleteResult) stmt.executeQuery(sql);
     rs.setStatement(null); // bypass Hibernate statement tracking (CONJ-49)
     rs.useAliasAsName();
