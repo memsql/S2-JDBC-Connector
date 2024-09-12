@@ -521,6 +521,11 @@ public class MultiPrimaryClient implements Client {
     return currentClient.getAggregatorId();
   }
 
+  @Override
+  public BigInteger getInitialSqlSelectLimit() {
+    return currentClient.getInitialSqlSelectLimit();
+  }
+
   public boolean isPrimary() {
     return true;
   }

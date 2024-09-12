@@ -206,4 +206,12 @@ public interface Client extends AutoCloseable {
    * @return aggregator id
    */
   BigInteger getAggregatorId();
+
+  /**
+   * Get the maximum number of rows returned by a SELECT query. If the LIMIT clause is specified in
+   * a SELECT query, the value in the LIMIT clause overrides sql_select_limit
+   *
+   * @return sql select limit
+   */
+  BigInteger getInitialSqlSelectLimit();
 }

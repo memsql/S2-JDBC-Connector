@@ -61,6 +61,7 @@ public class Connection implements java.sql.Connection {
   private final int defaultFetchSize;
   private SingleStorePoolConnection poolConnection;
   private final boolean forceTransactionEnd;
+  private long sqlSelectLimit;
 
   @SuppressWarnings({"this-escape"})
   public Connection(Configuration conf, ReentrantLock lock, Client client) {
@@ -71,6 +72,10 @@ public class Connection implements java.sql.Connection {
     this.exceptionFactory = client.getExceptionFactory().setConnection(this);
     this.client = client;
     Context context = this.client.getContext();
+    this.sqlSelectLimit =
+        client.getInitialSqlSelectLimit() == null
+            ? 0
+            : client.getInitialSqlSelectLimit().longValue();
     this.canCachePrepStmts = context.getConf().cachePrepStmts();
     this.defaultFetchSize = context.getConf().defaultFetchSize();
   }
@@ -100,6 +105,30 @@ public class Connection implements java.sql.Connection {
           String.format("KILL QUERY %d %d", client.getContext().getThreadId(), aggregatorId);
       cli.execute(new QueryPacket(killQuery), false);
     }
+  }
+
+  /**
+   * Set sql select limit session engine variable.
+   *
+   * @param maxRows limit of rows
+   */
+  public void setSqlSelectLimit(long maxRows) throws SQLException {
+    if (maxRows < 0) {
+      throw exceptionFactory.create(
+          "sql_select_limit cannot be negative : asked for " + maxRows, "42000");
+    }
+    String setSelectLimitQuery = String.format("set sql_select_limit=%d", maxRows);
+    this.client.execute(new QueryPacket(setSelectLimitQuery), false);
+    this.sqlSelectLimit = maxRows;
+  }
+
+  /**
+   * Get current sql select limit value.
+   *
+   * @return sql select limit
+   */
+  public long getSqlSelectLimit() {
+    return sqlSelectLimit;
   }
 
   @Override
