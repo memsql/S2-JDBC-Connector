@@ -36,7 +36,7 @@ public interface ColumnDecoder extends Column {
 
     buf.skip(); // skip length always 0x0c
     short charset = buf.readShort();
-    int length = buf.readInt();
+    long length = Integer.toUnsignedLong(buf.readInt());
     DataType dataType = DataType.of(buf.readUnsignedByte());
     int flags = buf.readUnsignedShort();
     byte decimals = buf.readByte();
