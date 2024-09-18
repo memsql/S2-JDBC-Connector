@@ -11,7 +11,7 @@ import com.singlestore.jdbc.client.DataType;
 import com.singlestore.jdbc.client.ReadableByteBuf;
 import com.singlestore.jdbc.client.util.MutableInt;
 import com.singlestore.jdbc.message.server.ColumnDefinitionPacket;
-import com.singlestore.jdbc.plugin.codec.BitSetCodec;
+import com.singlestore.jdbc.plugin.codec.ByteArrayCodec;
 import com.singlestore.jdbc.plugin.codec.ByteCodec;
 import java.sql.Date;
 import java.sql.SQLDataException;
@@ -87,7 +87,7 @@ public class BitColumn extends ColumnDefinitionPacket implements ColumnDecoder {
   @Override
   public Object getDefaultText(final Configuration conf, ReadableByteBuf buf, MutableInt length)
       throws SQLDataException {
-    return BitSetCodec.parseBit(buf, length);
+    return ByteArrayCodec.parseBit(buf, length);
   }
 
   @Override
@@ -109,9 +109,7 @@ public class BitColumn extends ColumnDefinitionPacket implements ColumnDecoder {
 
   @Override
   public byte decodeByteText(ReadableByteBuf buf, MutableInt length) throws SQLDataException {
-    byte val = buf.readByte();
-    if (length.get() > 1) buf.skip(length.get() - 1);
-    return val;
+    return ByteArrayCodec.parseBit(buf, length)[0];
   }
 
   @Override

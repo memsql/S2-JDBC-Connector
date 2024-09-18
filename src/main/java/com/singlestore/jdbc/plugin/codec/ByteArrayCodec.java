@@ -15,6 +15,7 @@ import com.singlestore.jdbc.plugin.Codec;
 import java.io.IOException;
 import java.sql.SQLDataException;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.EnumSet;
 
@@ -68,19 +69,41 @@ public class ByteArrayCodec implements Codec<byte[]> {
       case TINYBLOB:
       case MEDIUMBLOB:
       case LONGBLOB:
-      case BIT:
       case CHAR:
       case VARCHAR:
       case GEOMETRY:
         byte[] arr = new byte[length.get()];
         buf.readBytes(arr);
         return arr;
-
+      case BIT:
+        return parseBit(buf, length);
       default:
         buf.skip(length.get());
         throw new SQLDataException(
             String.format("Data type %s cannot be decoded as byte[]", column.getType()));
     }
+  }
+
+  /**
+   * Reads BIT type as 8 bytes array and removes the leading zero bytes. SingleStore returns 8 bytes
+   * array with leading zero bytes for BIT type.
+   *
+   * @param buf to read
+   * @param length length of data
+   * @return byte array of BIT column
+   */
+  public static byte[] parseBit(ReadableByteBuf buf, MutableInt length) {
+    byte[] arr = new byte[length.get()];
+    buf.readBytes(arr);
+    // removes the leading zero bytes from array
+    int index = 0;
+    while (index < arr.length && arr[index] == (byte) 0) {
+      index++;
+    }
+    if (arr.length == index) {
+      return new byte[] {0};
+    }
+    return Arrays.copyOfRange(arr, index, arr.length);
   }
 
   @Override

@@ -69,6 +69,14 @@ public interface ReadableByteBuf {
   SingleStoreBlob readBlob(int length);
 
   /**
+   * Read Blob from BIT type skipping leading zero bytes in array.
+   *
+   * @param length original byte array length
+   * @return Blob
+   */
+  SingleStoreBlob readBlobFromBit(int length);
+
+  /**
    * Read byte from buffer at current position, without changing position
    *
    * @return byte value

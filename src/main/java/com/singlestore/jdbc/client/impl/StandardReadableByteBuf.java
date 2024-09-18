@@ -88,9 +88,20 @@ public final class StandardReadableByteBuf implements ReadableByteBuf {
     }
   }
 
+  @Override
   public SingleStoreBlob readBlob(int length) {
     pos += length;
     return SingleStoreBlob.safeSingleStoreBlob(buf, pos - length, length);
+  }
+
+  @Override
+  public SingleStoreBlob readBlobFromBit(int length) {
+    int index = pos;
+    while (index < pos + length - 1 && buf[index] == (byte) 0) {
+      index++; // non -zero index
+    }
+    pos += length;
+    return SingleStoreBlob.safeSingleStoreBlob(buf, index, pos - index);
   }
 
   @Override
