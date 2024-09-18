@@ -76,13 +76,23 @@ public class BitCodecTest extends CommonCodecTest {
   }
 
   public void getObject(ResultSet rs) throws SQLException {
-    assertArrayEquals(new byte[] {(byte) 0}, (byte[]) rs.getObject(1));
+    assertArrayEquals(
+        new byte[] {(byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0},
+        (byte[]) rs.getObject(1));
     assertFalse(rs.wasNull());
-    assertArrayEquals(new byte[] {(byte) 1}, (byte[]) rs.getObject(2));
+    assertArrayEquals(
+        new byte[] {(byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 1},
+        (byte[]) rs.getObject(2));
     assertEquals((byte) 1, (byte) rs.getObject(2, Byte.class));
-    assertArrayEquals(new byte[] {(byte) 1}, (byte[]) rs.getObject("t2alias"));
+    assertArrayEquals(
+        new byte[] {(byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 1},
+        (byte[]) rs.getObject("t2alias"));
     assertFalse(rs.wasNull());
-    assertArrayEquals(new byte[] {(byte) 15, (byte) 4}, (byte[]) rs.getObject(3));
+    assertArrayEquals(
+        new byte[] {
+          (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 15, (byte) 4
+        },
+        (byte[]) rs.getObject(3));
     assertEquals((byte) 15, (byte) rs.getObject(3, Byte.class));
     assertFalse(rs.wasNull());
     assertNull(rs.getObject(4));
@@ -114,7 +124,7 @@ public class BitCodecTest extends CommonCodecTest {
     testErrObject(rs, Double.class);
     testErrObject(rs, Float.class);
     testObject(rs, Byte.class, (byte) 0);
-    testObject(rs, byte[].class, new byte[] {0});
+    testObject(rs, byte[].class, new byte[] {0, 0, 0, 0, 0, 0, 0, 0});
     testErrObject(rs, Date.class);
     testErrObject(rs, Time.class);
     testErrObject(rs, Timestamp.class);
@@ -513,11 +523,11 @@ public class BitCodecTest extends CommonCodecTest {
   }
 
   public void getBytes(ResultSet rs) throws SQLException {
-    assertArrayEquals(new byte[] {0}, rs.getBytes(1));
+    assertArrayEquals(new byte[] {0, 0, 0, 0, 0, 0, 0, 0}, rs.getBytes(1));
     assertFalse(rs.wasNull());
-    assertArrayEquals(new byte[] {1}, rs.getBytes(2));
+    assertArrayEquals(new byte[] {0, 0, 0, 0, 0, 0, 0, 1}, rs.getBytes(2));
     assertFalse(rs.wasNull());
-    assertArrayEquals(new byte[] {15, 4}, rs.getBytes(3));
+    assertArrayEquals(new byte[] {0, 0, 0, 0, 0, 0, 15, 4}, rs.getBytes(3));
     assertFalse(rs.wasNull());
     assertNull(rs.getBytes(4));
     assertTrue(rs.wasNull());
@@ -579,12 +589,60 @@ public class BitCodecTest extends CommonCodecTest {
   }
 
   public void getBlob(ResultSet rs) throws SQLException {
-    assertEquals(new SingleStoreBlob(new byte[] {(byte) 0x00}), rs.getBlob(1));
+    assertEquals(
+        new SingleStoreBlob(
+            new byte[] {
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00
+            }),
+        rs.getBlob(1));
     assertFalse(rs.wasNull());
-    assertEquals(new SingleStoreBlob(new byte[] {(byte) 0x01}), rs.getBlob(2));
-    assertEquals(new SingleStoreBlob(new byte[] {0x01}), rs.getBlob("t2alias"));
+    assertEquals(
+        new SingleStoreBlob(
+            new byte[] {
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x01
+            }),
+        rs.getBlob(2));
+    assertEquals(
+        new SingleStoreBlob(
+            new byte[] {
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x01
+            }),
+        rs.getBlob("t2alias"));
     assertFalse(rs.wasNull());
-    assertEquals(new SingleStoreBlob(new byte[] {(byte) 15, (byte) 4}), rs.getBlob(3));
+    assertEquals(
+        new SingleStoreBlob(
+            new byte[] {
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 0x00,
+              (byte) 15,
+              (byte) 4
+            }),
+        rs.getBlob(3));
     assertFalse(rs.wasNull());
     assertNull(rs.getBlob(4));
     assertTrue(rs.wasNull());

@@ -95,16 +95,6 @@ public final class StandardReadableByteBuf implements ReadableByteBuf {
   }
 
   @Override
-  public SingleStoreBlob readBlobFromBit(int length) {
-    int index = pos;
-    while (index < pos + length - 1 && buf[index] == (byte) 0) {
-      index++; // non -zero index
-    }
-    pos += length;
-    return SingleStoreBlob.safeSingleStoreBlob(buf, index, pos - index);
-  }
-
-  @Override
   public long atoll(int length) {
     boolean negate = false;
     int idx = 0;

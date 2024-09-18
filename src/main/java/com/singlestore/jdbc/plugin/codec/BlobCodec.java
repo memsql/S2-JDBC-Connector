@@ -63,11 +63,10 @@ public class BlobCodec implements Codec<Blob> {
       case TINYBLOB:
       case MEDIUMBLOB:
       case LONGBLOB:
+      case BIT:
       case BLOB:
       case GEOMETRY:
         return buf.readBlob(length.get());
-      case BIT:
-        return buf.readBlobFromBit(length.get());
 
       default:
         buf.skip(length.get());
@@ -88,10 +87,9 @@ public class BlobCodec implements Codec<Blob> {
       case MEDIUMBLOB:
       case LONGBLOB:
       case BLOB:
+      case BIT:
       case GEOMETRY:
         return buf.readBlob(length.get());
-      case BIT:
-        return buf.readBlobFromBit(length.get());
 
       default:
         buf.skip(length.get());
