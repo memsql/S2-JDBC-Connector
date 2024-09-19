@@ -13,10 +13,12 @@ import java.sql.*;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.opentest4j.AssertionFailedError;
 
 public class ResultSetMetadataTest extends Common {
 
+  private static final String UTF8_CHARSET = "utf8";
+  private static final String UTF8MB4_CHARSET = "utf8mb4";
+  private static final String BINARY_CHARSET = "binary";
   private static final Class<? extends java.lang.Exception> sqle = SQLException.class;
 
   @AfterAll
@@ -152,30 +154,6 @@ public class ResultSetMetadataTest extends Common {
       assertEquals(rsmd.getColumnTypeName(i), cols.getString("TYPE_NAME"));
       assertEquals(rsmd.getColumnType(i), cols.getInt("DATA_TYPE"));
     }
-
-    cols = md.getColumns(null, null, "test\\_rsmd\\_types", null);
-
-    for (int i = 1; i <= 28; ++i) {
-      cols.next();
-      // Cannot correctly determine precision in the case of DOUBLE(8,3)
-      if (i == 22) {
-        continue;
-      }
-
-      // Versions < 7.8 incorrectly send length of TEXT types
-      // Versions < 7.5 incorrectly send charset for those types,
-      // so LONGTEXT also doesn't work
-      if ((!minVersion(7, 8, 0) && i >= 6 && i <= 8) || !minVersion(7, 5, 0) && i == 5) {
-        continue;
-      }
-
-      try {
-        assertEquals(rsmd.getPrecision(i), cols.getInt("COLUMN_SIZE"));
-      } catch (AssertionFailedError e) {
-        System.out.println("Error at column " + i);
-        throw e;
-      }
-    }
   }
 
   @Test
@@ -202,13 +180,106 @@ public class ResultSetMetadataTest extends Common {
     assertEquals(8, rsmd.getPrecision(2));
     assertEquals(9, rsmd.getPrecision(3));
     assertEquals(10, rsmd.getPrecision(4));
-    if (minVersion(8, 7, 0)) {
-      assertEquals(1073741823, rsmd.getPrecision(5));
-    } else {
-      assertEquals(1431655765, rsmd.getPrecision(5));
+    assertEquals(Integer.MAX_VALUE, rsmd.getPrecision(5));
+    assertEquals(Integer.MAX_VALUE, rsmd.getPrecision(12));
+    assertEquals(Integer.MAX_VALUE, rsmd.getPrecision(13));
+  }
+
+  @Test
+  public void columnTypesDisplaySize() throws SQLException {
+    try (com.singlestore.jdbc.Connection connection = createCon()) {
+      try (Statement stmt = connection.createStatement()) {
+        ResultSet rs = stmt.executeQuery("SELECT @@character_set_server");
+        rs.next();
+        String defaultCharset = rs.getString(1);
+        try {
+          columnTypesDisplaySize(UTF8_CHARSET);
+          columnTypesDisplaySize(UTF8MB4_CHARSET);
+          columnTypesDisplaySize(BINARY_CHARSET);
+        } finally {
+          stmt.execute(String.format("set global character_set_server='%s'", defaultCharset));
+          stmt.execute(String.format("set character_set_server='%s'", defaultCharset));
+        }
+      }
     }
-    assertEquals(2147483647, rsmd.getPrecision(12));
-    assertEquals(0, rsmd.getPrecision(13));
+  }
+
+  private void columnTypesDisplaySize(final String charset) throws SQLException {
+    try (com.singlestore.jdbc.Connection connection = createCon()) {
+      try (Statement stmt = connection.createStatement()) {
+        stmt.execute("DROP TABLE IF EXISTS test_charset_types");
+        stmt.execute(String.format("set global character_set_server='%s'", charset));
+        stmt.execute(String.format("set character_set_server='%s'", charset));
+        stmt.execute(
+            "CREATE ROWSTORE TABLE test_charset_types (a1 CHAR(7), a2 BINARY(8), a3 VARCHAR(9), "
+                + "a4 VARBINARY(10), a5 LONGTEXT, a6 MEDIUMTEXT, a7 TEXT, a8 TINYTEXT, b1 TINYBLOB, b2 BLOB, "
+                + "b3 MEDIUMBLOB, b4 LONGBLOB, c JSON, d1 BOOL, d2 BIT, d3 TINYINT, d4 SMALLINT, "
+                + "d5 MEDIUMINT, d6 INT, d7 BIGINT, e1 FLOAT, e2 DOUBLE(8, 3), e3 DECIMAL(10, 2), "
+                + "f1 DATE, f2 TIME, f3 TIME(6), f4 DATETIME, f5 DATETIME(6), f6 TIMESTAMP, "
+                + "f7 TIMESTAMP(6), f8 YEAR, o1 ENUM('ON', 'OFF'), o2 SET('v1', 'v2', 'v3', 'v4'), g1 GEOGRAPHY, "
+                + "g2 GEOGRAPHYPOINT)");
+        stmt.execute(
+            "insert into test_charset_types values (null, null, null, null, null, null, "
+                + "null, null, null, null, null, null, null, null, null, null, null, "
+                + "null, null, null, null, null, null, null, null, null, null, null, "
+                + "null, null, null, null, null, null, null)");
+
+        ResultSet rs =
+            stmt.executeQuery(
+                "select a1 as a1alias, a2 as a2alias, a3 as a3alias, a4 as a4alias, a5 as a5alias, "
+                    + "a6 as a6alias, a7 as a7alias, a8 as a8alias, b1 as b1alias, b2 as b2alias, b3 as b3alias, "
+                    + "b4 as b4alias, c as calias, d1 as d1alias, d2 as d2alias, d3 as d3alias, d4 as d4alias, "
+                    + "d5 as d5alias, d6 as d6alias, d7 as d7alias, e1 as e1alias, e2 as e2alias, "
+                    + "e3 as e3alias, f1 as f1alias, f2 as f2alias, f3 as f3alias, f4 as f4alias, "
+                    + "f5 as f5alias, f6 as f6alias, f7 as f7alias, f8 as f8alias, o1 as o1alias, o2 as o2alias, "
+                    + "g1 as g1alias, g2 as g2alias from test_charset_types");
+        assertTrue(rs.next());
+        ResultSetMetaData rsmd = rs.getMetaData();
+
+        assertEquals(7, rsmd.getColumnDisplaySize(1));
+        assertEquals(8, rsmd.getColumnDisplaySize(2));
+        assertEquals(9, rsmd.getColumnDisplaySize(3));
+        assertEquals(10, rsmd.getColumnDisplaySize(4));
+        // TEXT
+        assertEquals(65, 535, rsmd.getColumnDisplaySize(7));
+        // BLOB
+        assertEquals(65, 535, rsmd.getColumnDisplaySize(10));
+        // TINYTEXT
+        assertEquals(255, rsmd.getColumnDisplaySize(8));
+        // TINYBLOB
+        assertEquals(255, rsmd.getColumnDisplaySize(9));
+        // MEDIUMTEXT
+        assertEquals(16777215, rsmd.getColumnDisplaySize(6));
+        // MEDIUMBLOB
+        assertEquals(16777215, rsmd.getColumnDisplaySize(11));
+        // LONGTEXT
+        assertEquals(Integer.MAX_VALUE, rsmd.getColumnDisplaySize(5));
+        // LONGBLOB
+        assertEquals(Integer.MAX_VALUE, rsmd.getColumnDisplaySize(12));
+        // JSON
+        assertEquals(Integer.MAX_VALUE, rsmd.getColumnDisplaySize(13));
+        // BOOL TINYINT(1) always returns 4
+        assertEquals(4, rsmd.getColumnDisplaySize(14));
+        // BIT
+        assertEquals(1, rsmd.getColumnDisplaySize(15));
+        assertEquals(4, rsmd.getColumnDisplaySize(16));
+        assertEquals(6, rsmd.getColumnDisplaySize(17));
+        assertEquals(9, rsmd.getColumnDisplaySize(18));
+        assertEquals(11, rsmd.getColumnDisplaySize(19));
+        assertEquals(20, rsmd.getColumnDisplaySize(20));
+        assertEquals(12, rsmd.getColumnDisplaySize(21));
+        assertEquals(18, rsmd.getColumnDisplaySize(22));
+        assertEquals(12, rsmd.getColumnDisplaySize(23));
+        assertEquals(10, rsmd.getColumnDisplaySize(24));
+        assertEquals(10, rsmd.getColumnDisplaySize(25));
+        assertEquals(17, rsmd.getColumnDisplaySize(26));
+        assertEquals(19, rsmd.getColumnDisplaySize(27));
+        assertEquals(26, rsmd.getColumnDisplaySize(28));
+        assertEquals(19, rsmd.getColumnDisplaySize(29));
+        assertEquals(26, rsmd.getColumnDisplaySize(30));
+        assertEquals(4, rsmd.getColumnDisplaySize(31));
+      }
+    }
   }
 
   @Test

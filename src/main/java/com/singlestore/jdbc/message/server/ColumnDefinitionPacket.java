@@ -139,30 +139,15 @@ public class ColumnDefinitionPacket implements Column, ServerMessage {
   public int getDisplaySize() {
     switch (dataType) {
       case VARCHAR:
-      case JSON:
       case ENUM:
       case SET:
       case CHAR:
-      case MEDIUMBLOB:
-      case BLOB:
-      case TINYBLOB:
         Integer maxWidth = CharsetEncodingLength.maxCharlen.get(charset);
         if (maxWidth == null) {
-          return (int) columnLength;
-        }
-        return (int) columnLength / maxWidth;
-
-        // server sends MAX_UNSIGNEDINT or 4GB (or -1 if interpreted as int) as length for this.
-        // For LONGBLOB with maxWidth 1 this doesn't fit into an int, so return MAXINT.
-        // For LONGTEXT with maxWidth of at least 2, the precision fits
-      case LONGBLOB:
-        maxWidth = CharsetEncodingLength.maxCharlen.get(charset);
-        if (maxWidth == null) {
-          return Integer.MAX_VALUE;
+          return (int) Long.min(columnLength, Integer.MAX_VALUE);
         }
         return (int)
             Long.min(Long.divideUnsigned(columnLength, maxWidth.longValue()), Integer.MAX_VALUE);
-
       case DATE:
         return 10;
       case DATETIME:
@@ -180,7 +165,7 @@ public class ColumnDefinitionPacket implements Column, ServerMessage {
         return 18;
 
       default:
-        return (int) columnLength;
+        return (int) Long.min(columnLength, Integer.MAX_VALUE);
     }
   }
 
