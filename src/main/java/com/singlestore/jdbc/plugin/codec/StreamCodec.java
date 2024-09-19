@@ -27,10 +27,6 @@ public class StreamCodec implements Codec<InputStream> {
 
   private static final EnumSet<DataType> COMPATIBLE_TYPES =
       EnumSet.of(
-          DataType.BLOB,
-          DataType.TINYBLOB,
-          DataType.MEDIUMBLOB,
-          DataType.LONGBLOB,
           DataType.VARCHAR,
           DataType.CHAR,
           DataType.BLOB,

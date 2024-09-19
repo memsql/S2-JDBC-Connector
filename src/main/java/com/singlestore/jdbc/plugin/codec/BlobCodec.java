@@ -5,7 +5,6 @@
 
 package com.singlestore.jdbc.plugin.codec;
 
-import com.singlestore.jdbc.SingleStoreBlob;
 import com.singlestore.jdbc.client.ColumnDecoder;
 import com.singlestore.jdbc.client.Context;
 import com.singlestore.jdbc.client.DataType;
@@ -61,10 +60,10 @@ public class BlobCodec implements Codec<Blob> {
     switch (column.getType()) {
       case CHAR:
       case VARCHAR:
-      case BIT:
       case TINYBLOB:
       case MEDIUMBLOB:
       case LONGBLOB:
+      case BIT:
       case BLOB:
       case GEOMETRY:
         return buf.readBlob(length.get());
@@ -84,14 +83,13 @@ public class BlobCodec implements Codec<Blob> {
     switch (column.getType()) {
       case CHAR:
       case VARCHAR:
-      case BIT:
       case TINYBLOB:
       case MEDIUMBLOB:
       case LONGBLOB:
       case BLOB:
+      case BIT:
       case GEOMETRY:
-        buf.skip(length.get());
-        return new SingleStoreBlob(buf.buf(), buf.pos() - length.get(), length.get());
+        return buf.readBlob(length.get());
 
       default:
         buf.skip(length.get());

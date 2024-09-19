@@ -68,14 +68,13 @@ public class ByteArrayCodec implements Codec<byte[]> {
       case TINYBLOB:
       case MEDIUMBLOB:
       case LONGBLOB:
-      case BIT:
       case CHAR:
       case VARCHAR:
+      case BIT:
       case GEOMETRY:
         byte[] arr = new byte[length.get()];
         buf.readBytes(arr);
         return arr;
-
       default:
         buf.skip(length.get());
         throw new SQLDataException(
