@@ -151,8 +151,13 @@ public class ResultSetMetadataTest extends Common {
     ResultSet cols = md.getColumns(null, null, "test\\_rsmd\\_types", null);
     for (int i = 1; i <= 28; ++i) {
       cols.next();
-      assertEquals(rsmd.getColumnTypeName(i), cols.getString("TYPE_NAME"));
+      String colName = cols.getString("TYPE_NAME");
+      assertEquals(rsmd.getColumnTypeName(i), colName);
       assertEquals(rsmd.getColumnType(i), cols.getInt("DATA_TYPE"));
+      if ("DOUBLE".equals(colName)) {
+        continue;
+      }
+      assertEquals(rsmd.getPrecision(i), cols.getInt("COLUMN_SIZE"));
     }
   }
 

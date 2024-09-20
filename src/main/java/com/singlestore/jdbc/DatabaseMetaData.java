@@ -707,6 +707,14 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
             + " CASE c.DATA_TYPE"
             + DateTimeSizeClause(fullTypeColumnName)
             + (conf.yearIsDateType() ? "" : " WHEN 'year' THEN 5")
+            + "  WHEN 'json' THEN "
+            + Integer.MAX_VALUE
+            + "  WHEN 'tinytext' THEN c.CHARACTER_OCTET_LENGTH"
+            + "  WHEN 'text' THEN c.CHARACTER_OCTET_LENGTH"
+            + "  WHEN 'mediumtext' THEN c.CHARACTER_OCTET_LENGTH"
+            + "  WHEN 'longtext' THEN LEAST(c.CHARACTER_OCTET_LENGTH,"
+            + Integer.MAX_VALUE
+            + ")"
             + "  ELSE "
             + "  IF(c.NUMERIC_PRECISION IS NULL, LEAST(c.CHARACTER_MAXIMUM_LENGTH,"
             + Integer.MAX_VALUE
