@@ -762,9 +762,8 @@ public class ClobCodecTest extends CommonCodecTest {
     assertEquals(4, meta.getColumnCount());
     assertEquals(0, meta.getScale(1));
     assertEquals("", meta.getSchemaName(1));
-    int prec = minVersion(7, 8, 0) ? 63 : minVersion(7, 5, 0) ? 340 : 255;
-    assertEquals(prec, meta.getPrecision(1));
-    assertEquals(prec, meta.getColumnDisplaySize(1));
+    assertEquals(255, meta.getPrecision(1));
+    assertEquals(255, meta.getColumnDisplaySize(1));
   }
 
   @Test
