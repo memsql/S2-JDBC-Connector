@@ -8,6 +8,8 @@ package com.singlestore.jdbc.client;
 import com.singlestore.jdbc.Configuration;
 import com.singlestore.jdbc.client.impl.StandardReadableByteBuf;
 import com.singlestore.jdbc.client.util.MutableInt;
+import com.singlestore.jdbc.client.util.ProtocolExtendedTypeCodes;
+import com.singlestore.jdbc.client.util.VectorType;
 import com.singlestore.jdbc.util.constants.ColumnFlags;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
@@ -33,19 +35,33 @@ public interface ColumnDecoder extends Column {
     stringPos[3] = buf.skipIdentifier(); // column alias pos
     stringPos[4] = buf.skipIdentifier(); // column pos
     buf.skipIdentifier();
-
-    buf.skip(); // skip length always 0x0c
+    int fixedLengthFields = buf.readByte();
     short charset = buf.readShort();
     long length = Integer.toUnsignedLong(buf.readInt());
     DataType dataType = DataType.of(buf.readUnsignedByte());
     int flags = buf.readUnsignedShort();
     byte decimals = buf.readByte();
+    String extTypeName = null;
+    String extTypeFormat = null;
+    if (fixedLengthFields > 12) {
+      buf.skip(2); // unused
+      ProtocolExtendedTypeCodes typeCode = ProtocolExtendedTypeCodes.fromCode(buf.readByte());
+      if (typeCode == ProtocolExtendedTypeCodes.VECTOR) {
+        int dimensionsOfVector = buf.readInt();
+        VectorType typeOfVectorElements = VectorType.fromCode(buf.readByte());
+        dataType = typeOfVectorElements.getType();
+        extTypeName = dataType.name() + (charset == 63 ? "_BINARY" : "");
+        extTypeFormat = dimensionsOfVector + "," + dataType.name();
+      } else if (typeCode == ProtocolExtendedTypeCodes.BSON) {
+        // todo BSON handling
+      }
+    }
     DataType.ColumnConstructor constructor =
         (flags & ColumnFlags.UNSIGNED) == 0
             ? dataType.getColumnConstructor()
             : dataType.getUnsignedColumnConstructor();
     return constructor.create(
-        buf, charset, length, dataType, decimals, flags, stringPos, null, null);
+        buf, charset, length, dataType, decimals, flags, stringPos, extTypeName, extTypeFormat);
   }
 
   /**

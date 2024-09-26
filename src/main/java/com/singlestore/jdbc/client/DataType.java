@@ -5,28 +5,8 @@
 
 package com.singlestore.jdbc.client;
 
-import com.singlestore.jdbc.client.column.BigDecimalColumn;
-import com.singlestore.jdbc.client.column.BitColumn;
-import com.singlestore.jdbc.client.column.BlobColumn;
-import com.singlestore.jdbc.client.column.DateColumn;
-import com.singlestore.jdbc.client.column.DoubleColumn;
-import com.singlestore.jdbc.client.column.FloatColumn;
-import com.singlestore.jdbc.client.column.GeometryColumn;
-import com.singlestore.jdbc.client.column.JsonColumn;
-import com.singlestore.jdbc.client.column.SignedBigIntColumn;
-import com.singlestore.jdbc.client.column.SignedIntColumn;
-import com.singlestore.jdbc.client.column.SignedMediumIntColumn;
-import com.singlestore.jdbc.client.column.SignedSmallIntColumn;
-import com.singlestore.jdbc.client.column.SignedTinyIntColumn;
-import com.singlestore.jdbc.client.column.StringColumn;
-import com.singlestore.jdbc.client.column.TimeColumn;
-import com.singlestore.jdbc.client.column.TimestampColumn;
-import com.singlestore.jdbc.client.column.UnsignedBigIntColumn;
-import com.singlestore.jdbc.client.column.UnsignedIntColumn;
-import com.singlestore.jdbc.client.column.UnsignedMediumIntColumn;
-import com.singlestore.jdbc.client.column.UnsignedSmallIntColumn;
-import com.singlestore.jdbc.client.column.UnsignedTinyIntColumn;
-import com.singlestore.jdbc.client.column.YearColumn;
+import com.singlestore.jdbc.client.column.*;
+import java.util.Arrays;
 
 public enum DataType {
   OLDDECIMAL(0, BigDecimalColumn::new, BigDecimalColumn::new),
@@ -55,16 +35,16 @@ public enum DataType {
   BLOB(252, BlobColumn::new, BlobColumn::new),
   VARCHAR(253, StringColumn::new, StringColumn::new),
   CHAR(254, StringColumn::new, StringColumn::new),
-  GEOMETRY(255, GeometryColumn::new, GeometryColumn::new);
+  GEOMETRY(255, GeometryColumn::new, GeometryColumn::new),
 
-  static final DataType[] typeMap;
-
-  static {
-    typeMap = new DataType[256];
-    for (DataType v : values()) {
-      typeMap[v.singlestoreType] = v;
-    }
-  }
+  // SingleStoreDB extended types
+  BSON(1001, JsonColumn::new, JsonColumn::new),
+  FLOAT32_VECTOR(2001, VectorColumn::new, VectorColumn::new),
+  FLOAT64_VECTOR(2002, VectorColumn::new, VectorColumn::new),
+  INT8_VECTOR(2003, VectorColumn::new, VectorColumn::new),
+  INT16_VECTOR(2004, VectorColumn::new, VectorColumn::new),
+  INT32_VECTOR(2005, VectorColumn::new, VectorColumn::new),
+  INT64_VECTOR(2006, VectorColumn::new, VectorColumn::new);
 
   private final int singlestoreType;
   private final ColumnConstructor columnConstructor;
@@ -84,7 +64,10 @@ public enum DataType {
   }
 
   public static DataType of(int typeValue) {
-    return typeMap[typeValue];
+    return Arrays.stream(values())
+        .filter(v -> v.singlestoreType == typeValue)
+        .findFirst()
+        .orElseThrow(() -> new IllegalStateException("No data type for: " + typeValue));
   }
 
   public ColumnConstructor getColumnConstructor() {

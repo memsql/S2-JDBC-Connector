@@ -34,7 +34,13 @@ public class BlobCodec implements Codec<Blob> {
           DataType.MEDIUMBLOB,
           DataType.LONGBLOB,
           DataType.CHAR,
-          DataType.VARCHAR);
+          DataType.VARCHAR,
+          DataType.INT8_VECTOR,
+          DataType.INT16_VECTOR,
+          DataType.INT32_VECTOR,
+          DataType.INT64_VECTOR,
+          DataType.FLOAT32_VECTOR,
+          DataType.FLOAT64_VECTOR);
 
   public String className() {
     return Blob.class.getName();
@@ -66,6 +72,12 @@ public class BlobCodec implements Codec<Blob> {
       case BIT:
       case BLOB:
       case GEOMETRY:
+      case INT8_VECTOR:
+      case INT16_VECTOR:
+      case INT32_VECTOR:
+      case INT64_VECTOR:
+      case FLOAT32_VECTOR:
+      case FLOAT64_VECTOR:
         return buf.readBlob(length.get());
 
       default:
@@ -89,6 +101,12 @@ public class BlobCodec implements Codec<Blob> {
       case BLOB:
       case BIT:
       case GEOMETRY:
+      case INT8_VECTOR:
+      case INT16_VECTOR:
+      case INT32_VECTOR:
+      case INT64_VECTOR:
+      case FLOAT32_VECTOR:
+      case FLOAT64_VECTOR:
         return buf.readBlob(length.get());
 
       default:

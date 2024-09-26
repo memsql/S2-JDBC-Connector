@@ -18,6 +18,7 @@ import com.singlestore.jdbc.message.ClientMessage;
 import com.singlestore.jdbc.message.client.ChangeDbPacket;
 import com.singlestore.jdbc.message.client.QueryPacket;
 import com.singlestore.jdbc.message.client.RedoableWithPrepareClientMessage;
+import com.singlestore.jdbc.util.Version;
 import com.singlestore.jdbc.util.constants.ConnectionState;
 import com.singlestore.jdbc.util.constants.ServerStatus;
 import com.singlestore.jdbc.util.log.Loggers;
@@ -524,6 +525,11 @@ public class MultiPrimaryClient implements Client {
   @Override
   public BigInteger getInitialSqlSelectLimit() {
     return currentClient.getInitialSqlSelectLimit();
+  }
+
+  @Override
+  public Version getSingleStoreVersion() {
+    return currentClient.getSingleStoreVersion();
   }
 
   public boolean isPrimary() {

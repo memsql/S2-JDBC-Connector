@@ -151,7 +151,7 @@ public class PacketWriter implements Writer {
     } else {
       this.maxAllowedPacket = Math.min(this.maxAllowedPacket, maxAllowedPacket);
     }
-    logger.debug("set maxAllowedPacket = {}", this.maxAllowedPacket);
+    logger.debug("use maxAllowedPacket = {}", this.maxAllowedPacket);
   }
 
   /**

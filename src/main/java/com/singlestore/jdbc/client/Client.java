@@ -10,6 +10,7 @@ import com.singlestore.jdbc.Statement;
 import com.singlestore.jdbc.export.ExceptionFactory;
 import com.singlestore.jdbc.export.Prepare;
 import com.singlestore.jdbc.message.ClientMessage;
+import com.singlestore.jdbc.util.Version;
 import java.math.BigInteger;
 import java.sql.SQLException;
 import java.util.List;
@@ -214,4 +215,11 @@ public interface Client extends AutoCloseable {
    * @return sql select limit
    */
   BigInteger getInitialSqlSelectLimit();
+
+  /**
+   * Get SingleStore version.
+   *
+   * @return S2 version
+   */
+  Version getSingleStoreVersion();
 }
