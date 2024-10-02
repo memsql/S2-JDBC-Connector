@@ -52,12 +52,12 @@ public class ResultSetMetadataTest extends Common {
             + "b3 MEDIUMBLOB, b4 LONGBLOB, c JSON, d1 BOOL, d2 BIT, d3 TINYINT, d4 SMALLINT, "
             + "d5 MEDIUMINT, d6 INT, d7 BIGINT, e1 FLOAT, e2 DOUBLE(8, 3), e3 DECIMAL(10, 2), "
             + "f1 DATE, f2 TIME, f3 TIME(6), f4 DATETIME, f5 DATETIME(6), f6 TIMESTAMP, "
-            + "f7 TIMESTAMP(6), f8 YEAR, v1 VECTOR(4, F32), v2 VECTOR(2, I64))");
+            + "f7 TIMESTAMP(6), f8 YEAR, v1 VECTOR(4, F32), v2 VECTOR(2, I64), bs1 BSON)");
     stmt.execute(
         "insert into test_rsmd_types values (null, null, null, null, null, null, "
             + "null, null, null, null, null, null, null, null, null, null, null, "
             + "null, null, null, null, null, null, null, null, null, null, null, "
-            + "null, null, null, null, null)");
+            + "null, null, null, null, null, null)");
     stmt.execute(
         "CREATE TABLE IF NOT EXISTS test_rsmd_unsigned (s1 TINYINT, s2 SMALLINT, "
             + "s3 MEDIUMINT, s4 INT, s5 BIGINT, s6 REAL, s7 DOUBLE, s8 DECIMAL, s9 NUMERIC, "
@@ -143,18 +143,17 @@ public class ResultSetMetadataTest extends Common {
   @Test
   public void metaTypesVsColumnTypes() throws SQLException {
     if (minVersion(8, 7, 1)) {
-      metaTypesVsColumnTypesWithVector(false, false);
-      metaTypesVsColumnTypesWithVector(false, true);
-      metaTypesVsColumnTypesWithVector(true, false);
-      metaTypesVsColumnTypesWithVector(true, true);
-
+      metaTypesVsColumnTypesWithExtendedTypes(false, false);
+      metaTypesVsColumnTypesWithExtendedTypes(false, true);
+      metaTypesVsColumnTypesWithExtendedTypes(true, false);
+      metaTypesVsColumnTypesWithExtendedTypes(true, true);
     } else {
       metaTypesVsColumnTypes(sharedConn);
     }
   }
 
-  public void metaTypesVsColumnTypesWithVector(boolean isExtTypeEnabled, boolean isVectorBinary)
-      throws SQLException {
+  public void metaTypesVsColumnTypesWithExtendedTypes(
+      boolean isExtTypeEnabled, boolean isVectorBinary) throws SQLException {
     try (Connection connection =
         createCon(
             String.format(

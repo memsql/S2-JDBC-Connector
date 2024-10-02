@@ -68,16 +68,18 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     }
 
     if (!conf.yearIsDateType()) {
-      return " IF(c.COLUMN_TYPE IN ('year(2)', 'year(4)'), 'SMALLINT', "
-          + upperCaseWithoutSize
-          + ")";
+      upperCaseWithoutSize =
+          " IF(c.COLUMN_TYPE IN ('year(2)', 'year(4)'), 'SMALLINT', " + upperCaseWithoutSize + ")";
     }
     if (!isExtendedTypesEnabled()) {
-      return " IF(c.COLUMN_TYPE LIKE 'vector%', "
-          + (isBinaryVectorOutputEnabled() ? "'VARBINARY'" : "'VARCHAR'")
-          + ", "
-          + upperCaseWithoutSize
-          + ")";
+      upperCaseWithoutSize =
+          " IF(c.COLUMN_TYPE LIKE 'vector%', "
+              + (isBinaryVectorOutputEnabled() ? "'VARBINARY'" : "'VARCHAR'")
+              + ", "
+              + upperCaseWithoutSize
+              + ")";
+      upperCaseWithoutSize =
+          " IF(c.COLUMN_TYPE LIKE 'bson%', " + "'LONGBLOB'" + ", " + upperCaseWithoutSize + ")";
     }
     return upperCaseWithoutSize;
   }
@@ -432,6 +434,8 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
             ? " WHEN 'vector' THEN "
                 + (isBinaryVectorOutputEnabled() ? Types.VARBINARY : Types.VARCHAR)
             : " WHEN 'vector' THEN " + Types.OTHER)
+        + " WHEN 'bson' THEN "
+        + Types.LONGVARBINARY
         + " WHEN 'year' THEN "
         + (conf.yearIsDateType() ? Types.DATE : Types.SMALLINT)
         + " ELSE "
@@ -738,6 +742,8 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
             + DateTimeSizeClause(fullTypeColumnName)
             + (conf.yearIsDateType() ? "" : " WHEN 'year' THEN 5")
             + "  WHEN 'json' THEN "
+            + Integer.MAX_VALUE
+            + "  WHEN 'bson' THEN "
             + Integer.MAX_VALUE
             + "  WHEN 'vector' THEN "
             + (isBinaryVectorOutputEnabled() || isExtendedTypesEnabled()

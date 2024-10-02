@@ -53,7 +53,7 @@ public interface ColumnDecoder extends Column {
         extTypeName = dataType.name() + (charset == 63 ? "_BINARY" : "");
         extTypeFormat = dimensionsOfVector + "," + dataType.name();
       } else if (typeCode == ProtocolExtendedTypeCodes.BSON) {
-        // todo BSON handling
+        dataType = DataType.BSON;
       }
     }
     DataType.ColumnConstructor constructor =

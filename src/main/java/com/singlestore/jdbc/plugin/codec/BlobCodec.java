@@ -40,7 +40,8 @@ public class BlobCodec implements Codec<Blob> {
           DataType.INT32_VECTOR,
           DataType.INT64_VECTOR,
           DataType.FLOAT32_VECTOR,
-          DataType.FLOAT64_VECTOR);
+          DataType.FLOAT64_VECTOR,
+          DataType.BSON);
 
   public String className() {
     return Blob.class.getName();
@@ -78,6 +79,7 @@ public class BlobCodec implements Codec<Blob> {
       case INT64_VECTOR:
       case FLOAT32_VECTOR:
       case FLOAT64_VECTOR:
+      case BSON:
         return buf.readBlob(length.get());
 
       default:
@@ -107,6 +109,7 @@ public class BlobCodec implements Codec<Blob> {
       case INT64_VECTOR:
       case FLOAT32_VECTOR:
       case FLOAT64_VECTOR:
+      case BSON:
         return buf.readBlob(length.get());
 
       default:

@@ -11,6 +11,7 @@ import com.singlestore.jdbc.SingleStoreBlob;
 import com.singlestore.jdbc.Statement;
 import com.singlestore.jdbc.client.result.CompleteResult;
 import com.singlestore.jdbc.integration.Common;
+import com.singlestore.jdbc.type.Vector;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -19,6 +20,7 @@ import java.sql.*;
 import java.time.*;
 import java.util.Arrays;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -31,6 +33,7 @@ public class BlobCodecTest extends CommonCodecTest {
     Statement stmt = sharedConn.createStatement();
     stmt.execute("DROP TABLE IF EXISTS BlobCodec");
     stmt.execute("DROP TABLE IF EXISTS BlobCodec2");
+    stmt.execute("DROP TABLE IF EXISTS BlobCodec3");
   }
 
   @BeforeAll
@@ -46,7 +49,11 @@ public class BlobCodecTest extends CommonCodecTest {
     stmt.execute(
         createRowstore()
             + " TABLE BlobCodec2 (id int not null primary key auto_increment, t1 BLOB)");
-    stmt.execute("FLUSH TABLES");
+    if (minVersion(8, 7, 1)) {
+      stmt.execute("CREATE TABLE BlobCodec3 (t1 BSON, t2 BSON, t3 BSON, t4 BSON, id INT)");
+      stmt.execute(
+          "INSERT INTO BlobCodec3 VALUES (128:>BSON, TIMESTAMP('2010-12-31 23:59:59'):>BSON, '{\"f1\":\"v1\"}':>BSON, null, 1)");
+    }
 
     tmpFile = File.createTempFile("temp-file-name", ".tmp");
     for (int i = 0; i < 11_000; i++) {
@@ -59,22 +66,31 @@ public class BlobCodecTest extends CommonCodecTest {
   }
 
   private ResultSet get() throws SQLException {
-    Statement stmt = sharedConn.createStatement();
-    stmt.execute("START TRANSACTION"); // if MAXSCALE ensure using WRITER
+    return get(sharedConn, "BlobCodec");
+  }
+
+  private ResultSet get(Connection connection, String table) throws SQLException {
+    Statement stmt = (Statement) connection.createStatement();
     ResultSet rs =
         stmt.executeQuery(
-            "select t1 as t1alias, t2 as t2alias, t3 as t3alias, t4 as t4alias from BlobCodec ORDER BY id");
+            String.format(
+                "select t1 as t1alias, t2 as t2alias, t3 as t3alias, t4 as t4alias from %s ORDER BY id",
+                table));
     assertTrue(rs.next());
     return rs;
   }
 
-  private CompleteResult getPrepare(com.singlestore.jdbc.Connection con) throws SQLException {
-    java.sql.Statement stmt = con.createStatement();
-    stmt.execute("START TRANSACTION"); // if MAXSCALE ensure using WRITER
+  private CompleteResult getPrepare(Connection con) throws SQLException {
+    return getPrepare(con, "BlobCodec");
+  }
+
+  private CompleteResult getPrepare(Connection con, String table) throws SQLException {
     PreparedStatement preparedStatement =
         con.prepareStatement(
-            "select t1 as t1alias, t2 as t2alias, t3 as t3alias, t4 as t4alias from BlobCodec"
-                + " WHERE 1 > ? ORDER BY id");
+            String.format(
+                "select t1 as t1alias, t2 as t2alias, t3 as t3alias, t4 as t4alias from %s"
+                    + " WHERE 1 > ? ORDER BY id",
+                table));
     preparedStatement.closeOnCompletion();
     preparedStatement.setInt(1, 0);
     CompleteResult rs = (CompleteResult) preparedStatement.executeQuery();
@@ -84,8 +100,41 @@ public class BlobCodecTest extends CommonCodecTest {
   }
 
   @Test
+  public void getObjectBson() throws Exception {
+    Assumptions.assumeTrue(minVersion(8, 7, 1));
+    try (Connection connection = createCon("enableExtendedDataTypes=true")) {
+      getBsonObject(get(connection, "BlobCodec3"));
+    }
+  }
+
+  public void getBsonObject(ResultSet rs) throws Exception {
+    byte[] timestampBson = convertLocalDateTimeToBson(LocalDateTime.of(2010, 12, 31, 23, 59, 59));
+    byte[] jsonBson = new byte[] {16, 0, 0, 0, 2, 102, 49, 0, 3, 0, 0, 0, 118, 49, 0, 0};
+    assertStreamEquals(new SingleStoreBlob(convertInt32ToBson(128)), (Blob) rs.getObject(1));
+    assertFalse(rs.wasNull());
+    assertStreamEquals(new SingleStoreBlob(timestampBson), (Blob) rs.getObject(2));
+    assertStreamEquals(new SingleStoreBlob(timestampBson), (Blob) rs.getObject("t2alias"));
+    assertFalse(rs.wasNull());
+    assertStreamEquals(new SingleStoreBlob(jsonBson), (Blob) rs.getObject(3));
+    assertFalse(rs.wasNull());
+    assertNull(rs.getObject(4));
+    assertTrue(rs.wasNull());
+  }
+
+  @Test
   public void getObject() throws Exception {
     getObject(get());
+  }
+
+  @Test
+  public void getBsonObjectPrepare() throws Exception {
+    Assumptions.assumeTrue(minVersion(8, 7, 1));
+    try (Connection clientPrepConnection = createCon("enableExtendedDataTypes=true");
+        Connection serverPrepConnection =
+            createCon("enableExtendedDataTypes=true&useServerPrepStmts=true")) {
+      getBsonObject(getPrepare(clientPrepConnection, "BlobCodec3"));
+      getBsonObject(getPrepare(serverPrepConnection, "BlobCodec3"));
+    }
   }
 
   @Test
@@ -105,6 +154,55 @@ public class BlobCodecTest extends CommonCodecTest {
     assertFalse(rs.wasNull());
     assertNull(rs.getObject(4));
     assertTrue(rs.wasNull());
+  }
+
+  @Test
+  public void getBsonObjectType() throws Exception {
+    Assumptions.assumeTrue(minVersion(8, 7, 1));
+    try (Connection connection = createCon("enableExtendedDataTypes=true")) {
+      getBsonObjectType(get(connection, "BlobCodec3"));
+    }
+  }
+
+  @Test
+  public void getBsonObjectTypePrepare() throws Exception {
+    Assumptions.assumeTrue(minVersion(8, 7, 1));
+    try (Connection clientPrepConnection = createCon("enableExtendedDataTypes=true");
+        Connection serverPrepConnection =
+            createCon("enableExtendedDataTypes=true&useServerPrepStmts=true")) {
+      getBsonObjectType(getPrepare(clientPrepConnection, "BlobCodec3"));
+      getBsonObjectType(getPrepare(serverPrepConnection, "BlobCodec3"));
+    }
+  }
+
+  public void getBsonObjectType(ResultSet rs) throws Exception {
+    testErrObject(rs, Integer.class);
+    testErrObject(rs, String.class);
+    testErrObject(rs, Long.class);
+    testErrObject(rs, Short.class);
+    testErrObject(rs, BigDecimal.class);
+    testErrObject(rs, BigInteger.class);
+    testErrObject(rs, Double.class);
+    testErrObject(rs, Float.class);
+    testErrObject(rs, Byte.class);
+    testArrObject(rs, byte[].class, convertInt32ToBson(128));
+    testErrObject(rs, Boolean.class);
+    testErrObject(rs, Clob.class);
+    testErrObject(rs, NClob.class);
+    testObject(
+        rs, InputStream.class, new SingleStoreBlob(convertInt32ToBson(128)).getBinaryStream());
+    testErrObject(rs, Reader.class);
+    testErrObject(rs, LocalDate.class);
+    testErrObject(rs, LocalTime.class);
+    testErrObject(rs, LocalDateTime.class);
+    testErrObject(rs, Time.class);
+    testErrObject(rs, Date.class);
+    testErrObject(rs, Timestamp.class);
+    testErrObject(rs, ZonedDateTime.class);
+    testErrObject(rs, OffsetDateTime.class);
+    testErrObject(rs, OffsetTime.class);
+    testErrObject(rs, java.util.Date.class);
+    testErrObject(rs, Vector.class);
   }
 
   @Test
@@ -689,6 +787,61 @@ public class BlobCodecTest extends CommonCodecTest {
     }
   }
 
+  @Test
+  public void sendBsonParam() throws Exception {
+    Assumptions.assumeTrue(minVersion(8, 7, 1));
+    try (Connection connection = createCon("enableExtendedDataTypes=true"); ) {
+      sendBsonParam(connection);
+    }
+  }
+
+  private void sendBsonParam(Connection con) throws Exception {
+    java.sql.Statement stmt = con.createStatement();
+    stmt.execute("DROP TABLE IF EXISTS BsonCodec2");
+    stmt.execute("CREATE TABLE BsonCodec2 (id int not null primary key auto_increment, t1 BSON)");
+    SingleStoreBlob bson1 = new SingleStoreBlob(convertInt32ToBson(1234632));
+    byte[] bson2 = convertLocalDateTimeToBson(LocalDateTime.now());
+    InputStream bson3 = new ByteArrayInputStream(convertInt32ToBson(1234));
+    byte[] bson4 = convertLocalDateTimeToBson(LocalDateTime.now());
+
+    try (PreparedStatement prep =
+        con.prepareStatement("INSERT INTO BsonCodec2(id, t1) VALUES (?, ?)")) {
+      prep.setInt(1, 1);
+      prep.setObject(2, bson1);
+      prep.execute();
+      prep.setInt(1, 2);
+      prep.setObject(2, (Blob) null);
+      prep.execute();
+      prep.setInt(1, 3);
+      prep.setObject(2, bson2);
+      prep.addBatch();
+      prep.setInt(1, 4);
+      prep.setBinaryStream(2, bson3);
+      prep.addBatch();
+      prep.executeBatch();
+    }
+
+    ResultSet rs =
+        con.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE)
+            .executeQuery("SELECT * FROM BsonCodec2 ORDER BY id");
+    assertTrue(rs.next());
+    assertStreamEquals(bson1, rs.getObject(2, Blob.class));
+    rs.updateNull(2);
+    rs.updateRow();
+    assertNull(rs.getObject(2, Blob.class));
+    assertTrue(rs.next());
+    assertNull(rs.getObject(2, Blob.class));
+    rs.updateObject(2, bson4);
+    rs.updateRow();
+    assertArrayEquals(bson4, rs.getObject(2, byte[].class));
+
+    assertTrue(rs.next());
+    assertArrayEquals(bson2, rs.getObject(2, byte[].class));
+    assertTrue(rs.next());
+    bson3 = new ByteArrayInputStream(convertInt32ToBson(1234));
+    assertStreamEquals(bson3, rs.getObject(2, InputStream.class));
+  }
+
   private void sendParam(Connection con) throws Exception {
     java.sql.Statement stmt = con.createStatement();
     stmt.execute("TRUNCATE TABLE BlobCodec2");
@@ -1041,6 +1194,34 @@ public class BlobCodecTest extends CommonCodecTest {
     assertTrue(rs.next());
     assertArrayEquals("2g🌟4".getBytes(StandardCharsets.UTF_8), rs.getBytes(2));
     con.commit();
+  }
+
+  private static byte[] convertInt32ToBson(int value) {
+    byte[] bson = new byte[5]; // 4 (value) + 1 (type)
+    bson[4] = 0x10; // Type for int32
+    // Convert the integer to a byte array (little-endian format)
+    bson[0] = (byte) (value); // Byte 1
+    bson[1] = (byte) (value >> 8); // Byte 2
+    bson[2] = (byte) (value >> 16); // Byte 3
+    bson[3] = (byte) (value >> 24); // Byte 4
+    return bson;
+  }
+
+  private static byte[] convertLocalDateTimeToBson(LocalDateTime localDateTime) {
+    byte[] bson = new byte[9]; // 1 (type) + 4 (value) + 3 (length, 8 total)
+    bson[8] = 0x09; // Type for timestamp
+    Instant instant = localDateTime.toInstant(ZoneOffset.UTC);
+    long dateInMillis = instant.toEpochMilli();
+    // Convert the integer to a byte array (little-endian format)
+    bson[0] = (byte) (dateInMillis);
+    bson[1] = (byte) (dateInMillis >> 8);
+    bson[2] = (byte) (dateInMillis >> 16);
+    bson[3] = (byte) (dateInMillis >> 24);
+    bson[4] = (byte) (dateInMillis >> 32);
+    bson[5] = (byte) (dateInMillis >> 40);
+    bson[6] = (byte) (dateInMillis >> 48);
+    bson[7] = (byte) (dateInMillis >> 56);
+    return bson;
   }
 
   private class BlobInputStream implements Blob {

@@ -39,7 +39,8 @@ public class ByteArrayCodec implements Codec<byte[]> {
           DataType.INT32_VECTOR,
           DataType.INT64_VECTOR,
           DataType.FLOAT32_VECTOR,
-          DataType.FLOAT64_VECTOR);
+          DataType.FLOAT64_VECTOR,
+          DataType.BSON);
 
   public String className() {
     return byte[].class.getName();
@@ -84,6 +85,7 @@ public class ByteArrayCodec implements Codec<byte[]> {
       case INT64_VECTOR:
       case FLOAT32_VECTOR:
       case FLOAT64_VECTOR:
+      case BSON:
         byte[] arr = new byte[length.get()];
         buf.readBytes(arr);
         return arr;

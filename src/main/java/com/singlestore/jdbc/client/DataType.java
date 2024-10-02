@@ -38,7 +38,7 @@ public enum DataType {
   GEOMETRY(255, GeometryColumn::new, GeometryColumn::new),
 
   // SingleStoreDB extended types
-  BSON(1001, JsonColumn::new, JsonColumn::new),
+  BSON(1001, BsonColumn::new, BsonColumn::new),
   FLOAT32_VECTOR(2001, VectorColumn::new, VectorColumn::new),
   FLOAT64_VECTOR(2002, VectorColumn::new, VectorColumn::new),
   INT8_VECTOR(2003, VectorColumn::new, VectorColumn::new),
