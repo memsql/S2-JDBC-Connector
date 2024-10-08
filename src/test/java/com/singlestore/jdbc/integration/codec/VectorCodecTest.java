@@ -10,6 +10,7 @@ import com.singlestore.jdbc.SingleStoreBlob;
 import com.singlestore.jdbc.Statement;
 import com.singlestore.jdbc.client.util.VectorType;
 import com.singlestore.jdbc.type.Vector;
+import com.singlestore.jdbc.unit.util.VectorDataUtilsTest;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -19,7 +20,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -69,6 +69,46 @@ public class VectorCodecTest extends CommonCodecTest {
     }
     String strVal = Arrays.toString(arr).replace(" ", "");
     return Vector.fromData(strVal.getBytes(StandardCharsets.UTF_8), length, type.getType(), false);
+  }
+
+  private static Vector convertToBinary(Vector vector) {
+
+    switch (vector.getType()) {
+      case INT8_VECTOR:
+        return Vector.fromData(vector.toByteArray(), vector.getLength(), vector.getType(), true);
+      case INT16_VECTOR:
+        return Vector.fromData(
+            VectorDataUtilsTest.encodeShortArray(vector.toShortArray()),
+            vector.getLength(),
+            vector.getType(),
+            true);
+      case INT32_VECTOR:
+        return Vector.fromData(
+            VectorDataUtilsTest.encodeIntArray(vector.toIntArray()),
+            vector.getLength(),
+            vector.getType(),
+            true);
+      case INT64_VECTOR:
+        return Vector.fromData(
+            VectorDataUtilsTest.encodeLongArray(vector.toLongArray()),
+            vector.getLength(),
+            vector.getType(),
+            true);
+      case FLOAT32_VECTOR:
+        return Vector.fromData(
+            VectorDataUtilsTest.encodeFloatArray(vector.toFloatArray()),
+            vector.getLength(),
+            vector.getType(),
+            true);
+      case FLOAT64_VECTOR:
+        return Vector.fromData(
+            VectorDataUtilsTest.encodeDoubleArray(vector.toDoubleArray()),
+            vector.getLength(),
+            vector.getType(),
+            true);
+      default:
+        throw new IllegalArgumentException(vector.getType() + " is not supported.");
+    }
   }
 
   @AfterAll
@@ -152,9 +192,13 @@ public class VectorCodecTest extends CommonCodecTest {
   @Test
   public void getObject() throws SQLException {
     try (Connection connection =
-        createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON")) {
-      getIntVectorAsJsonObject(get(connection, I_VECTOR_TABLE_NAME));
+            createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON");
+        Connection binaryConnection =
+            createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=BINARY")) {
+      getIntVectorObject(get(connection, I_VECTOR_TABLE_NAME), false);
+      getIntVectorObject(get(binaryConnection, I_VECTOR_TABLE_NAME), true);
       getFloatVectorAsJsonObject(get(connection, F_VECTOR_TABLE_NAME));
+      getFloatVectorAsJsonObject(get(binaryConnection, F_VECTOR_TABLE_NAME));
     }
   }
 
@@ -162,22 +206,25 @@ public class VectorCodecTest extends CommonCodecTest {
   public void getObjectPrepare() throws SQLException {
     try (Connection clientPrepConnection =
             createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON");
+        Connection clientPrepBinaryConnection =
+            createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=BINARY");
         Connection serverPrepConnection =
             createCon(
                 "enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON&useServerPrepStmts=true")) {
-      getIntVectorAsJsonObject(getPrepare(clientPrepConnection, I_VECTOR_TABLE_NAME));
-      getIntVectorAsJsonObject(getPrepare(serverPrepConnection, I_VECTOR_TABLE_NAME));
+      getIntVectorObject(getPrepare(clientPrepConnection, I_VECTOR_TABLE_NAME), false);
+      getIntVectorObject(getPrepare(clientPrepBinaryConnection, I_VECTOR_TABLE_NAME), true);
+      getIntVectorObject(getPrepare(serverPrepConnection, I_VECTOR_TABLE_NAME), false);
 
       getFloatVectorAsJsonObject(getPrepare(clientPrepConnection, F_VECTOR_TABLE_NAME));
       getFloatVectorAsJsonObject(getPrepare(serverPrepConnection, F_VECTOR_TABLE_NAME));
     }
   }
 
-  public void getIntVectorAsJsonObject(ResultSet rs) throws SQLException {
+  public void getIntVectorObject(ResultSet rs, boolean isBinary) throws SQLException {
     Vector vector1 = (Vector) rs.getObject(1);
     Vector expectedVector1 = I_VECTOR_VALUES.get(0);
 
-    assertEquals(expectedVector1, vector1);
+    assertEquals(isBinary ? convertToBinary(expectedVector1) : expectedVector1, vector1);
     assertArrayEquals(expectedVector1.toFloatArray(), vector1.toFloatArray());
     assertArrayEquals(expectedVector1.toDoubleArray(), vector1.toDoubleArray());
     assertArrayEquals(expectedVector1.toIntArray(), vector1.toIntArray());
@@ -186,24 +233,26 @@ public class VectorCodecTest extends CommonCodecTest {
     assertArrayEquals(expectedVector1.toStringArray(), vector1.toStringArray());
     assertFalse(rs.wasNull());
 
-    assertEquals(expectedVector1.stringValue(), rs.getString(1));
+    if (!isBinary) {
+      assertEquals(expectedVector1.stringValue(), rs.getString(1));
+    }
 
     vector1 = (Vector) rs.getObject(2);
     expectedVector1 = I_VECTOR_VALUES.get(1);
-    assertEquals(expectedVector1, vector1);
+    assertEquals(isBinary ? convertToBinary(expectedVector1) : expectedVector1, vector1);
 
     vector1 = (Vector) rs.getObject("t2alias");
-    assertEquals(expectedVector1, vector1);
+    assertEquals(isBinary ? convertToBinary(expectedVector1) : expectedVector1, vector1);
     assertFalse(rs.wasNull());
 
     vector1 = rs.getObject(3, Vector.class);
     expectedVector1 = I_VECTOR_VALUES.get(2);
-    assertEquals(expectedVector1, vector1);
+    assertEquals(isBinary ? convertToBinary(expectedVector1) : expectedVector1, vector1);
     assertFalse(rs.wasNull());
 
     vector1 = (Vector) rs.getObject(4);
     expectedVector1 = I_VECTOR_VALUES.get(3);
-    assertEquals(expectedVector1, vector1);
+    assertEquals(isBinary ? convertToBinary(expectedVector1) : expectedVector1, vector1);
   }
 
   public void getFloatVectorAsJsonObject(ResultSet rs) throws SQLException {
@@ -317,18 +366,6 @@ public class VectorCodecTest extends CommonCodecTest {
 
   @Test
   public void sendParam() throws Exception {
-    List<Vector> vectors =
-        Arrays.asList(
-            generateVector(VectorType.I64, 2),
-            generateVector(VectorType.I64, 2),
-            generateVector(VectorType.I64, 2),
-            generateVector(VectorType.I64, 2));
-    sharedConn.createStatement().execute("DROP TABLE IF EXISTS VectorTestData");
-    sharedConn.createStatement().execute("CREATE TABLE VectorTestData (t1 VECTOR(2, I64))");
-    String values = vectors.stream().map(Vector::stringValue).collect(Collectors.joining("'),('"));
-    sharedConn
-        .createStatement()
-        .execute(String.format("INSERT INTO VectorTestData(t1) VALUES ('%s')", values));
     try (Connection connection =
             createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON");
         Connection binaryVectorConnection =
@@ -339,14 +376,23 @@ public class VectorCodecTest extends CommonCodecTest {
   }
 
   private void sendParam(Connection con, boolean isBinary) throws Exception {
-    // get test vector data from table to be able to test binary vectors
-    ResultSet rst = con.createStatement().executeQuery("SELECT * FROM VectorTestData");
     List<Vector> vectors = new ArrayList<>(4);
-    while (rst.next()) {
-      Vector v = rst.getObject(1, Vector.class);
-      assertEquals(isBinary, v.isBinary());
-      vectors.add(v);
-    }
+    vectors.add(
+        isBinary
+            ? convertToBinary(generateVector(VectorType.I64, 2))
+            : generateVector(VectorType.I64, 2));
+    vectors.add(
+        isBinary
+            ? convertToBinary(generateVector(VectorType.I64, 2))
+            : generateVector(VectorType.I64, 2));
+    vectors.add(
+        isBinary
+            ? convertToBinary(generateVector(VectorType.I64, 2))
+            : generateVector(VectorType.I64, 2));
+    vectors.add(
+        isBinary
+            ? convertToBinary(generateVector(VectorType.I64, 2))
+            : generateVector(VectorType.I64, 2));
     assertEquals(4, vectors.size());
     Vector vector1 = vectors.get(0);
     Vector vector2 = vectors.get(1);
