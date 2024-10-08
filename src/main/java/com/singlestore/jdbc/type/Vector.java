@@ -92,50 +92,54 @@ public class Vector {
     return type;
   }
 
+  public int getLength() {
+    return length;
+  }
+
   public String stringValue() {
-    return new String(values);
+    return Arrays.toString(toStringArray()).replace(", ", ",");
   }
 
   public String[] toStringArray() {
-    if (!isBinary()) {
-      return VectorDataUtils.parseVectorString(values, length);
-    }
-    throw new IllegalStateException("Cannot convert vector in binary format to String array.");
+    return isBinary()
+        ? VectorDataUtils.parseBinary(values, length, String[].class, type)
+        : VectorDataUtils.parse(values, length, String[].class, type);
   }
 
   public float[] toFloatArray() {
-    if (!isBinary()) {
-      return VectorDataUtils.parse(values, length, float[].class, type);
-    }
-    throw new IllegalStateException("Cannot convert vector in binary format to float array.");
+    return isBinary()
+        ? VectorDataUtils.parseBinary(values, length, float[].class, type)
+        : VectorDataUtils.parse(values, length, float[].class, type);
   }
 
   public double[] toDoubleArray() {
-    if (!isBinary()) {
-      return VectorDataUtils.parse(values, length, double[].class, type);
-    }
-    throw new IllegalStateException("Cannot convert vector in binary format to double array.");
+    return isBinary()
+        ? VectorDataUtils.parseBinary(values, length, double[].class, type)
+        : VectorDataUtils.parse(values, length, double[].class, type);
   }
 
-  public int[] toIntArray() {
-    if (!isBinary()) {
-      return VectorDataUtils.parse(values, length, int[].class, type);
-    }
-    throw new IllegalStateException("Cannot convert vector in binary format to int array.");
-  }
-
-  public long[] toLongArray() {
-    if (!isBinary()) {
-      return VectorDataUtils.parse(values, length, long[].class, type);
-    }
-    throw new IllegalStateException("Cannot convert vector in binary format to long array.");
+  public byte[] toByteArray() {
+    return isBinary()
+        ? VectorDataUtils.parseBinary(values, length, byte[].class, type)
+        : VectorDataUtils.parse(values, length, byte[].class, type);
   }
 
   public short[] toShortArray() {
-    if (!isBinary()) {
-      return VectorDataUtils.parse(values, length, short[].class, type);
-    }
-    throw new IllegalStateException("Cannot convert vector in binary format to short array.");
+    return isBinary()
+        ? VectorDataUtils.parseBinary(values, length, short[].class, type)
+        : VectorDataUtils.parse(values, length, short[].class, type);
+  }
+
+  public int[] toIntArray() {
+    return isBinary()
+        ? VectorDataUtils.parseBinary(values, length, int[].class, type)
+        : VectorDataUtils.parse(values, length, int[].class, type);
+  }
+
+  public long[] toLongArray() {
+    return isBinary()
+        ? VectorDataUtils.parseBinary(values, length, long[].class, type)
+        : VectorDataUtils.parse(values, length, long[].class, type);
   }
 
   @Override

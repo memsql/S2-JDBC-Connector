@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import com.singlestore.jdbc.client.DataType;
 import com.singlestore.jdbc.integration.Common;
 import com.singlestore.jdbc.util.VectorDataUtils;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
@@ -22,12 +24,19 @@ public class VectorDataUtilsTest {
         new String[] {"-1", "22", "2147483647", "-123213", "-2147483648", "127"};
     String data = Arrays.toString(ints);
     String[] actualStrings =
-        VectorDataUtils.parseVectorString(data.getBytes(StandardCharsets.UTF_8), ints.length);
+        VectorDataUtils.parse(
+            data.getBytes(StandardCharsets.UTF_8), 6, String[].class, DataType.INT32_VECTOR);
+    assertArrayEquals(expectedArray, actualStrings);
+
+    // binary
+    byte[] binary = encodeIntArray(ints);
+    actualStrings = VectorDataUtils.parseBinary(binary, 6, String[].class, DataType.INT32_VECTOR);
     assertArrayEquals(expectedArray, actualStrings);
 
     data = "    [   -1, 22,    2147483647,    -123213   ,   -2147483648,     127]     ";
     actualStrings =
-        VectorDataUtils.parseVectorString(data.getBytes(StandardCharsets.UTF_8), ints.length);
+        VectorDataUtils.parse(
+            data.getBytes(StandardCharsets.UTF_8), 6, String[].class, DataType.INT32_VECTOR);
     assertArrayEquals(expectedArray, actualStrings);
     Common.assertThrowsContains(
         IllegalStateException.class,
@@ -50,6 +59,13 @@ public class VectorDataUtilsTest {
         IllegalStateException.class,
         () -> VectorDataUtils.parse(data.getBytes(), 2, int[].class, DataType.INT32_VECTOR),
         "Expected vector length: 2, but got: 3.");
+
+    // binary
+    byte[] binary = encodeIntArray(ints);
+    Common.assertThrowsContains(
+        IllegalStateException.class,
+        () -> VectorDataUtils.parseBinary(binary, 2, int[].class, DataType.INT32_VECTOR),
+        "Expected byte array of length 8 (for 2 I32), but got 12 bytes.");
   }
 
   @Test
@@ -107,6 +123,25 @@ public class VectorDataUtilsTest {
                 int[].class,
                 DataType.INT8_VECTOR),
         "Invalid I8 number format at index 2: 128");
+
+    // binary
+    actualArr = VectorDataUtils.parseBinary(arr, 3, byte[].class, DataType.INT8_VECTOR);
+    assertArrayEquals(actualArr, arr);
+
+    actualShortArr = VectorDataUtils.parseBinary(arr, 3, short[].class, DataType.INT8_VECTOR);
+    assertArrayEquals(actualShortArr, shortArr);
+
+    actualIntArr = VectorDataUtils.parseBinary(arr, 3, int[].class, DataType.INT8_VECTOR);
+    assertArrayEquals(actualIntArr, intArr);
+
+    actualLongArr = VectorDataUtils.parseBinary(arr, 3, long[].class, DataType.INT8_VECTOR);
+    assertArrayEquals(actualLongArr, longArr);
+
+    actualDoubleArr = VectorDataUtils.parseBinary(arr, 3, double[].class, DataType.INT8_VECTOR);
+    assertArrayEquals(actualDoubleArr, doubleArr);
+
+    actualFloatArr = VectorDataUtils.parseBinary(arr, 3, float[].class, DataType.INT8_VECTOR);
+    assertArrayEquals(actualFloatArr, floatArr);
   }
 
   @Test
@@ -174,6 +209,28 @@ public class VectorDataUtilsTest {
                 int[].class,
                 DataType.INT16_VECTOR),
         "Invalid I16 number format at index 2: 32768");
+
+    // binary
+    byte[] binary = encodeShortArray(arr);
+    actualShortArr =
+        VectorDataUtils.parseBinary(binary, arr.length, short[].class, DataType.INT16_VECTOR);
+    assertArrayEquals(actualShortArr, arr);
+
+    actualIntArr =
+        VectorDataUtils.parseBinary(binary, arr.length, int[].class, DataType.INT16_VECTOR);
+    assertArrayEquals(actualIntArr, intArr);
+
+    actualLongArr =
+        VectorDataUtils.parseBinary(binary, arr.length, long[].class, DataType.INT16_VECTOR);
+    assertArrayEquals(actualLongArr, longArr);
+
+    actualDoubleArr =
+        VectorDataUtils.parseBinary(binary, arr.length, double[].class, DataType.INT16_VECTOR);
+    assertArrayEquals(actualDoubleArr, doubleArr);
+
+    actualFloatArr =
+        VectorDataUtils.parseBinary(binary, arr.length, float[].class, DataType.INT16_VECTOR);
+    assertArrayEquals(actualFloatArr, floatArr);
   }
 
   @Test
@@ -242,6 +299,24 @@ public class VectorDataUtilsTest {
                 int[].class,
                 DataType.INT32_VECTOR),
         "Invalid I32 number format at index 2: 2147483648");
+
+    // binary
+    byte[] binary = encodeIntArray(arr);
+    actualIntArr =
+        VectorDataUtils.parseBinary(binary, arr.length, int[].class, DataType.INT32_VECTOR);
+    assertArrayEquals(actualIntArr, arr);
+
+    actualLongArr =
+        VectorDataUtils.parseBinary(binary, arr.length, long[].class, DataType.INT32_VECTOR);
+    assertArrayEquals(actualLongArr, longArr);
+
+    actualDoubleArr =
+        VectorDataUtils.parseBinary(binary, arr.length, double[].class, DataType.INT32_VECTOR);
+    assertArrayEquals(actualDoubleArr, doubleArr);
+
+    actualFloatArr =
+        VectorDataUtils.parseBinary(binary, arr.length, float[].class, DataType.INT32_VECTOR);
+    assertArrayEquals(actualFloatArr, floatArr);
   }
 
   @Test
@@ -291,6 +366,16 @@ public class VectorDataUtilsTest {
             arr.length,
             double[].class,
             DataType.INT64_VECTOR);
+    assertArrayEquals(actualDoubleArr, doubleArr);
+
+    // binary
+    byte[] binary = encodeLongArray(arr);
+    actualLongArr =
+        VectorDataUtils.parseBinary(binary, arr.length, long[].class, DataType.INT64_VECTOR);
+    assertArrayEquals(actualLongArr, arr);
+
+    actualDoubleArr =
+        VectorDataUtils.parseBinary(binary, arr.length, double[].class, DataType.INT64_VECTOR);
     assertArrayEquals(actualDoubleArr, doubleArr);
 
     Common.assertThrowsContains(
@@ -375,6 +460,16 @@ public class VectorDataUtilsTest {
             DataType.FLOAT32_VECTOR);
     assertArrayEquals(arr, actualFloatArr);
 
+    // binary
+    byte[] binary = encodeFloatArray(arr);
+    actualDoubleArr =
+        VectorDataUtils.parseBinary(binary, arr.length, double[].class, DataType.FLOAT32_VECTOR);
+    assertArrayEquals(expectedDoubleArr, actualDoubleArr);
+
+    actualFloatArr =
+        VectorDataUtils.parseBinary(binary, arr.length, float[].class, DataType.FLOAT32_VECTOR);
+    assertArrayEquals(arr, actualFloatArr);
+
     // wrong value
     String wrongData = "[-143243, 22.2332f, 1243.33, wrong]";
     Common.assertThrowsContains(
@@ -441,6 +536,12 @@ public class VectorDataUtilsTest {
             DataType.FLOAT64_VECTOR);
     assertArrayEquals(actualDoubleArr, arr);
 
+    // binary
+    byte[] binary = encodeDoubleArray(arr);
+    actualDoubleArr =
+        VectorDataUtils.parseBinary(binary, arr.length, double[].class, DataType.FLOAT64_VECTOR);
+    assertArrayEquals(actualDoubleArr, arr);
+
     Common.assertThrowsContains(
         UnsupportedOperationException.class,
         () ->
@@ -462,5 +563,50 @@ public class VectorDataUtilsTest {
                 double[].class,
                 DataType.FLOAT64_VECTOR),
         "Invalid F64 number format at index 3: wrong");
+  }
+
+  public static byte[] encodeShortArray(short[] shortArray) {
+    ByteBuffer buffer = ByteBuffer.allocate(shortArray.length * 2); // Each short is 2 bytes
+    buffer.order(ByteOrder.LITTLE_ENDIAN);
+    for (short value : shortArray) {
+      buffer.putShort(value);
+    }
+    return buffer.array();
+  }
+
+  public static byte[] encodeIntArray(int[] intArray) {
+    ByteBuffer buffer = ByteBuffer.allocate(intArray.length * 4);
+    buffer.order(ByteOrder.LITTLE_ENDIAN);
+    for (int value : intArray) {
+      buffer.putInt(value);
+    }
+    return buffer.array();
+  }
+
+  public static byte[] encodeLongArray(long[] longArray) {
+    ByteBuffer buffer = ByteBuffer.allocate(longArray.length * 8); // Each long is 8 bytes
+    buffer.order(ByteOrder.LITTLE_ENDIAN);
+    for (long value : longArray) {
+      buffer.putLong(value);
+    }
+    return buffer.array();
+  }
+
+  public static byte[] encodeFloatArray(float[] floatArray) {
+    ByteBuffer buffer = ByteBuffer.allocate(floatArray.length * 4); // Each float is 4 bytes
+    buffer.order(ByteOrder.LITTLE_ENDIAN);
+    for (float value : floatArray) {
+      buffer.putFloat(value);
+    }
+    return buffer.array();
+  }
+
+  public static byte[] encodeDoubleArray(double[] doubleArray) {
+    ByteBuffer buffer = ByteBuffer.allocate(doubleArray.length * 8); // Each double is 8 bytes
+    buffer.order(ByteOrder.LITTLE_ENDIAN);
+    for (double value : doubleArray) {
+      buffer.putDouble(value);
+    }
+    return buffer.array();
   }
 }

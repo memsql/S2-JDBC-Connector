@@ -46,18 +46,24 @@ public class ResultSetMetadataTest extends Common {
     stmt.execute("CREATE TABLE resultsetmetadatatest1(id int, name varchar(20))");
     stmt.execute("CREATE TABLE resultsetmetadatatest2(id int, name varchar(20))");
     stmt.execute("CREATE TABLE resultsetmetadatatest3(id int, name varchar(20))");
+
+    String extendedTypes = "v1 VECTOR(4, F32), v2 VECTOR(2, I64), bs1 BSON";
     stmt.execute(
-        "CREATE TABLE IF NOT EXISTS test_rsmd_types (a1 CHAR(7), a2 BINARY(8), a3 VARCHAR(9), "
-            + "a4 VARBINARY(10), a5 LONGTEXT, a6 MEDIUMTEXT, a7 TEXT, a8 TINYTEXT, b1 TINYBLOB, b2 BLOB, "
-            + "b3 MEDIUMBLOB, b4 LONGBLOB, c JSON, d1 BOOL, d2 BIT, d3 TINYINT, d4 SMALLINT, "
-            + "d5 MEDIUMINT, d6 INT, d7 BIGINT, e1 FLOAT, e2 DOUBLE(8, 3), e3 DECIMAL(10, 2), "
-            + "f1 DATE, f2 TIME, f3 TIME(6), f4 DATETIME, f5 DATETIME(6), f6 TIMESTAMP, "
-            + "f7 TIMESTAMP(6), f8 YEAR, v1 VECTOR(4, F32), v2 VECTOR(2, I64), bs1 BSON)");
+        String.format(
+            "CREATE TABLE IF NOT EXISTS test_rsmd_types (a1 CHAR(7), a2 BINARY(8), a3 VARCHAR(9), "
+                + "a4 VARBINARY(10), a5 LONGTEXT, a6 MEDIUMTEXT, a7 TEXT, a8 TINYTEXT, b1 TINYBLOB, b2 BLOB, "
+                + "b3 MEDIUMBLOB, b4 LONGBLOB, c JSON, d1 BOOL, d2 BIT, d3 TINYINT, d4 SMALLINT, "
+                + "d5 MEDIUMINT, d6 INT, d7 BIGINT, e1 FLOAT, e2 DOUBLE(8, 3), e3 DECIMAL(10, 2), "
+                + "f1 DATE, f2 TIME, f3 TIME(6), f4 DATETIME, f5 DATETIME(6), f6 TIMESTAMP, "
+                + "f7 TIMESTAMP(6), f8 YEAR%s)",
+            minVersion(8, 7, 1) ? ", " + extendedTypes : ""));
     stmt.execute(
-        "insert into test_rsmd_types values (null, null, null, null, null, null, "
-            + "null, null, null, null, null, null, null, null, null, null, null, "
-            + "null, null, null, null, null, null, null, null, null, null, null, "
-            + "null, null, null, null, null, null)");
+        String.format(
+            "insert into test_rsmd_types values (null, null, null, null, null, null, "
+                + "null, null, null, null, null, null, null, null, null, null, null, "
+                + "null, null, null, null, null, null, null, null, null, null, null, "
+                + "null, null, null%s)",
+            minVersion(8, 7, 1) ? ", null, null, null" : ""));
     stmt.execute(
         "CREATE TABLE IF NOT EXISTS test_rsmd_unsigned (s1 TINYINT, s2 SMALLINT, "
             + "s3 MEDIUMINT, s4 INT, s5 BIGINT, s6 REAL, s7 DOUBLE, s8 DECIMAL, s9 NUMERIC, "

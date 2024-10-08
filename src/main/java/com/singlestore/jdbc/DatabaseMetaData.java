@@ -36,7 +36,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     this.connection = connection;
     this.conf = conf;
     this.version = null;
-    this.singleStoreVersion = connection.getClient().getSingleStoreVersion();
+    this.singleStoreVersion = null;
   }
 
   private String DataTypeClause(Configuration conf) {
