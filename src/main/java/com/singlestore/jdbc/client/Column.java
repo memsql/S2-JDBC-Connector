@@ -125,4 +125,11 @@ public interface Column {
    * @return extended metadata name
    */
   String getExtTypeName();
+
+  /**
+   * Get extended type format.
+   *
+   * @return extended type format
+   */
+  String getExtTypeFormat();
 }

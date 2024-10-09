@@ -196,8 +196,14 @@ public class ColumnDefinitionPacket implements Column, ServerMessage {
     return flags;
   }
 
+  @Override
   public String getExtTypeName() {
     return extTypeName;
+  }
+
+  @Override
+  public String getExtTypeFormat() {
+    return extTypeFormat;
   }
 
   @Override

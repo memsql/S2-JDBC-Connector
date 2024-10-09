@@ -32,7 +32,8 @@ public class StreamCodec implements Codec<InputStream> {
           DataType.BLOB,
           DataType.TINYBLOB,
           DataType.MEDIUMBLOB,
-          DataType.LONGBLOB);
+          DataType.LONGBLOB,
+          DataType.BSON);
 
   public String className() {
     return InputStream.class.getName();
@@ -53,6 +54,7 @@ public class StreamCodec implements Codec<InputStream> {
       case TINYBLOB:
       case MEDIUMBLOB:
       case LONGBLOB:
+      case BSON:
         ByteArrayInputStream is = new ByteArrayInputStream(buf.buf(), buf.pos(), length.get());
         buf.skip(length.get());
         return is;
@@ -74,6 +76,7 @@ public class StreamCodec implements Codec<InputStream> {
       case TINYBLOB:
       case MEDIUMBLOB:
       case LONGBLOB:
+      case BSON:
         ByteArrayInputStream is = new ByteArrayInputStream(buf.buf(), buf.pos(), length.get());
         buf.skip(length.get());
         return is;

@@ -5,10 +5,7 @@
 
 package com.singlestore.jdbc.integration;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -29,18 +26,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import javax.sql.ConnectionEvent;
-import javax.sql.ConnectionEventListener;
-import javax.sql.ConnectionPoolDataSource;
-import javax.sql.PooledConnection;
-import javax.sql.StatementEvent;
-import javax.sql.StatementEventListener;
+import java.sql.*;
+import javax.sql.*;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 

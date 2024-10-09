@@ -28,3 +28,4 @@ com.singlestore.jdbc.plugin.codec.UuidCodec
 com.singlestore.jdbc.plugin.codec.TimeCodec
 com.singlestore.jdbc.plugin.codec.TimestampCodec
 com.singlestore.jdbc.plugin.codec.ZonedDateTimeCodec
+com.singlestore.jdbc.plugin.codec.VectorCodec

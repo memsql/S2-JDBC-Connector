@@ -39,7 +39,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     this.singleStoreVersion = null;
   }
 
-  private static String DataTypeClause(Configuration conf) {
+  private String DataTypeClause(Configuration conf) {
     String upperCaseWithoutPersisted =
         "UCASE(IF( UCASE(COLUMN_TYPE) LIKE '%PERSISTED%', SUBSTRING(COLUMN_TYPE,"
             + " 10 + LOCATE('PERSISTED', UCASE(COLUMN_TYPE))), COLUMN_TYPE))";
@@ -68,12 +68,40 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     }
 
     if (!conf.yearIsDateType()) {
-      return " IF(c.COLUMN_TYPE IN ('year(2)', 'year(4)'), 'SMALLINT', "
-          + upperCaseWithoutSize
-          + ")";
+      upperCaseWithoutSize =
+          " IF(c.COLUMN_TYPE IN ('year(2)', 'year(4)'), 'SMALLINT', " + upperCaseWithoutSize + ")";
     }
-
+    if (!isExtendedTypesEnabled()) {
+      upperCaseWithoutSize =
+          " IF(c.COLUMN_TYPE LIKE 'vector%', "
+              + (isBinaryVectorOutputEnabled() ? "'VARBINARY'" : "'VARCHAR'")
+              + ", "
+              + upperCaseWithoutSize
+              + ")";
+      upperCaseWithoutSize =
+          " IF(c.COLUMN_TYPE LIKE 'bson%', " + "'LONGBLOB'" + ", " + upperCaseWithoutSize + ")";
+    }
     return upperCaseWithoutSize;
+  }
+
+  /** Is extended types enabled, like VECTOR, BSON, etc... */
+  private boolean isExtendedTypesEnabled() {
+    try {
+      return getSingleStoreVersion().versionGreaterOrEqual(8, 7, 1)
+          && conf.enableExtendedDataTypes();
+    } catch (SQLException e) {
+      return false;
+    }
+  }
+
+  /** Is Vector type binary output. */
+  private boolean isBinaryVectorOutputEnabled() {
+    try {
+      return getSingleStoreVersion().versionGreaterOrEqual(8, 7, 1)
+          && "BINARY".equalsIgnoreCase(conf.vectorTypeOutputFormat());
+    } catch (SQLException e) {
+      return false;
+    }
   }
 
   private static String DateTimeSizeClause(String fullTypeColumnName) {
@@ -402,6 +430,12 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
                 + Types.TINYINT
                 + ") "
             : Types.TINYINT)
+        + (!isExtendedTypesEnabled()
+            ? " WHEN 'vector' THEN "
+                + (isBinaryVectorOutputEnabled() ? Types.VARBINARY : Types.VARCHAR)
+            : " WHEN 'vector' THEN " + Types.OTHER)
+        + " WHEN 'bson' THEN "
+        + Types.LONGVARBINARY
         + " WHEN 'year' THEN "
         + (conf.yearIsDateType() ? Types.DATE : Types.SMALLINT)
         + " ELSE "
@@ -709,6 +743,12 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
             + (conf.yearIsDateType() ? "" : " WHEN 'year' THEN 5")
             + "  WHEN 'json' THEN "
             + Integer.MAX_VALUE
+            + "  WHEN 'bson' THEN "
+            + Integer.MAX_VALUE
+            + "  WHEN 'vector' THEN "
+            + (isBinaryVectorOutputEnabled() || isExtendedTypesEnabled()
+                ? Integer.MAX_VALUE
+                : Integer.MAX_VALUE / 2)
             + "  WHEN 'tinytext' THEN c.CHARACTER_OCTET_LENGTH"
             + "  WHEN 'text' THEN c.CHARACTER_OCTET_LENGTH"
             + "  WHEN 'mediumtext' THEN c.CHARACTER_OCTET_LENGTH"

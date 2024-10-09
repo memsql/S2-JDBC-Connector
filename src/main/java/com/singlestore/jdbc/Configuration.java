@@ -159,6 +159,8 @@ public class Configuration {
   private String consoleLogFilepath = null;
   private boolean printStackTrace = false;
   private Integer maxPrintStackSizeToLog = 10;
+  private boolean enableExtendedDataTypes = false;
+  private String vectorTypeOutputFormat = null;
 
   private Configuration() {
     this.logger = Loggers.getLogger(Configuration.class);
@@ -239,7 +241,9 @@ public class Configuration {
       String consoleLogLevel,
       String consoleLogFilepath,
       boolean printStackTrace,
-      int maxPrintStackSizeToLog) {
+      int maxPrintStackSizeToLog,
+      boolean enableExtendedDataTypes,
+      String vectorTypeOutputFormat) {
     this.user = user;
     this.password = password;
     this.database = database;
@@ -315,6 +319,8 @@ public class Configuration {
     this.consoleLogFilepath = consoleLogFilepath;
     this.printStackTrace = printStackTrace;
     this.maxPrintStackSizeToLog = maxPrintStackSizeToLog;
+    this.enableExtendedDataTypes = enableExtendedDataTypes;
+    this.vectorTypeOutputFormat = vectorTypeOutputFormat;
     this.initialUrl = buildUrl(this);
     this.logger = Loggers.getLogger(Configuration.class);
   }
@@ -394,7 +400,9 @@ public class Configuration {
       String consoleLogLevel,
       String consoleLogFilepath,
       Boolean printStackTrace,
-      Integer maxPrintStackSizeToLog)
+      Integer maxPrintStackSizeToLog,
+      Boolean enableExtendedDataTypes,
+      String vectorTypeOutputFormat)
       throws SQLException {
     this.consoleLogLevel = consoleLogLevel;
     this.consoleLogFilepath = consoleLogFilepath;
@@ -503,6 +511,17 @@ public class Configuration {
     if (keyStoreType != null) this.keyStoreType = keyStoreType;
     if (useMysqlVersion != null) this.useMysqlVersion = useMysqlVersion;
     if (rewriteBatchedStatements != null) this.rewriteBatchedStatements = rewriteBatchedStatements;
+    if (enableExtendedDataTypes != null) this.enableExtendedDataTypes = enableExtendedDataTypes;
+    if (vectorTypeOutputFormat != null) {
+      vectorTypeOutputFormat = vectorTypeOutputFormat.toUpperCase().trim();
+      if (!"JSON".equals(vectorTypeOutputFormat) && !"BINARY".equals(vectorTypeOutputFormat)) {
+        throw new IllegalArgumentException(
+            "Invalid 'vectorTypeOutputFormat' parameter: '"
+                + vectorTypeOutputFormat
+                + "'. Expected values are 'JSON' or 'BINARY'.");
+      }
+      this.vectorTypeOutputFormat = vectorTypeOutputFormat;
+    }
 
     // *************************************************************
     // host primary check
@@ -943,7 +962,9 @@ public class Configuration {
         this.consoleLogLevel,
         this.consoleLogFilepath,
         this.printStackTrace,
-        this.maxPrintStackSizeToLog);
+        this.maxPrintStackSizeToLog,
+        this.enableExtendedDataTypes,
+        this.vectorTypeOutputFormat);
   }
 
   /**
@@ -1502,6 +1523,14 @@ public class Configuration {
     return maxPrintStackSizeToLog;
   }
 
+  public boolean enableExtendedDataTypes() {
+    return enableExtendedDataTypes;
+  }
+
+  public String vectorTypeOutputFormat() {
+    return vectorTypeOutputFormat;
+  }
+
   /**
    * ToString implementation.
    *
@@ -1766,6 +1795,9 @@ public class Configuration {
     private String consoleLogFilepath;
     private Boolean printStackTrace;
     private Integer maxPrintStackSizeToLog;
+
+    private Boolean enableExtendedDataTypes;
+    private String vectorTypeOutputFormat;
 
     public Builder user(String user) {
       this.user = nullOrEmpty(user);
@@ -2342,6 +2374,28 @@ public class Configuration {
     }
 
     /**
+     * Enable protocol extended types response.
+     *
+     * @param enableExtendedDataTypes to enable extended type like Vector, Bson, etc...
+     * @return this {@link Builder}
+     */
+    public Builder enableExtendedDataTypes(Boolean enableExtendedDataTypes) {
+      this.enableExtendedDataTypes = enableExtendedDataTypes;
+      return this;
+    }
+
+    /**
+     * Sets Vector type output format as JSON or BINARY.
+     *
+     * @param vectorTypeOutputFormat Vector type output format
+     * @return this {@link Builder}
+     */
+    public Builder vectorTypeOutputFormat(String vectorTypeOutputFormat) {
+      this.vectorTypeOutputFormat = vectorTypeOutputFormat;
+      return this;
+    }
+
+    /**
      * Build a configuration
      *
      * @return a Configuration object
@@ -2424,7 +2478,9 @@ public class Configuration {
               this.consoleLogLevel,
               this.consoleLogFilepath,
               this.printStackTrace,
-              this.maxPrintStackSizeToLog);
+              this.maxPrintStackSizeToLog,
+              this.enableExtendedDataTypes,
+              this.vectorTypeOutputFormat);
       conf.initialUrl = buildUrl(conf);
       return conf;
     }
