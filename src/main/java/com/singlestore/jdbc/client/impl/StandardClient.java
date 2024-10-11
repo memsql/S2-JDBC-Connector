@@ -399,6 +399,10 @@ public class StandardClient implements Client, AutoCloseable {
             false,
             true);
       }
+    } else if (conf.enableExtendedDataTypes() || conf.vectorTypeOutputFormat() != null) {
+      Loggers.getLogger(StandardClient.class)
+          .warn(
+              "Configuration parameters: 'enableExtendedDataTypes' and 'vectorTypeOutputFormat' are not supported for SingleStore versions earlier than 8.7.1.");
     }
   }
 

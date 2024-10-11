@@ -182,6 +182,15 @@ public class ResultSetMetadataTest extends Common {
       String colName = cols.getString("TYPE_NAME");
       assertEquals(rsmd.getColumnTypeName(i), colName);
       assertEquals(rsmd.getColumnType(i), cols.getInt("DATA_TYPE"));
+      // Skip column length comparison for VECTOR type.
+      // ColumnDefinitionPacket returns VARCHAR or VARBINARY
+      // if extendedTypes = false, vectorOutputFormat=JSON: returns Types.VARCHAR -> precision =
+      // Integer.MAX_VALUE / charset
+      // if extendedTypes = false, vectorOutputFormat=BINARY: returns Types.VARBINARY -> precision =
+      // Integer.MAX_VALUE
+      if (i == 32 || i == 33) {
+        continue;
+      }
       if ("DOUBLE".equals(colName) || "YEAR".equals(colName)) { // PLAT-7210
         continue;
       }

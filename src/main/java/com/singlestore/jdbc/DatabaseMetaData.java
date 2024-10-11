@@ -9,13 +9,8 @@ import com.singlestore.jdbc.client.DataType;
 import com.singlestore.jdbc.client.result.CompleteResult;
 import com.singlestore.jdbc.util.Version;
 import com.singlestore.jdbc.util.VersionFactory;
-import java.sql.PseudoColumnUsage;
-import java.sql.ResultSet;
-import java.sql.RowIdLifetime;
-import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
+import java.sql.*;
 import java.sql.Statement;
-import java.sql.Types;
 
 public class DatabaseMetaData implements java.sql.DatabaseMetaData {
 
@@ -86,21 +81,19 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
 
   /** Is extended types enabled, like VECTOR, BSON, etc... */
   private boolean isExtendedTypesEnabled() {
-    try {
-      return getSingleStoreVersion().versionGreaterOrEqual(8, 7, 1)
-          && conf.enableExtendedDataTypes();
-    } catch (SQLException e) {
-      return false;
-    }
+    return isExtendedTypesSupported() && conf.enableExtendedDataTypes();
   }
 
   /** Is Vector type binary output. */
   private boolean isBinaryVectorOutputEnabled() {
+    return isExtendedTypesSupported() && "BINARY".equalsIgnoreCase(conf.vectorTypeOutputFormat());
+  }
+
+  private boolean isExtendedTypesSupported() {
     try {
-      return getSingleStoreVersion().versionGreaterOrEqual(8, 7, 1)
-          && "BINARY".equalsIgnoreCase(conf.vectorTypeOutputFormat());
+      return getSingleStoreVersion().versionGreaterOrEqual(8, 7, 1);
     } catch (SQLException e) {
-      return false;
+      throw new IllegalStateException("Failed to get SingleStore version.", e);
     }
   }
 
@@ -746,9 +739,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
             + "  WHEN 'bson' THEN "
             + Integer.MAX_VALUE
             + "  WHEN 'vector' THEN "
-            + (isBinaryVectorOutputEnabled() || isExtendedTypesEnabled()
-                ? Integer.MAX_VALUE
-                : Integer.MAX_VALUE / 2)
+            + Integer.MAX_VALUE
             + "  WHEN 'tinytext' THEN c.CHARACTER_OCTET_LENGTH"
             + "  WHEN 'text' THEN c.CHARACTER_OCTET_LENGTH"
             + "  WHEN 'mediumtext' THEN c.CHARACTER_OCTET_LENGTH"
