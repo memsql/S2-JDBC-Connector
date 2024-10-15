@@ -193,10 +193,8 @@ public class VectorCodecTest extends CommonCodecTest {
 
   @Test
   public void getObject() throws SQLException {
-    try (Connection connection =
-            createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON");
-        Connection binaryConnection =
-            createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=BINARY")) {
+    try (Connection connection = createCon("vectorTypeOutputFormat=JSON");
+        Connection binaryConnection = createCon("vectorTypeOutputFormat=BINARY")) {
       getIntVectorObject(get(connection, I_VECTOR_TABLE_NAME), false);
       getIntVectorObject(get(binaryConnection, I_VECTOR_TABLE_NAME), true);
       getFloatVectorAsJsonObject(get(connection, F_VECTOR_TABLE_NAME));
@@ -206,13 +204,10 @@ public class VectorCodecTest extends CommonCodecTest {
 
   @Test
   public void getObjectPrepare() throws SQLException {
-    try (Connection clientPrepConnection =
-            createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON");
-        Connection clientPrepBinaryConnection =
-            createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=BINARY");
+    try (Connection clientPrepConnection = createCon("vectorTypeOutputFormat=JSON");
+        Connection clientPrepBinaryConnection = createCon("vectorTypeOutputFormat=BINARY");
         Connection serverPrepConnection =
-            createCon(
-                "enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON&useServerPrepStmts=true")) {
+            createCon("vectorTypeOutputFormat=JSON&useServerPrepStmts=true")) {
       getIntVectorObject(getPrepare(clientPrepConnection, I_VECTOR_TABLE_NAME), false);
       getIntVectorObject(getPrepare(clientPrepBinaryConnection, I_VECTOR_TABLE_NAME), true);
       getIntVectorObject(getPrepare(serverPrepConnection, I_VECTOR_TABLE_NAME), false);
@@ -288,19 +283,16 @@ public class VectorCodecTest extends CommonCodecTest {
 
   @Test
   public void getObjectType() throws Exception {
-    try (Connection connection =
-        createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON")) {
+    try (Connection connection = createCon("vectorTypeOutputFormat=JSON")) {
       getObjectType(get(connection, I_VECTOR_TABLE_NAME));
     }
   }
 
   @Test
   public void getObjectTypePrepare() throws Exception {
-    try (Connection clientPrepConnection =
-            createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON");
+    try (Connection clientPrepConnection = createCon("vectorTypeOutputFormat=JSON");
         Connection serverPrepConnection =
-            createCon(
-                "enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON&useServerPrepStmts=true")) {
+            createCon("vectorTypeOutputFormat=JSON&useServerPrepStmts=true")) {
       getObjectType(getPrepare(clientPrepConnection, I_VECTOR_TABLE_NAME));
       getObjectType(getPrepare(serverPrepConnection, I_VECTOR_TABLE_NAME));
     }
@@ -325,10 +317,9 @@ public class VectorCodecTest extends CommonCodecTest {
 
   @Test
   public void getMetaData() throws SQLException {
-    try (com.singlestore.jdbc.Connection connection =
-            createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON");
+    try (com.singlestore.jdbc.Connection connection = createCon("vectorTypeOutputFormat=JSON");
         com.singlestore.jdbc.Connection binaryVectorConnection =
-            createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=BINARY")) {
+            createCon("vectorTypeOutputFormat=BINARY")) {
       getMetaData(connection);
       getMetaData(binaryVectorConnection);
     }
@@ -369,10 +360,8 @@ public class VectorCodecTest extends CommonCodecTest {
 
   @Test
   public void sendParam() throws Exception {
-    try (Connection connection =
-            createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON");
-        Connection binaryVectorConnection =
-            createCon("enableExtendedDataTypes=true&vectorTypeOutputFormat=BINARY")) {
+    try (Connection connection = createCon("vectorTypeOutputFormat=JSON");
+        Connection binaryVectorConnection = createCon("vectorTypeOutputFormat=BINARY")) {
       sendParam(connection, false);
       sendParam(binaryVectorConnection, true);
     }

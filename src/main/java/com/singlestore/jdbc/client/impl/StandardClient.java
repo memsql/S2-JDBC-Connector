@@ -376,29 +376,20 @@ public class StandardClient implements Client, AutoCloseable {
   private void initializeExtendedTypesMetadata() throws SQLException {
     if (singleStoreVersion != null && singleStoreVersion.versionGreaterOrEqual(8, 7, 1)) {
       List<String> commands = new ArrayList<>();
-      if (conf.enableExtendedDataTypes()) {
-        commands.add("SET @@SESSION.enable_extended_types_metadata=on");
-      }
+      commands.add(
+          "SET @@SESSION.enable_extended_types_metadata="
+              + (conf.enableExtendedDataTypes() ? "on" : "off"));
       if (conf.vectorTypeOutputFormat() != null) {
         commands.add(
             String.format(
                 "SET @@SESSION.vector_type_project_format=%s", conf.vectorTypeOutputFormat()));
       }
-      if (!commands.isEmpty()) {
-        ClientMessage[] msgs = new ClientMessage[commands.size()];
-        for (int i = 0; i < commands.size(); i++) {
-          msgs[i] = new QueryPacket(commands.get(i));
-        }
-        executePipeline(
-            msgs,
-            null,
-            0,
-            0L,
-            ResultSet.CONCUR_READ_ONLY,
-            ResultSet.TYPE_FORWARD_ONLY,
-            false,
-            true);
+      ClientMessage[] msgs = new ClientMessage[commands.size()];
+      for (int i = 0; i < commands.size(); i++) {
+        msgs[i] = new QueryPacket(commands.get(i));
       }
+      executePipeline(
+          msgs, null, 0, 0L, ResultSet.CONCUR_READ_ONLY, ResultSet.TYPE_FORWARD_ONLY, false, true);
     } else if (conf.enableExtendedDataTypes() || conf.vectorTypeOutputFormat() != null) {
       Loggers.getLogger(StandardClient.class)
           .warn(

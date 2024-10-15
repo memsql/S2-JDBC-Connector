@@ -159,7 +159,7 @@ public class Configuration {
   private String consoleLogFilepath = null;
   private boolean printStackTrace = false;
   private Integer maxPrintStackSizeToLog = 10;
-  private boolean enableExtendedDataTypes = false;
+  private boolean enableExtendedDataTypes = true;
   private String vectorTypeOutputFormat = null;
 
   private Configuration() {

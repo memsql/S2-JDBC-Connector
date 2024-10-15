@@ -72,6 +72,14 @@ public abstract class VectorParser<M> {
         "Unable to convert Vector of " + type.name() + " elements to byte array.");
   }
 
+  /**
+   * Parses a vector string byte array into an array of string values (trimming spaces and removing
+   * brackets). Example: input "[ 1, 2, 3 ]" will be parsed to String[]{"1", "2", "3"}.
+   *
+   * @param input the vector string byte array in the format "[value1, value2, value3...]"
+   * @param length the vector length
+   * @return the vector values as a string array
+   */
   public static String[] parseVectorString(byte[] input, Integer length) {
     String str = new String(input, StandardCharsets.UTF_8).replaceAll("[\\[\\]]", "").trim();
     String[] values = str.split("\\s*,\\s*");
