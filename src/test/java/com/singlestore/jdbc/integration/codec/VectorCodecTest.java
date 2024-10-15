@@ -11,6 +11,8 @@ import com.singlestore.jdbc.Statement;
 import com.singlestore.jdbc.client.util.VectorType;
 import com.singlestore.jdbc.type.Vector;
 import com.singlestore.jdbc.unit.util.VectorDataUtilsTest;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -315,6 +317,7 @@ public class VectorCodecTest extends CommonCodecTest {
     testErrObject(rs, Float.class);
     testErrObject(rs, Byte.class);
     testObject(rs, byte[].class, I_VECTOR_VALUES.get(0).getValues());
+    testObject(rs, InputStream.class, new ByteArrayInputStream(I_VECTOR_VALUES.get(0).getValues()));
     testObject(rs, Blob.class, new SingleStoreBlob(I_VECTOR_VALUES.get(0).getValues()));
     testObject(rs, String.class, I_VECTOR_VALUES.get(0).stringValue());
     testObject(rs, Vector.class, I_VECTOR_VALUES.get(0));

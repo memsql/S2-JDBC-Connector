@@ -15,7 +15,7 @@ import java.sql.Types;
 public class BsonColumn extends BlobColumn {
 
   /**
-   * Vector metadata type decoder
+   * BSON metadata type decoder
    *
    * @param buf buffer
    * @param charset charset

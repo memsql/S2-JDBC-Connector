@@ -6,7 +6,6 @@
 package com.singlestore.jdbc.client;
 
 import com.singlestore.jdbc.client.column.*;
-import java.util.Arrays;
 
 public enum DataType {
   OLDDECIMAL(0, BigDecimalColumn::new, BigDecimalColumn::new),
@@ -46,6 +45,17 @@ public enum DataType {
   INT32_VECTOR(2005, VectorColumn::new, VectorColumn::new),
   INT64_VECTOR(2006, VectorColumn::new, VectorColumn::new);
 
+  static final DataType[] basicTypeMap;
+
+  static {
+    basicTypeMap = new DataType[256];
+    for (DataType v : values()) {
+      if (v.singlestoreType < 256) {
+        basicTypeMap[v.singlestoreType] = v;
+      }
+    }
+  }
+
   private final int singlestoreType;
   private final ColumnConstructor columnConstructor;
   private final ColumnConstructor unsignedColumnConstructor;
@@ -64,10 +74,7 @@ public enum DataType {
   }
 
   public static DataType of(int typeValue) {
-    return Arrays.stream(values())
-        .filter(v -> v.singlestoreType == typeValue)
-        .findFirst()
-        .orElseThrow(() -> new IllegalStateException("No data type for: " + typeValue));
+    return basicTypeMap[typeValue];
   }
 
   public ColumnConstructor getColumnConstructor() {

@@ -11,8 +11,6 @@ import com.singlestore.jdbc.client.ReadableByteBuf;
 import com.singlestore.jdbc.client.util.MutableInt;
 import com.singlestore.jdbc.message.server.ColumnDefinitionPacket;
 import com.singlestore.jdbc.type.Vector;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.*;
 import java.util.Calendar;
 
@@ -125,25 +123,13 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
   @Override
   public boolean decodeBooleanBinary(ReadableByteBuf buf, MutableInt length)
       throws SQLDataException {
-    buf.skip(length.get());
-    throw new SQLDataException(
-        String.format("Data type %s cannot be decoded as Boolean", dataType));
+    return decodeBooleanText(buf, length);
   }
 
   @Override
   public byte decodeByteText(ReadableByteBuf buf, MutableInt length) throws SQLDataException {
-    String str = buf.readString(length.get());
-    long result;
-    try {
-      result = new BigDecimal(str).setScale(0, RoundingMode.DOWN).longValue();
-    } catch (NumberFormatException nfe) {
-      throw new SQLDataException(
-          String.format("value '%s' (%s) cannot be decoded as Byte", str, dataType));
-    }
-    if ((byte) result != result || (result < 0 && !isSigned())) {
-      throw new SQLDataException("byte overflow");
-    }
-    return (byte) result;
+    buf.skip(length.get());
+    throw new SQLDataException(String.format("Data type %s cannot be decoded as Byte", dataType));
   }
 
   @Override
@@ -160,7 +146,7 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
   @Override
   public String decodeStringBinary(ReadableByteBuf buf, MutableInt length, Calendar cal)
       throws SQLDataException {
-    return buf.readString(length.get());
+    return decodeStringText(buf, length, cal);
   }
 
   @Override
@@ -171,8 +157,7 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
 
   @Override
   public short decodeShortBinary(ReadableByteBuf buf, MutableInt length) throws SQLDataException {
-    buf.skip(length.get());
-    throw new SQLDataException(String.format("Data type %s cannot be decoded as Short", dataType));
+    return decodeShortText(buf, length);
   }
 
   @Override
@@ -184,9 +169,7 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
 
   @Override
   public int decodeIntBinary(ReadableByteBuf buf, MutableInt length) throws SQLDataException {
-    buf.skip(length.get());
-    throw new SQLDataException(
-        String.format("Data type %s cannot be decoded as Integer", dataType));
+    return decodeIntText(buf, length);
   }
 
   @Override
@@ -197,8 +180,7 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
 
   @Override
   public long decodeLongBinary(ReadableByteBuf buf, MutableInt length) throws SQLDataException {
-    buf.skip(length.get());
-    throw new SQLDataException(String.format("Data type %s cannot be decoded as Long", dataType));
+    return decodeLongText(buf, length);
   }
 
   @Override
@@ -209,8 +191,7 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
 
   @Override
   public float decodeFloatBinary(ReadableByteBuf buf, MutableInt length) throws SQLDataException {
-    buf.skip(length.get());
-    throw new SQLDataException(String.format("Data type %s cannot be decoded as Float", dataType));
+    return decodeFloatText(buf, length);
   }
 
   @Override
@@ -221,8 +202,7 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
 
   @Override
   public double decodeDoubleBinary(ReadableByteBuf buf, MutableInt length) throws SQLDataException {
-    buf.skip(length.get());
-    throw new SQLDataException(String.format("Data type %s cannot be decoded as Double", dataType));
+    return decodeDoubleText(buf, length);
   }
 
   @Override
@@ -235,8 +215,7 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
   @Override
   public Date decodeDateBinary(ReadableByteBuf buf, MutableInt length, Calendar cal)
       throws SQLDataException {
-    buf.skip(length.get());
-    throw new SQLDataException(String.format("Data type %s cannot be decoded as Date", dataType));
+    return decodeDateText(buf, length, cal);
   }
 
   @Override
@@ -249,8 +228,7 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
   @Override
   public Time decodeTimeBinary(ReadableByteBuf buf, MutableInt length, Calendar calParam)
       throws SQLDataException {
-    buf.skip(length.get());
-    throw new SQLDataException(String.format("Data type %s cannot be decoded as Time", dataType));
+    return decodeTimeText(buf, length, calParam);
   }
 
   @Override
@@ -264,8 +242,6 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
   @Override
   public Timestamp decodeTimestampBinary(ReadableByteBuf buf, MutableInt length, Calendar cal)
       throws SQLDataException {
-    buf.skip(length.get());
-    throw new SQLDataException(
-        String.format("Data type %s cannot be decoded as Timestamp", dataType));
+    return decodeTimestampText(buf, length, cal);
   }
 }
