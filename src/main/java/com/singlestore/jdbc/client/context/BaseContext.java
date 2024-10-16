@@ -72,10 +72,7 @@ public class BaseContext implements Context {
     this.serverStatus = handshake.getServerStatus();
     this.eofDeprecated = (clientCapabilities & Capabilities.CLIENT_DEPRECATE_EOF) > 0;
     this.skipMeta = (serverCapabilities & Capabilities.CACHE_METADATA) > 0;
-    this.columnDecoderFunction =
-        (serverCapabilities & Capabilities.EXTENDED_TYPE_INFO) > 0
-            ? ColumnDecoder::decode
-            : ColumnDecoder::decodeStd;
+    this.columnDecoderFunction = ColumnDecoder::decodeStd;
     this.conf = conf;
     this.database = conf.database();
     this.exceptionFactory = exceptionFactory;

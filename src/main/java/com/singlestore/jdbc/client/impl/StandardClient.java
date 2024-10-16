@@ -38,6 +38,7 @@ import com.singlestore.jdbc.plugin.Credential;
 import com.singlestore.jdbc.plugin.CredentialPlugin;
 import com.singlestore.jdbc.plugin.credential.browser.BrowserCredentialPlugin;
 import com.singlestore.jdbc.util.Security;
+import com.singlestore.jdbc.util.Version;
 import com.singlestore.jdbc.util.constants.Capabilities;
 import com.singlestore.jdbc.util.constants.ServerStatus;
 import com.singlestore.jdbc.util.log.Logger;
@@ -83,6 +84,7 @@ public class StandardClient implements Client, AutoCloseable {
   protected boolean timeOut;
   private BigInteger aggregatorId;
   private BigInteger initialSqlSelectLimit;
+  private Version singleStoreVersion;
   private transient Timer cancelTimer;
 
   /**
@@ -323,10 +325,6 @@ public class StandardClient implements Client, AutoCloseable {
       commands.add(String.format("USE `%s`", escapedDb));
       resInd += 2;
     }
-    if (context.getCharset() == null || !"utf8mb4".equals(context.getCharset())) {
-      commands.add("SET NAMES utf8mb4");
-      resInd++;
-    }
     if (conf.initSql() != null) {
       commands.add(conf.initSql());
       resInd++;
@@ -336,7 +334,8 @@ public class StandardClient implements Client, AutoCloseable {
       commands.addAll(Arrays.asList(initialCommands));
       resInd += initialCommands.length;
     }
-    commands.add("SELECT @@max_allowed_packet, @@aggregator_id, @@sql_select_limit");
+    commands.add(
+        "SELECT @@max_allowed_packet, @@aggregator_id, @@sql_select_limit, @@memsql_version");
     try {
       List<Completion> res;
       ClientMessage[] msgs = new ClientMessage[commands.size()];
@@ -360,9 +359,41 @@ public class StandardClient implements Client, AutoCloseable {
         this.writer.setMaxAllowedPacket(result.getInt(1));
         this.aggregatorId = result.getBigInteger(2);
         this.initialSqlSelectLimit = result.getBigInteger(3);
+        this.singleStoreVersion = new Version(result.getString(4));
       }
+      initializeExtendedTypesMetadata();
     } catch (SQLException sqlException) {
       throw exceptionFactory.create("Initialization command fail", "08000", sqlException);
+    }
+  }
+
+  /**
+   * Enables extended types metadata and vector output format if the appropriate configuration is
+   * set.
+   *
+   * <p>Note: This feature is available starting from SingleStore version 8.7.1.
+   */
+  private void initializeExtendedTypesMetadata() throws SQLException {
+    if (singleStoreVersion != null && singleStoreVersion.versionGreaterOrEqual(8, 7, 1)) {
+      List<String> commands = new ArrayList<>();
+      commands.add(
+          "SET @@SESSION.enable_extended_types_metadata="
+              + (conf.enableExtendedDataTypes() ? "on" : "off"));
+      if (conf.vectorTypeOutputFormat() != null) {
+        commands.add(
+            String.format(
+                "SET @@SESSION.vector_type_project_format=%s", conf.vectorTypeOutputFormat()));
+      }
+      ClientMessage[] msgs = new ClientMessage[commands.size()];
+      for (int i = 0; i < commands.size(); i++) {
+        msgs[i] = new QueryPacket(commands.get(i));
+      }
+      executePipeline(
+          msgs, null, 0, 0L, ResultSet.CONCUR_READ_ONLY, ResultSet.TYPE_FORWARD_ONLY, false, true);
+    } else if (conf.enableExtendedDataTypes() || conf.vectorTypeOutputFormat() != null) {
+      Loggers.getLogger(StandardClient.class)
+          .warn(
+              "Configuration parameters: 'enableExtendedDataTypes' and 'vectorTypeOutputFormat' are not supported for SingleStore versions earlier than 8.7.1.");
     }
   }
 
@@ -1044,6 +1075,11 @@ public class StandardClient implements Client, AutoCloseable {
   @Override
   public BigInteger getInitialSqlSelectLimit() {
     return this.initialSqlSelectLimit;
+  }
+
+  @Override
+  public Version getSingleStoreVersion() {
+    return singleStoreVersion;
   }
 
   public void reset() {

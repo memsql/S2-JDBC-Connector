@@ -50,7 +50,13 @@ public class StringCodec implements Codec<String> {
           DataType.BLOB,
           DataType.TINYBLOB,
           DataType.MEDIUMBLOB,
-          DataType.LONGBLOB);
+          DataType.LONGBLOB,
+          DataType.INT8_VECTOR,
+          DataType.INT16_VECTOR,
+          DataType.INT32_VECTOR,
+          DataType.INT64_VECTOR,
+          DataType.FLOAT32_VECTOR,
+          DataType.FLOAT64_VECTOR);
 
   public String className() {
     return String.class.getName();

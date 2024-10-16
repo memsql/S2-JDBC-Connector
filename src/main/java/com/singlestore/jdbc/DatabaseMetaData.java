@@ -9,13 +9,8 @@ import com.singlestore.jdbc.client.DataType;
 import com.singlestore.jdbc.client.result.CompleteResult;
 import com.singlestore.jdbc.util.Version;
 import com.singlestore.jdbc.util.VersionFactory;
-import java.sql.PseudoColumnUsage;
-import java.sql.ResultSet;
-import java.sql.RowIdLifetime;
-import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
+import java.sql.*;
 import java.sql.Statement;
-import java.sql.Types;
 
 public class DatabaseMetaData implements java.sql.DatabaseMetaData {
 
@@ -39,7 +34,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     this.singleStoreVersion = null;
   }
 
-  private static String DataTypeClause(Configuration conf) {
+  private String DataTypeClause(Configuration conf) {
     String upperCaseWithoutPersisted =
         "UCASE(IF( UCASE(COLUMN_TYPE) LIKE '%PERSISTED%', SUBSTRING(COLUMN_TYPE,"
             + " 10 + LOCATE('PERSISTED', UCASE(COLUMN_TYPE))), COLUMN_TYPE))";
@@ -68,12 +63,38 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     }
 
     if (!conf.yearIsDateType()) {
-      return " IF(c.COLUMN_TYPE IN ('year(2)', 'year(4)'), 'SMALLINT', "
-          + upperCaseWithoutSize
-          + ")";
+      upperCaseWithoutSize =
+          " IF(c.COLUMN_TYPE IN ('year(2)', 'year(4)'), 'SMALLINT', " + upperCaseWithoutSize + ")";
     }
-
+    if (!isExtendedTypesEnabled()) {
+      upperCaseWithoutSize =
+          " IF(c.COLUMN_TYPE LIKE 'vector%', "
+              + (isBinaryVectorOutputEnabled() ? "'VARBINARY'" : "'VARCHAR'")
+              + ", "
+              + upperCaseWithoutSize
+              + ")";
+      upperCaseWithoutSize =
+          " IF(c.COLUMN_TYPE LIKE 'bson%', " + "'LONGBLOB'" + ", " + upperCaseWithoutSize + ")";
+    }
     return upperCaseWithoutSize;
+  }
+
+  /** Is extended types enabled, like VECTOR, BSON, etc... */
+  private boolean isExtendedTypesEnabled() {
+    return isExtendedTypesSupported() && conf.enableExtendedDataTypes();
+  }
+
+  /** Is Vector type binary output. */
+  private boolean isBinaryVectorOutputEnabled() {
+    return isExtendedTypesSupported() && "BINARY".equalsIgnoreCase(conf.vectorTypeOutputFormat());
+  }
+
+  private boolean isExtendedTypesSupported() {
+    try {
+      return getSingleStoreVersion().versionGreaterOrEqual(8, 7, 1);
+    } catch (SQLException e) {
+      throw new IllegalStateException("Failed to get SingleStore version.", e);
+    }
   }
 
   private static String DateTimeSizeClause(String fullTypeColumnName) {
@@ -402,6 +423,12 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
                 + Types.TINYINT
                 + ") "
             : Types.TINYINT)
+        + (!isExtendedTypesEnabled()
+            ? " WHEN 'vector' THEN "
+                + (isBinaryVectorOutputEnabled() ? Types.VARBINARY : Types.VARCHAR)
+            : " WHEN 'vector' THEN " + Types.OTHER)
+        + " WHEN 'bson' THEN "
+        + Types.LONGVARBINARY
         + " WHEN 'year' THEN "
         + (conf.yearIsDateType() ? Types.DATE : Types.SMALLINT)
         + " ELSE "
@@ -708,6 +735,10 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
             + DateTimeSizeClause(fullTypeColumnName)
             + (conf.yearIsDateType() ? "" : " WHEN 'year' THEN 5")
             + "  WHEN 'json' THEN "
+            + Integer.MAX_VALUE
+            + "  WHEN 'bson' THEN "
+            + Integer.MAX_VALUE
+            + "  WHEN 'vector' THEN "
             + Integer.MAX_VALUE
             + "  WHEN 'tinytext' THEN c.CHARACTER_OCTET_LENGTH"
             + "  WHEN 'text' THEN c.CHARACTER_OCTET_LENGTH"
