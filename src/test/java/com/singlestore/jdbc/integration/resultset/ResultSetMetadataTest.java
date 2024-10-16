@@ -191,7 +191,7 @@ public class ResultSetMetadataTest extends Common {
       if (i == 32 || i == 33) {
         continue;
       }
-      if ("DOUBLE".equals(colName) || "YEAR".equals(colName)) { // PLAT-7210
+      if ("DOUBLE".equals(colName)) {
         continue;
       }
       assertEquals(rsmd.getPrecision(i), cols.getInt("COLUMN_SIZE"));

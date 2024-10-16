@@ -61,11 +61,6 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
               + upperCaseWithoutSize
               + ")";
     }
-
-    if (!conf.yearIsDateType()) {
-      upperCaseWithoutSize =
-          " IF(c.COLUMN_TYPE IN ('year(2)', 'year(4)'), 'SMALLINT', " + upperCaseWithoutSize + ")";
-    }
     if (!isExtendedTypesEnabled()) {
       upperCaseWithoutSize =
           " IF(c.COLUMN_TYPE LIKE 'vector%', "
@@ -733,8 +728,8 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
             + " TYPE_NAME, "
             + " CASE c.DATA_TYPE"
             + DateTimeSizeClause(fullTypeColumnName)
-            + (conf.yearIsDateType() ? "" : " WHEN 'year' THEN 5")
-            + "  WHEN 'json' THEN "
+            + " WHEN 'year' THEN 4"
+            + " WHEN 'json' THEN "
             + Integer.MAX_VALUE
             + "  WHEN 'bson' THEN "
             + Integer.MAX_VALUE
