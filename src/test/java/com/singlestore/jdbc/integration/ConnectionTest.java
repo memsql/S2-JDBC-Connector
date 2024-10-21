@@ -151,7 +151,7 @@ public class ConnectionTest extends Common {
     nonExistentDatabase = "blafl0";
     connStr =
         String.format(
-            "jdbc:singlestore:replication://%s:%s,%s:%s/%s?user=%s&password=%s&createDatabaseIfNotExist",
+            "jdbc:singlestore:sequential://%s:%s,%s:%s/%s?user=%s&password=%s&createDatabaseIfNotExist",
             hostname, port, hostname, port, nonExistentDatabase, user, password);
     try (Connection con = DriverManager.getConnection(connStr)) {
       ResultSet rs = con.createStatement().executeQuery("select DATABASE()");

@@ -6,8 +6,7 @@
 package com.singlestore.jdbc;
 
 import com.singlestore.jdbc.client.Client;
-import com.singlestore.jdbc.client.impl.MultiPrimaryClient;
-import com.singlestore.jdbc.client.impl.MultiPrimaryReplicaClient;
+import com.singlestore.jdbc.client.impl.FailoverClient;
 import com.singlestore.jdbc.client.impl.ReplayClient;
 import com.singlestore.jdbc.client.impl.StandardClient;
 import com.singlestore.jdbc.pool.Pools;
@@ -47,12 +46,7 @@ public final class Driver implements java.sql.Driver {
     switch (configuration.haMode()) {
       case LOADBALANCE:
       case SEQUENTIAL:
-        client = new MultiPrimaryClient(configuration, lock);
-        break;
-
-      case REPLICATION:
-        // additional check
-        client = new MultiPrimaryReplicaClient(configuration, lock);
+        client = new FailoverClient(configuration, lock);
         break;
 
       default:

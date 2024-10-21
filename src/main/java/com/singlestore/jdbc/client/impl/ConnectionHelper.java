@@ -206,8 +206,7 @@ public final class ConnectionHelper {
     // created
     if (configuration.database() != null
         && (!configuration.createDatabaseIfNotExist()
-            || (configuration.createDatabaseIfNotExist()
-                && (hostAddress != null && !hostAddress.primary)))) {
+            || (configuration.createDatabaseIfNotExist() && hostAddress != null))) {
       capabilities |= Capabilities.CONNECT_WITH_DB;
     }
     if (configuration.sslMode() != SslMode.DISABLE) {

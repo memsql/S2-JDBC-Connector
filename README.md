@@ -25,9 +25,8 @@ The driver (jar) can be downloaded from maven :
 ## Usage
 To get a connection using SingleStore JDBC Driver, you need a connection string of the following format:
 ```script
-jdbc:singlestore:[replication:|loadbalance:|sequential:]//<hostDescription>[,<hostDescription>...]/[database][?<key1>=<value1>[&<key2>=<value2>]] 
+jdbc:singlestore:[loadbalance:|sequential:]//<hostDescription>[,<hostDescription>...]/[database][?<key1>=<value1>[&<key2>=<value2>]] 
 ```
-The full list of parameters that can be used in the connection string is coming soon
 
 Example:
 ```script
@@ -59,6 +58,44 @@ SingleStorePoolDataSource pool = new SingleStorePoolDataSource("jdbc:singlestore
             System.out.println(rs.getTimestamp(1));
         }
     }
+```
+
+## Extended types support
+
+Starting with SingleStore database version 8.7.1, extended types metadata is supported. 
+This feature can be enabled using the `enable_extended_types_metadata` session variable. 
+By default, this variable is set to false for backward compatibility, meaning the system will use the standard data type format.
+
+With SingleStore JDBC driver version 1.2.6 and later, you can enable extended types metadata by setting the `enableExtendedDataTypes` parameter to true.
+When enabled, JDBC will handle extended types metadata properly.
+
+**Note: The `enableExtendedDataTypes` JDBC parameter overrides the manually set `enable_extended_types_metadata` session variable.**
+
+Extended types:
+
+| Type                                                                                         | Affected changes                                                                                     |
+|----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| [Vector](https://docs.singlestore.com/cloud/reference/sql-reference/data-types/vector-type/) | Added `com.singlestore.jdbc.type.Vector` type to read/write Vector data<br/>Updated metadata methods |
+| [BSON](https://docs.singlestore.com/cloud/reference/sql-reference/data-types/bson-type/)     | Updated metadata methods                                                                             |
+
+Example 
+```script
+Connection connection = DriverManager.getConnection("jdbc:singlestore://localhost:3306/test?user=root&password=myPassword&enableExtendedDataTypes=true&vectorTypeOutputFormat=JSON");
+Statement stmt = connection.createStatement();
+
+stmt.execute("CREATE TABLE extended_types (a1 VECTOR(3, I16), a2 BSON)");
+
+PreparedStatement pstmt = connection.prepareStatement("INSERT INTO extended_types VALUES(?, '{\"a1\":\"test\"}' :> BSON)");
+
+pstmt.setObject(1, Vector.ofInt16Values(new short[]{1, 2, 3}));
+pstmt.execute();
+
+ResultSet rs = stmt.executeQuery("SELECT * FROM extended_types");
+rs.next();
+Vector vector = (Vector) rs.getObject(1);
+SingleStoreBlob bson = (SingleStoreBlob) rs.getObject(2);
+System.out.println(vector);
+
 ```
 
 ## Building from source

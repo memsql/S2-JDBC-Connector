@@ -9,12 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.singlestore.jdbc.HostAddress;
 import com.singlestore.jdbc.export.HaMode;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.junit.jupiter.api.Test;
@@ -22,114 +17,83 @@ import org.junit.jupiter.api.Test;
 public class HaModeTest {
   @Test
   public void getAvailableHostWithoutConnectionNumber() {
-    getAvailableHostWithoutConnectionNumber(HaMode.REPLICATION);
-    getAvailableHostWithoutConnectionNumber(HaMode.LOADBALANCE);
-  }
-
-  private void getAvailableHostWithoutConnectionNumber(HaMode haMode) {
     List<HostAddress> hostAddresses = new ArrayList<>();
-    hostAddresses.add(HostAddress.from("prim1", 3306, true));
-    hostAddresses.add(HostAddress.from("prim2", 3306, true));
-    hostAddresses.add(HostAddress.from("prim3", 3306, true));
-    hostAddresses.add(HostAddress.from("slave1", 3306, false));
-    hostAddresses.add(HostAddress.from("slave2", 3306, false));
-    hostAddresses.add(HostAddress.from("slave3", 3306, false));
+    hostAddresses.add(HostAddress.from("master1", 3306));
+    hostAddresses.add(HostAddress.from("child1", 3306));
+    hostAddresses.add(HostAddress.from("child2", 3306));
+    hostAddresses.add(HostAddress.from("child3", 3306));
+    hostAddresses.add(HostAddress.from("child4", 3306));
+    hostAddresses.add(HostAddress.from("child5", 3306));
 
-    haMode.resetLast();
+    HaMode.LOADBALANCE.resetLast();
     ConcurrentMap<HostAddress, Long> denyList = new ConcurrentHashMap<>();
     HostCounter hostCounter = new HostCounter();
     for (int i = 0; i < 100; i++) {
-      Optional<HostAddress> availHost = haMode.getAvailableHost(hostAddresses, denyList, true);
+      Optional<HostAddress> availHost =
+          HaMode.LOADBALANCE.getAvailableHost(hostAddresses, denyList);
       if (availHost.isPresent()) hostCounter.add(availHost.get(), false);
     }
-    assertEquals("prim1:34,prim2:33,prim3:33", hostCounter.results());
+    assertEquals(
+        "child1:17,child2:17,child3:17,child4:16,child5:16,master1:17", hostCounter.results());
 
-    haMode.resetLast();
-    hostCounter = new HostCounter();
-    for (int i = 0; i < 100; i++) {
-      Optional<HostAddress> availHost = haMode.getAvailableHost(hostAddresses, denyList, false);
-      if (availHost.isPresent()) hostCounter.add(availHost.get(), false);
-    }
-    assertEquals("slave1:34,slave2:33,slave3:33", hostCounter.results());
-
-    haMode.resetLast();
+    HaMode.LOADBALANCE.resetLast();
     denyList.put(hostAddresses.get(0), System.currentTimeMillis() - 100);
     denyList.put(hostAddresses.get(1), System.currentTimeMillis() + 1000);
 
     hostCounter = new HostCounter();
     for (int i = 0; i < 100; i++) {
-      Optional<HostAddress> availHost = haMode.getAvailableHost(hostAddresses, denyList, true);
+      Optional<HostAddress> availHost =
+          HaMode.LOADBALANCE.getAvailableHost(hostAddresses, denyList);
       if (availHost.isPresent()) hostCounter.add(availHost.get(), false);
     }
-    assertEquals("prim1:50,prim3:50", hostCounter.results());
+    assertEquals("child2:20,child3:20,child4:20,child5:20,master1:20", hostCounter.results());
 
-    haMode.resetLast();
+    HaMode.LOADBALANCE.resetLast();
     denyList.clear();
     denyList.put(hostAddresses.get(3), System.currentTimeMillis() - 100);
     denyList.put(hostAddresses.get(4), System.currentTimeMillis() + 1000);
     hostCounter = new HostCounter();
     for (int i = 0; i < 100; i++) {
-      Optional<HostAddress> availHost = haMode.getAvailableHost(hostAddresses, denyList, false);
+      Optional<HostAddress> availHost =
+          HaMode.LOADBALANCE.getAvailableHost(hostAddresses, denyList);
       if (availHost.isPresent()) hostCounter.add(availHost.get(), false);
     }
-    assertEquals("slave1:50,slave3:50", hostCounter.results());
+    assertEquals("child1:20,child2:20,child3:20,child5:20,master1:20", hostCounter.results());
   }
 
   @Test
   public void getAvailableHostWithConnectionNumber() {
-    getAvailableHostWithConnectionNumber(HaMode.LOADBALANCE);
-    getAvailableHostWithConnectionNumber(HaMode.REPLICATION);
-  }
-
-  private void getAvailableHostWithConnectionNumber(HaMode haMode) {
     List<HostAddress> hostAddresses = new ArrayList<>();
 
-    HostAddress host1 = HostAddress.from("prim1", 3306, true);
-    HostAddress host2 = HostAddress.from("prim2", 3306, true);
-    HostAddress host3 = HostAddress.from("prim3", 3306, true);
+    HostAddress host1 = HostAddress.from("master1", 3306);
+    HostAddress host2 = HostAddress.from("master2", 3306);
+    HostAddress host3 = HostAddress.from("master3", 3306);
     host1.setThreadsConnected(200);
     host2.setThreadsConnected(150);
     host3.setThreadsConnected(100);
     hostAddresses.add(host1);
     hostAddresses.add(host2);
     hostAddresses.add(host3);
-    HostAddress slave1 = HostAddress.from("slave1", 3306, false);
-    HostAddress slave2 = HostAddress.from("slave2", 3306, false);
-    HostAddress slave3 = HostAddress.from("slave3", 3306, false);
-    slave1.setThreadsConnected(200);
-    slave2.setThreadsConnected(150);
-    slave3.setThreadsConnected(100);
-    hostAddresses.add(slave1);
-    hostAddresses.add(slave2);
-    hostAddresses.add(slave3);
 
     ConcurrentMap<HostAddress, Long> denyList = new ConcurrentHashMap<>();
     HostCounter hostCounter = new HostCounter();
     for (int i = 0; i < 100; i++) {
-      Optional<HostAddress> availHost = haMode.getAvailableHost(hostAddresses, denyList, true);
+      Optional<HostAddress> availHost =
+          HaMode.LOADBALANCE.getAvailableHost(hostAddresses, denyList);
       if (availHost.isPresent()) hostCounter.add(availHost.get(), true);
     }
-    assertEquals("prim2:25,prim3:75", hostCounter.results());
+    assertEquals("master2:25,master3:75", hostCounter.results());
 
     host1.forceThreadsConnected(200, System.currentTimeMillis() - 50000);
     host2.setThreadsConnected(150);
     host3.setThreadsConnected(100);
     hostCounter = new HostCounter();
     for (int i = 0; i < 100; i++) {
-      Optional<HostAddress> availHost = haMode.getAvailableHost(hostAddresses, denyList, true);
+      Optional<HostAddress> availHost =
+          HaMode.LOADBALANCE.getAvailableHost(hostAddresses, denyList);
       if (availHost.isPresent()) hostCounter.add(availHost.get(), true);
     }
-    assertEquals("prim1:34,prim2:33,prim3:33", hostCounter.results());
-
-    slave1.setThreadsConnected(200);
-    slave2.setThreadsConnected(150);
-    slave3.setThreadsConnected(100);
-    hostCounter = new HostCounter();
-    for (int i = 0; i < 100; i++) {
-      Optional<HostAddress> availHost = haMode.getAvailableHost(hostAddresses, denyList, false);
-      if (availHost.isPresent()) hostCounter.add(availHost.get(), true);
-    }
-    assertEquals("slave2:25,slave3:75", hostCounter.results());
+    assertEquals("master1:34,master2:33,master3:33", hostCounter.results());
 
     denyList.put(hostAddresses.get(0), System.currentTimeMillis() - 100);
     denyList.put(hostAddresses.get(1), System.currentTimeMillis() + 1000);
@@ -138,23 +102,22 @@ public class HaModeTest {
     host3.setThreadsConnected(100);
     hostCounter = new HostCounter();
     for (int i = 0; i < 100; i++) {
-      Optional<HostAddress> availHost = haMode.getAvailableHost(hostAddresses, denyList, true);
+      Optional<HostAddress> availHost =
+          HaMode.LOADBALANCE.getAvailableHost(hostAddresses, denyList);
       if (availHost.isPresent()) hostCounter.add(availHost.get(), true);
     }
-    assertEquals("prim1:25,prim3:75", hostCounter.results());
+    assertEquals("master1:25,master3:75", hostCounter.results());
 
     denyList.clear();
-    denyList.put(hostAddresses.get(3), System.currentTimeMillis() - 100);
-    denyList.put(hostAddresses.get(4), System.currentTimeMillis() + 1000);
-    slave1.setThreadsConnected(150);
-    slave2.setThreadsConnected(150);
-    slave3.setThreadsConnected(100);
+    denyList.put(hostAddresses.get(1), System.currentTimeMillis() - 100);
+    denyList.put(hostAddresses.get(2), System.currentTimeMillis() + 1000);
     hostCounter = new HostCounter();
     for (int i = 0; i < 100; i++) {
-      Optional<HostAddress> availHost = haMode.getAvailableHost(hostAddresses, denyList, false);
+      Optional<HostAddress> availHost =
+          HaMode.LOADBALANCE.getAvailableHost(hostAddresses, denyList);
       if (availHost.isPresent()) hostCounter.add(availHost.get(), true);
     }
-    assertEquals("slave1:25,slave3:75", hostCounter.results());
+    assertEquals("master1:38,master2:62", hostCounter.results());
   }
 
   private static class HostCounter {
