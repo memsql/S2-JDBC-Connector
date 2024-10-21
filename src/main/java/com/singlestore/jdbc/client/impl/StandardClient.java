@@ -317,7 +317,7 @@ public class StandardClient implements Client, AutoCloseable {
       commands.add("set autocommit=" + (conf.autocommit() ? "true" : "false"));
       resInd++;
     }
-    if (conf.database() != null && conf.createDatabaseIfNotExist() && hostAddress == null) {
+    if (conf.database() != null && conf.createDatabaseIfNotExist()) {
       String escapedDb = conf.database().replace("`", "``");
       commands.add(String.format("CREATE DATABASE IF NOT EXISTS `%s`", escapedDb));
       commands.add(String.format("USE `%s`", escapedDb));
