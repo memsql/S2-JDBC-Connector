@@ -53,7 +53,7 @@ import java.util.ServiceLoader;
  * <p>Some examples :<br>
  * {@code jdbc:singlestore://localhost:3306/database?user=greg&password=pass}<br>
  * {@code
- * jdbc:singlestore://address=(host=master1),address=(port=3307)(host=slave1)/database?user=greg&password=pass}
+ * jdbc:singlestore://address=(port=3306)(host=master1),address=(port=3307)(host=child1)/database?user=greg&password=pass}
  * <br>
  */
 public class Configuration {

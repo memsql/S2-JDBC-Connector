@@ -67,9 +67,10 @@ This feature can be enabled using the `enable_extended_types_metadata` session v
 By default, this variable is set to false for backward compatibility, meaning the system will use the standard data type format.
 
 With SingleStore JDBC driver version 1.2.6 and later, you can enable extended types metadata by setting the `enableExtendedDataTypes` parameter to true.
-When enabled, JDBC will handle extended types metadata properly.
+Based on this parameter, the JDBC driver automatically sets the `enable_extended_types_metadata` session variable during connection initialization. 
+When enabled, the JDBC driver will properly handle extended types metadata.
 
-**Note: The `enableExtendedDataTypes` JDBC parameter overrides the manually set `enable_extended_types_metadata` session variable.**
+**Note: The JDBC driver always sets the `enable_extended_types_metadata` session variable to false or true during connection initialization, which may override any previously set value. By default, `enableExtendedDataTypes` is set to false.**
 
 Extended types:
 
