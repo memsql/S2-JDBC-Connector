@@ -74,7 +74,7 @@ Extended types:
 
 | Type                                                                                         | Affected changes                                                                                     |
 |----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
-| [Vector](https://docs.singlestore.com/cloud/reference/sql-reference/data-types/vector-type/) | Added `com.singlestore.jdbc.type.Vector` type to read/write Vector data<br/>Updated metadata methods |
+| [Vector](https://docs.singlestore.com/cloud/reference/sql-reference/data-types/vector-type/) | Added `com.singlestore.jdbc.type.Vector` type to read/write Vector data.<br/>Updated metadata methods. |
 | [BSON](https://docs.singlestore.com/cloud/reference/sql-reference/data-types/bson-type/)     | Updated metadata methods.                                                                             |
 
 Example 
