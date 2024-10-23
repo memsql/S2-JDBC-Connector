@@ -65,7 +65,7 @@ SingleStorePoolDataSource pool = new SingleStorePoolDataSource("jdbc:singlestore
 SingleStore supports extended types metadata starting from database version 8.7.1. Enable the `enable_extended_types_metadata` session engine variable to use extended types in SingleStore. By default, support for extended types is disabled for backward compatibility and the database uses the standard data type format. 
 
 To correctly handle the extended type metadata with the SingleStore JDBC driver, set the `enableExtendedDataTypes` parameter to `true`. This parameter is only supported in SingleStore JDBC driver version 1.2.6 and later. By default, `enableExtendedDataTypes` is set to `false`.
-Based on this parameter, the JDBC driver automatically sets the `enable_extended_types_metadata` session variable during connection initialization. 
+**Note**: Based on the value of the `enableExtendedDataTypes` parameter, the driver automatically configures the value of `enable_extended_types_metadata` engine variable while initializing the connection, which overrides the current value of this engine variable.
 When enabled, the JDBC driver will properly handle extended types metadata.
 
 **Note: The JDBC driver always sets the `enable_extended_types_metadata` session variable to false or true during connection initialization, which may override any previously set value. By default, `enableExtendedDataTypes` is set to false.**
