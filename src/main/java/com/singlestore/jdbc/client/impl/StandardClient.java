@@ -317,9 +317,7 @@ public class StandardClient implements Client, AutoCloseable {
       commands.add("set autocommit=" + (conf.autocommit() ? "true" : "false"));
       resInd++;
     }
-    if (conf.database() != null
-        && conf.createDatabaseIfNotExist()
-        && (hostAddress == null || hostAddress.primary)) {
+    if (conf.database() != null && conf.createDatabaseIfNotExist()) {
       String escapedDb = conf.database().replace("`", "``");
       commands.add(String.format("CREATE DATABASE IF NOT EXISTS `%s`", escapedDb));
       commands.add(String.format("USE `%s`", escapedDb));
@@ -1053,10 +1051,6 @@ public class StandardClient implements Client, AutoCloseable {
     return this.socket.getInetAddress() == null
         ? null
         : this.socket.getInetAddress().getHostAddress();
-  }
-
-  public boolean isPrimary() {
-    return hostAddress.primary;
   }
 
   public ExceptionFactory getExceptionFactory() {

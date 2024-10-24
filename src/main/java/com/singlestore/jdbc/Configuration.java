@@ -31,7 +31,7 @@ import java.util.ServiceLoader;
  *
  * <p>basic syntax :<br>
  * {@code
- * jdbc:singlestore:[replication:|failover|loadbalance:]//<hostDescription>[,<hostDescription>]/[database>]
+ * jdbc:singlestore:[sequential:|failover|loadbalance:]//<hostDescription>[,<hostDescription>]/[database>]
  * [?<key1>=<value1>[&<key2>=<value2>]] }
  *
  * <p>hostDescription:<br>
@@ -40,7 +40,7 @@ import java.util.ServiceLoader;
  * (for example localhost:3306)<br>
  * <br>
  * - complex :<br>
- * {@code address=[(type=(master|slave))][(port=<portnumber>)](host=<host>)}<br>
+ * {@code address=[(port=<portnumber>)](host=<host>)}<br>
  * <br>
  * <br>
  * type is by default master<br>
@@ -53,7 +53,7 @@ import java.util.ServiceLoader;
  * <p>Some examples :<br>
  * {@code jdbc:singlestore://localhost:3306/database?user=greg&password=pass}<br>
  * {@code
- * jdbc:singlestore://address=(type=master)(host=master1),address=(port=3307)(type=slave)(host=slave1)/database?user=greg&password=pass}
+ * jdbc:singlestore://address=(port=3306)(host=master1),address=(port=3307)(host=child1)/database?user=greg&password=pass}
  * <br>
  */
 public class Configuration {
@@ -159,7 +159,7 @@ public class Configuration {
   private String consoleLogFilepath = null;
   private boolean printStackTrace = false;
   private Integer maxPrintStackSizeToLog = 10;
-  private boolean enableExtendedDataTypes = true;
+  private boolean enableExtendedDataTypes = false;
   private String vectorTypeOutputFormat = null;
 
   private Configuration() {
@@ -521,18 +521,6 @@ public class Configuration {
                 + "'. Expected values are 'JSON' or 'BINARY'.");
       }
       this.vectorTypeOutputFormat = vectorTypeOutputFormat;
-    }
-
-    // *************************************************************
-    // host primary check
-    // *************************************************************
-    boolean first = true;
-    for (HostAddress host : addresses) {
-      boolean primary = haMode != HaMode.REPLICATION || first;
-      if (host.primary == null) {
-        host.primary = primary;
-      }
-      first = false;
     }
 
     // *************************************************************
@@ -1564,22 +1552,12 @@ public class Configuration {
       if (i > 0) {
         sb.append(",");
       }
-      if ((conf.haMode == HaMode.NONE && hostAddress.primary)
-          || (conf.haMode == HaMode.REPLICATION
-              && ((i == 0 && hostAddress.primary) || (i != 0 && !hostAddress.primary)))) {
-        sb.append(hostAddress.host);
-        if (hostAddress.port != 3306) {
-          sb.append(":").append(hostAddress.port);
-        }
-      } else {
-        sb.append("address=(host=")
-            .append(hostAddress.host)
-            .append(")")
-            .append("(port=")
-            .append(hostAddress.port)
-            .append(")");
-        sb.append("(type=").append(hostAddress.primary ? "primary" : "replica").append(")");
-      }
+      sb.append("address=(host=")
+          .append(hostAddress.host)
+          .append(")")
+          .append("(port=")
+          .append(hostAddress.port)
+          .append(")");
     }
 
     sb.append("/");
@@ -1886,11 +1864,6 @@ public class Configuration {
 
     public Builder addHost(String host, int port) {
       this._addresses.add(HostAddress.from(nullOrEmpty(host), port));
-      return this;
-    }
-
-    public Builder addHost(String host, int port, boolean master) {
-      this._addresses.add(HostAddress.from(nullOrEmpty(host), port, master));
       return this;
     }
 

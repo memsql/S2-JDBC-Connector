@@ -15,7 +15,6 @@ public class HostAddress {
 
   public final String host;
   public int port;
-  public Boolean primary;
   private Long threadsConnected;
   private Long threadConnectedTimeout;
 
@@ -24,20 +23,14 @@ public class HostAddress {
    *
    * @param host host
    * @param port port
-   * @param primary is primary
    */
-  private HostAddress(String host, int port, Boolean primary) {
+  private HostAddress(String host, int port) {
     this.host = host;
     this.port = port;
-    this.primary = primary;
   }
 
   public static HostAddress from(String host, int port) {
-    return new HostAddress(host, port, null);
-  }
-
-  public static HostAddress from(String host, int port, boolean primary) {
-    return new HostAddress(host, port, primary);
+    return new HostAddress(host, port);
   }
 
   /**
@@ -60,17 +53,16 @@ public class HostAddress {
     for (int i = 0; i < tokens.length; i++) {
       String token = tokens[i];
       if (token.startsWith("address=")) {
-        arr.add(parseParameterHostAddress(token, haMode, i == 0));
+        arr.add(parseParameterHostAddress(token));
       } else {
-        arr.add(parseSimpleHostAddress(token, haMode, i == 0));
+        arr.add(parseSimpleHostAddress(token));
       }
     }
 
     return arr;
   }
 
-  private static HostAddress parseSimpleHostAddress(String str, HaMode haMode, boolean first)
-      throws SQLException {
+  private static HostAddress parseSimpleHostAddress(String str) throws SQLException {
     String host;
     int port = 3306;
 
@@ -90,10 +82,7 @@ public class HostAddress {
       /* Just host name is given */
       host = str;
     }
-
-    boolean primary = haMode != HaMode.REPLICATION || first;
-
-    return new HostAddress(host, port, primary);
+    return new HostAddress(host, port);
   }
 
   private static int getPort(String portString) throws SQLException {
@@ -104,11 +93,9 @@ public class HostAddress {
     }
   }
 
-  private static HostAddress parseParameterHostAddress(String str, HaMode haMode, boolean first)
-      throws SQLException {
+  private static HostAddress parseParameterHostAddress(String str) throws SQLException {
     String host = null;
     int port = 3306;
-    Boolean primary = null;
 
     String[] array = str.replace(" ", "").split("(?=\\()|(?<=\\))");
     for (int i = 1; i < array.length; i++) {
@@ -127,35 +114,14 @@ public class HostAddress {
         case "port":
           port = getPort(value);
           break;
-        case "type":
-          if ("master".equalsIgnoreCase(value) || "primary".equalsIgnoreCase(value)) {
-            primary = true;
-          } else if ("slave".equalsIgnoreCase(value) || "replica".equalsIgnoreCase(value)) {
-            primary = false;
-          } else {
-            throw new SQLException(
-                String.format("Wrong type value %s (possible value primary/replica)", array[i]));
-          }
-          break;
       }
     }
-
-    if (primary == null) {
-      if (haMode == HaMode.REPLICATION) {
-        primary = first;
-      } else {
-        primary = true;
-      }
-    }
-
-    return new HostAddress(host, port, primary);
+    return new HostAddress(host, port);
   }
 
   @Override
   public String toString() {
-    return String.format(
-        "address=(host=%s)(port=%s)%s",
-        host, port, ((primary != null) ? ("(type=" + (primary ? "primary)" : "replica)")) : ""));
+    return String.format("address=(host=%s)(port=%s)", host, port);
   }
 
   @Override
@@ -163,14 +129,12 @@ public class HostAddress {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     HostAddress that = (HostAddress) o;
-    return port == that.port
-        && Objects.equals(host, that.host)
-        && Objects.equals(primary, that.primary);
+    return port == that.port && Objects.equals(host, that.host);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(host, port, primary);
+    return Objects.hash(host, port);
   }
 
   public Long getThreadsConnected() {

@@ -202,12 +202,8 @@ public final class ConnectionHelper {
     if (configuration.useCompression() && ((serverCapabilities & Capabilities.COMPRESS) != 0)) {
       capabilities |= Capabilities.COMPRESS;
     }
-    // connect to database directly if not needed to be created, or if slave, since cannot be
-    // created
-    if (configuration.database() != null
-        && (!configuration.createDatabaseIfNotExist()
-            || (configuration.createDatabaseIfNotExist()
-                && (hostAddress != null && !hostAddress.primary)))) {
+    // connect to database directly if not needed to be created
+    if (configuration.database() != null && !configuration.createDatabaseIfNotExist()) {
       capabilities |= Capabilities.CONNECT_WITH_DB;
     }
     if (configuration.sslMode() != SslMode.DISABLE) {

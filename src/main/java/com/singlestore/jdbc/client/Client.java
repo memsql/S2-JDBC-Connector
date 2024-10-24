@@ -167,13 +167,6 @@ public interface Client extends AutoCloseable {
   void reset();
 
   /**
-   * is current client writer or read-only
-   *
-   * @return is primary
-   */
-  boolean isPrimary();
-
-  /**
    * Get connection context
    *
    * @return connection context

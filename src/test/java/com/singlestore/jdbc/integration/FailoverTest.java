@@ -110,7 +110,7 @@ public class FailoverTest extends Common {
             + "engine=innodb");
 
     try (Connection con =
-        createProxyCon(HaMode.REPLICATION, "&transactionReplay=" + transactionReplay)) {
+        createProxyCon(HaMode.SEQUENTIAL, "&transactionReplay=" + transactionReplay)) {
       final Statement stmt = con.createStatement();
       long threadId = con.getContext().getThreadId();
 

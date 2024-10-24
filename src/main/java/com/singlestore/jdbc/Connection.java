@@ -97,8 +97,7 @@ public class Connection implements java.sql.Connection {
     HostAddress hostAddress =
         currentIp == null
             ? client.getHostAddress()
-            : HostAddress.from(
-                currentIp, client.getHostAddress().port, client.getHostAddress().primary);
+            : HostAddress.from(currentIp, client.getHostAddress().port);
     try (Client cli = new StandardClient(conf, hostAddress, new ReentrantLock(), true)) {
       BigInteger aggregatorId = client.getAggregatorId();
       String killQuery =

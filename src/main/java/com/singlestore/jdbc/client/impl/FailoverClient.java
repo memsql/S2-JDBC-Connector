@@ -38,13 +38,13 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Handling connection failing automatic reconnection transparently when possible for multi-master
+ * Handling connection failing automatic reconnection transparently when possible for multi-host
  * Topology.
  *
  * <p>remark: would have been better using proxy, but for AOT compilation, avoiding to using not
  * supported proxy class.
  */
-public class MultiPrimaryClient implements Client {
+public class FailoverClient implements Client {
 
   /** temporary blacklisted hosts */
   protected static final ConcurrentMap<HostAddress, Long> denyList = new ConcurrentHashMap<>();
@@ -67,12 +67,12 @@ public class MultiPrimaryClient implements Client {
    * @throws SQLException if fail to connect
    */
   @SuppressWarnings({"this-escape"})
-  public MultiPrimaryClient(Configuration conf, ReentrantLock lock) throws SQLException {
+  public FailoverClient(Configuration conf, ReentrantLock lock) throws SQLException {
     this.conf = conf;
     this.lock = lock;
     deniedListTimeout =
         Long.parseLong(conf.nonMappedOptions().getProperty("deniedListTimeout", "60000"));
-    currentClient = connectHost(false, false);
+    currentClient = connectHost();
   }
 
   /**
@@ -81,19 +81,16 @@ public class MultiPrimaryClient implements Client {
    * <p>searching each connecting primary / replica connection not temporary denied until found one.
    * searching in temporary denied host if not succeed, until reaching `retriesAllDown` attempts.
    *
-   * @param readOnly must connect a replica / primary
-   * @param failFast must try only not denied server
    * @return a valid connection client
    * @throws SQLException if not succeed to create a connection.
    */
-  protected Client connectHost(boolean readOnly, boolean failFast) throws SQLException {
+  protected Client connectHost() throws SQLException {
 
     Optional<HostAddress> host;
     SQLNonTransientConnectionException lastSqle = null;
     int maxRetries = conf.retriesAllDown();
 
-    while ((host = conf.haMode().getAvailableHost(conf.addresses(), denyList, !readOnly))
-            .isPresent()
+    while ((host = conf.haMode().getAvailableHost(conf.addresses(), denyList)).isPresent()
         && maxRetries > 0) {
       try {
         return conf.transactionReplay()
@@ -106,26 +103,17 @@ public class MultiPrimaryClient implements Client {
       }
     }
 
-    if (failFast) {
-      throw (lastSqle != null)
-          ? lastSqle
-          : new SQLNonTransientConnectionException("all hosts are blacklisted");
-    }
-
     // All server corresponding to type are in deny list
     // return the one with lower denylist timeout
     // (check that server is in conf, because denyList is shared for all instances)
-    if (denyList.entrySet().stream()
-        .noneMatch(e -> conf.addresses().contains(e.getKey()) && e.getKey().primary != readOnly))
-      throw new SQLNonTransientConnectionException(
-          String.format("No %s host defined", readOnly ? "replica" : "primary"));
+    if (denyList.entrySet().stream().noneMatch(e -> conf.addresses().contains(e.getKey())))
+      throw new SQLNonTransientConnectionException("No host defined");
     while (maxRetries > 0) {
       try {
         host =
             denyList.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue())
-                .filter(
-                    e -> conf.addresses().contains(e.getKey()) && e.getKey().primary != readOnly)
+                .filter(e -> conf.addresses().contains(e.getKey()))
                 .findFirst()
                 .map(Map.Entry::getKey);
         if (host.isPresent()) {
@@ -167,14 +155,14 @@ public class MultiPrimaryClient implements Client {
 
     denyList.putIfAbsent(
         currentClient.getHostAddress(), System.currentTimeMillis() + deniedListTimeout);
-    Loggers.getLogger(MultiPrimaryClient.class)
+    Loggers.getLogger(FailoverClient.class)
         .info("Connection error on {}", currentClient.getHostAddress());
     try {
       Client oldClient = currentClient;
       // remove cached prepare from existing server prepare statement
       oldClient.getContext().resetPrepareCache();
 
-      currentClient = connectHost(false, false);
+      currentClient = connectHost();
       syncNewState(oldClient);
       return oldClient;
     } catch (SQLNonTransientConnectionException sqle) {

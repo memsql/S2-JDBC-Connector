@@ -95,7 +95,7 @@ public class DataSourceTest extends Common {
 
     ds.setUrl("jdbc:singlestore://myhost:5500/db?someOption=val");
     assertEquals(
-        "jdbc:singlestore://myhost:5500/db?user=dd&password=***&someOption=val&connectTimeout=50000",
+        "jdbc:singlestore://address=(host=myhost)(port=5500)/db?user=dd&password=***&someOption=val&connectTimeout=50000",
         ds.getUrl());
   }
 

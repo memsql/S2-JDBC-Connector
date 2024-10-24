@@ -752,11 +752,7 @@ public class PacketWriter implements Writer {
    * @param hostAddress host information
    */
   public void setServerThreadId(Long serverThreadId, HostAddress hostAddress) {
-    Boolean isMaster = hostAddress != null ? hostAddress.primary : null;
-    this.serverThreadLog =
-        "conn="
-            + (serverThreadId == null ? "-1" : serverThreadId)
-            + ((isMaster != null) ? " (" + (isMaster ? "M" : "S") + ")" : "");
+    this.serverThreadLog = "conn=" + (serverThreadId == null ? "-1" : serverThreadId);
   }
 
   public void mark() {
