@@ -18,11 +18,7 @@ import com.singlestore.jdbc.plugin.codec.LocalTimeCodec;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
-import java.sql.Date;
-import java.sql.SQLDataException;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.sql.Types;
+import java.sql.*;
 import java.time.DateTimeException;
 import java.util.Calendar;
 
@@ -75,8 +71,8 @@ public class StringColumn extends ColumnDefinitionPacket implements ColumnDecode
   }
 
   @Override
-  public String defaultClassname(Configuration conf) {
-    return String.class.getName();
+  public String defaultClassname(final Configuration conf) {
+    return isBinary() ? "byte[]" : String.class.getName();
   }
 
   @Override
@@ -113,13 +109,18 @@ public class StringColumn extends ColumnDefinitionPacket implements ColumnDecode
   @Override
   public Object getDefaultText(final Configuration conf, ReadableByteBuf buf, MutableInt length)
       throws SQLDataException {
+    if (isBinary()) {
+      byte[] arr = new byte[length.get()];
+      buf.readBytes(arr);
+      return arr;
+    }
     return buf.readString(length.get());
   }
 
   @Override
   public Object getDefaultBinary(final Configuration conf, ReadableByteBuf buf, MutableInt length)
       throws SQLDataException {
-    return buf.readString(length.get());
+    return getDefaultText(conf, buf, length);
   }
 
   @Override
