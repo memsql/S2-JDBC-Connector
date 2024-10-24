@@ -18,7 +18,11 @@ import com.singlestore.jdbc.plugin.codec.LocalTimeCodec;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
-import java.sql.*;
+import java.sql.Date;
+import java.sql.SQLDataException;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.DateTimeException;
 import java.util.Calendar;
 
