@@ -75,8 +75,8 @@ public class StringColumn extends ColumnDefinitionPacket implements ColumnDecode
   }
 
   @Override
-  public String defaultClassname(Configuration conf) {
-    return String.class.getName();
+  public String defaultClassname(final Configuration conf) {
+    return isBinary() ? "byte[]" : String.class.getName();
   }
 
   @Override
@@ -113,13 +113,18 @@ public class StringColumn extends ColumnDefinitionPacket implements ColumnDecode
   @Override
   public Object getDefaultText(final Configuration conf, ReadableByteBuf buf, MutableInt length)
       throws SQLDataException {
+    if (isBinary()) {
+      byte[] arr = new byte[length.get()];
+      buf.readBytes(arr);
+      return arr;
+    }
     return buf.readString(length.get());
   }
 
   @Override
   public Object getDefaultBinary(final Configuration conf, ReadableByteBuf buf, MutableInt length)
       throws SQLDataException {
-    return buf.readString(length.get());
+    return getDefaultText(conf, buf, length);
   }
 
   @Override
