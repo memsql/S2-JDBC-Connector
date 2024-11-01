@@ -618,6 +618,10 @@ public class Statement implements java.sql.Statement {
    */
   @Override
   public void setFetchSize(int rows) throws SQLException {
+    if (rows == Integer.MIN_VALUE) {
+      // for MySQL compatibility
+      rows = 1000;
+    }
     if (rows < 0) {
       throw exceptionFactory().create("invalid fetch size");
     }
