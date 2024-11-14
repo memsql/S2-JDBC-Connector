@@ -179,7 +179,8 @@ public class FailoverClient implements Client {
    * @param canRedo if command can be redo even if not in transaction
    * @throws SQLException if not able to replay
    */
-  protected void replayIfPossible(Client oldClient, boolean canRedo) throws SQLException {
+  protected void replayIfPossible(Client oldClient, boolean canRedo, SQLException cause)
+      throws SQLException {
     // oldClient is only valued if this occurs on master.
     if (oldClient != null) {
       if ((oldClient.getContext().getServerStatus() & ServerStatus.IN_TRANSACTION) > 0) {
@@ -192,7 +193,8 @@ public class FailoverClient implements Client {
               String.format(
                   "Driver has reconnect connection after a communications link failure with %s. In progress transaction was lost",
                   oldClient.getHostAddress()),
-              "25S03");
+              "25S03",
+              cause);
         }
       } else if (!canRedo) {
         // no transaction, but connection is now up again.
@@ -201,7 +203,8 @@ public class FailoverClient implements Client {
             String.format(
                 "Driver has reconnect connection after a communications link failure with %s",
                 oldClient.getHostAddress()),
-            "25S03");
+            "25S03",
+            cause);
       }
     }
   }
@@ -328,10 +331,11 @@ public class FailoverClient implements Client {
                     + "communications "
                     + "failure with %s during a COMMIT statement",
                 hostAddress),
-            "25S03");
+            "25S03",
+            e);
       }
 
-      replayIfPossible(oldClient, canRedo);
+      replayIfPossible(oldClient, canRedo, e);
 
       if (message instanceof RedoableWithPrepareClientMessage) {
         ((RedoableWithPrepareClientMessage) message).rePrepare(currentClient);
@@ -377,7 +381,7 @@ public class FailoverClient implements Client {
       if (e instanceof SQLNonTransientConnectionException
           || (e.getCause() != null && e.getCause() instanceof SQLNonTransientConnectionException)) {
         Client oldClient = reConnect();
-        replayIfPossible(oldClient, canRedo);
+        replayIfPossible(oldClient, canRedo, e);
         Arrays.stream(messages)
             .filter(RedoableWithPrepareClientMessage.class::isInstance)
             .map(RedoableWithPrepareClientMessage.class::cast)
