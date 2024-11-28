@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc;
 
@@ -270,6 +270,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         .replace("\"", "\\\"");
   }
 
+  @Override
   public ResultSet getImportedKeys(String catalog, String schema, String table) {
     return CompleteResult.createResultSet(
         new String[] {
@@ -432,58 +433,76 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
   }
 
   private String escapeQuote(String value) {
-    return "'" + escapeString(value) + "'";
-  }
-
-  private String tableEscapeQuote(String value) throws SQLException {
-    String escapedValue = "'" + escapeString(value) + "'";
-    return supportsMixedCaseIdentifiers() ? escapedValue : "LOWER(" + escapedValue + ")";
+    return value == null ? "null" : "'" + escapeString(value) + "'";
   }
 
   /**
    * Generate part of the information schema query that restricts catalog names In the driver,
    * catalogs is the equivalent to SingleStore schemas.
    *
+   * @param firstCondition is the first condition ( must be a 'WHERE' or an 'AND')
    * @param columnName - column name in the information schema table
-   * @param catalog - catalog name. This driver does not (always) follow JDBC standard for following
-   *     special values, due to ConnectorJ compatibility 1. empty string ("") - matches current
-   *     catalog (i.e database). JDBC standard says only tables without catalog should be returned -
-   *     such tables do not exist in SingleStore. If there is no current catalog, then empty string
-   *     matches any catalog. 2. null - if nullCatalogMeansCurrent=true (which is the default), then
-   *     the handling is the same as for "" . i.e return current catalog.JDBC-conforming way would
-   *     be to match any catalog with null parameter. This can be switched with
-   *     nullCatalogMeansCurrent=false in the connection URL.
+   * @param database - catalog name. This driver does not (always) follow JDBC standard for
+   *     following special values, empty string ("") - matches current catalog (i.e database). JDBC
+   *     standard says only tables without catalog should be returned - such tables do not exist in
+   *     SingleStore. If there is no current catalog, then empty string matches any catalog. 2. null
+   *     - matches any catalog.
    * @return part of SQL query ,that restricts search for the catalog.
    */
-  private String catalogCond(String columnName, String catalog) {
-    if (catalog == null || catalog.isEmpty()) {
-      return "(ISNULL(database()) OR (" + columnName + " = database()))";
+  private boolean databaseCond(
+      boolean firstCondition, StringBuilder sb, String columnName, String database) {
+    // null database => searching without any database restriction
+    if (database == null) return firstCondition;
+
+    // empty database => search restricting to current database
+    if (database.isEmpty()) {
+      sb.append(firstCondition ? " WHERE (" : " AND (")
+          .append(columnName)
+          .append(" = database()")
+          .append(" OR ISNULL(database()))");
+      return false;
     }
-    return "(" + columnName + " = " + escapeQuote(catalog) + ")";
+    // search with specified database
+    sb.append(firstCondition ? " WHERE " : " AND ")
+        .append(columnName)
+        .append((database.indexOf('%') == -1 && database.indexOf('_') == -1) ? "=" : " LIKE ")
+        .append(escapeQuote(database));
+    return false;
   }
 
   // Helper to generate  information schema queries with "like" or "equals" condition (typically  on
   // table name)
-  private String patternCond(String columnName, String columnValue) {
-    if (columnValue == null) {
-      return "";
+  private boolean patternCond(
+      boolean firstCondition, StringBuilder sb, String columnName, String tableName) {
+    if (tableName == null || "%".equals(tableName)) {
+      return firstCondition;
     }
-    String predicate =
-        (columnValue.indexOf('%') == -1 && columnValue.indexOf('_') == -1) ? "=" : "LIKE";
-    return " AND " + columnName + " " + predicate + " '" + escapeString(columnValue) + "' ";
+    sb.append(firstCondition ? " WHERE " : " AND ")
+        .append(columnName)
+        .append((tableName.indexOf('%') == -1 && tableName.indexOf('_') == -1) ? "=" : " LIKE ")
+        .append("'")
+        .append(escapeString(tableName))
+        .append("'");
+    return false;
   }
 
-  private String tablePatternCond(String columnName, String tableNameValue) throws SQLException {
-    if (tableNameValue == null) {
-      return "";
+  private boolean tablePatternCond(
+      boolean firstCondition, StringBuilder sb, String columnName, String tableNameValue)
+      throws SQLException {
+    if (tableNameValue == null || "%".equals(tableNameValue)) {
+      return firstCondition;
     }
-    String predicate =
-        (tableNameValue.indexOf('%') == -1 && tableNameValue.indexOf('_') == -1) ? "=" : "LIKE";
-    columnName = supportsMixedCaseIdentifiers() ? columnName : "LOWER(" + columnName + ")";
-    String escapedTableName = "'" + escapeString(tableNameValue) + "'";
-    String value =
-        supportsMixedCaseIdentifiers() ? escapedTableName : "LOWER(" + escapedTableName + ")";
-    return " AND " + columnName + " " + predicate + " " + value + " ";
+    sb.append(firstCondition ? " WHERE " : " AND ")
+        .append(supportsMixedCaseIdentifiers() ? columnName : "LOWER(" + columnName + ")")
+        .append(
+            (tableNameValue.indexOf('%') == -1 && tableNameValue.indexOf('_') == -1)
+                ? "="
+                : " LIKE ")
+        .append(
+            supportsMixedCaseIdentifiers()
+                ? "'" + escapeString(tableNameValue) + "'"
+                : "LOWER('" + escapeString(tableNameValue) + "')");
+    return false;
   }
 
   /**
@@ -506,25 +525,21 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param catalog a catalog name; must match the catalog name as it is stored in the database; ""
    *     retrieves those without a catalog; <code>null</code> means that the catalog name should not
    *     be used to narrow the search
-   * @param schema a schema name; must match the schema name as it is stored in the database; ""
-   *     retrieves those without a schema; <code>null</code> means that the schema name should not
-   *     be used to narrow the search
+   * @param schema ignored in SingleStore
    * @param table a table name; must match the table name as it is stored in the database
    * @return <code>ResultSet</code> - each row is a primary key column description
    * @throws SQLException if a database access error occurs
    */
   public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
-    // MySQL 8 now use 'PRI' in place of 'pri'
-    String sql =
-        "SELECT DISTINCT TABLE_SCHEMA TABLE_CAT, NULL TABLE_SCHEM, TABLE_NAME, COLUMN_NAME, SEQ_IN_INDEX KEY_SEQ, INDEX_NAME PK_NAME "
-            + " FROM INFORMATION_SCHEMA.STATISTICS "
-            + "WHERE INDEX_NAME='PRIMARY' "
-            + " AND "
-            + catalogCond("TABLE_SCHEMA", catalog)
-            + tablePatternCond("TABLE_NAME", table)
-            + " ORDER BY COLUMN_NAME";
-
-    return executeQuery(sql);
+    StringBuilder sb =
+        new StringBuilder(
+            "SELECT DISTINCT TABLE_SCHEMA TABLE_CAT, NULL TABLE_SCHEM, TABLE_NAME, COLUMN_NAME, SEQ_IN_INDEX KEY_SEQ, INDEX_NAME PK_NAME "
+                + " FROM INFORMATION_SCHEMA.STATISTICS "
+                + "WHERE INDEX_NAME='PRIMARY'");
+    boolean firstCondition = databaseCond(false, sb, "TABLE_SCHEMA", catalog);
+    tablePatternCond(firstCondition, sb, "TABLE_NAME", table);
+    sb.append(" ORDER BY COLUMN_NAME");
+    return executeQuery(sb.toString());
   }
 
   /**
@@ -554,9 +569,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param catalog a catalog name; must match the catalog name as it is stored in the database; ""
    *     retrieves those without a catalog; <code>null</code> means that the catalog name should not
    *     be used to narrow the search
-   * @param schemaPattern a schema name pattern; must match the schema name as it is stored in the
-   *     database; "" retrieves those without a schema; <code>null</code> means that the schema name
-   *     should not be used to narrow the search
+   * @param schemaPattern ignored in SingleStore
    * @param tableNamePattern a table name pattern; must match the table name as it is stored in the
    *     database
    * @param types a list of table types, which must be from the list of table types returned from
@@ -574,7 +587,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     // If we cannot use FLAGS, we have to join ROUTINES to exclude TVFs
     boolean canUseFlags = getSingleStoreVersion().versionGreaterOrEqual(7, 8, 1);
 
-    StringBuilder sql =
+    StringBuilder sb =
         new StringBuilder(
             "SELECT TABLE_SCHEMA TABLE_CAT, NULL  TABLE_SCHEM,  TABLE_NAME,"
                 + " (CASE WHEN TABLE_TYPE = 'BASE TABLE' THEN 'TABLE'"
@@ -588,35 +601,39 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
                         + "(TABLE_NAME=ROUTINE_NAME AND TABLE_SCHEMA=ROUTINE_SCHEMA)")
                 + " WHERE "
                 + (canUseFlags
-                    ? "CAST(FLAGS AS UNSIGNED INTEGER) & 1 = 0 AND "
-                    : "ROUTINE_NAME IS NULL AND ")
-                + catalogCond("TABLE_SCHEMA", catalog)
-                + tablePatternCond("TABLE_NAME", tableNamePattern));
+                    ? "CAST(FLAGS AS UNSIGNED INTEGER) & 1 = 0"
+                    : "ROUTINE_NAME IS NULL"));
+    boolean firstCondition = databaseCond(false, sb, "TABLE_SCHEMA", catalog);
+    firstCondition = tablePatternCond(firstCondition, sb, "TABLE_NAME", tableNamePattern);
 
     if (types != null && types.length > 0) {
       boolean mustAddType = false;
-      StringBuilder sqlType = new StringBuilder(" AND TABLE_TYPE IN (");
-      for (int i = 0; i < types.length; i++) {
-        if (mustAddType) sqlType.append(",");
-        mustAddType = true;
-        if (types[i] == null) {
-          mustAddType = false;
+      StringBuilder sqlType =
+          new StringBuilder(((firstCondition) ? " WHERE " : " AND ") + " TABLE_TYPE IN (");
+      for (String s : types) {
+        if (s == null) {
           continue;
         }
-        if ("information_schema".equalsIgnoreCase(catalog) && "VIEW".equals(types[i])) {
-          sqlType.append("'SYSTEM VIEW'");
-        } else {
-          String type = "TABLE".equals(types[i]) ? "'BASE TABLE'" : escapeQuote(types[i]);
-          sqlType.append(type);
+        if (mustAddType) sqlType.append(",");
+        mustAddType = true;
+        switch (s) {
+          case "TABLE":
+            sqlType.append("'BASE TABLE'");
+            break;
+          case "VIEW":
+            sqlType.append(
+                "information_schema".equalsIgnoreCase(catalog) ? "'SYSTEM VIEW'" : "'VIEW'");
+            break;
+          default:
+            sqlType.append(escapeQuote(s));
+            break;
         }
       }
       sqlType.append(")");
-      if (mustAddType) sql.append(sqlType);
+      if (mustAddType) sb.append(sqlType);
     }
-
-    sql.append(" ORDER BY TABLE_TYPE, TABLE_SCHEMA, TABLE_NAME");
-
-    return executeQuery(sql.toString());
+    sb.append(" ORDER BY TABLE_TYPE, TABLE_SCHEMA, TABLE_NAME");
+    return executeQuery(sb.toString());
   }
 
   /**
@@ -697,9 +714,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param catalog a catalog name; must match the catalog name as it is stored in the database; ""
    *     retrieves those without a catalog; <code>null</code> means that the catalog name should not
    *     be used to narrow the search
-   * @param schemaPattern a schema name pattern; must match the schema name as it is stored in the
-   *     database; "" retrieves those without a schema; <code>null</code> means that the schema name
-   *     should not be used to narrow the search
+   * @param schemaPattern ignored in SingleStore
    * @param tableNamePattern a table name pattern; must match the table name as it is stored in the
    *     database
    * @param columnNamePattern a column name pattern; must match the column name as it is stored in
@@ -720,63 +735,63 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     // This is because some users may not have access rights to information_schema.ROUTINES
     boolean canUseFlags = getSingleStoreVersion().versionGreaterOrEqual(7, 8, 1);
 
-    String sql =
-        "SELECT c.TABLE_SCHEMA TABLE_CAT, NULL TABLE_SCHEM, c.TABLE_NAME TABLE_NAME, c.COLUMN_NAME COLUMN_NAME,"
-            + dataTypeClause(fullTypeColumnName, "c.")
-            + " DATA_TYPE,"
-            + DataTypeClause(conf)
-            + " TYPE_NAME, "
-            + " CASE c.DATA_TYPE"
-            + DateTimeSizeClause(fullTypeColumnName)
-            + " WHEN 'year' THEN 4"
-            + " WHEN 'json' THEN "
-            + Integer.MAX_VALUE
-            + "  WHEN 'bson' THEN "
-            + Integer.MAX_VALUE
-            + "  WHEN 'vector' THEN "
-            + Integer.MAX_VALUE
-            + "  WHEN 'tinytext' THEN c.CHARACTER_OCTET_LENGTH"
-            + "  WHEN 'text' THEN c.CHARACTER_OCTET_LENGTH"
-            + "  WHEN 'mediumtext' THEN c.CHARACTER_OCTET_LENGTH"
-            + "  WHEN 'longtext' THEN LEAST(c.CHARACTER_OCTET_LENGTH,"
-            + Integer.MAX_VALUE
-            + ")"
-            + "  ELSE "
-            + "  IF(c.NUMERIC_PRECISION IS NULL, LEAST(c.CHARACTER_MAXIMUM_LENGTH,"
-            + Integer.MAX_VALUE
-            + "), c.NUMERIC_PRECISION) "
-            + " END"
-            + " COLUMN_SIZE, 65535 BUFFER_LENGTH, "
-            + " CONVERT (CASE c.DATA_TYPE"
-            + " WHEN 'year' THEN "
-            + (conf.yearIsDateType() ? "c.NUMERIC_SCALE" : "0")
-            + " WHEN 'tinyint' THEN "
-            + (conf.tinyInt1isBit() ? "0" : "c.NUMERIC_SCALE")
-            + " ELSE c.NUMERIC_SCALE END, UNSIGNED INTEGER) DECIMAL_DIGITS,"
-            + " 10 NUM_PREC_RADIX, IF(c.IS_NULLABLE = 'yes',1,0) NULLABLE,c.COLUMN_COMMENT REMARKS,"
-            + " c.COLUMN_DEFAULT COLUMN_DEF, 0 SQL_DATA_TYPE, 0 SQL_DATETIME_SUB,  "
-            + " LEAST(c.CHARACTER_OCTET_LENGTH,"
-            + Integer.MAX_VALUE
-            + ") CHAR_OCTET_LENGTH,"
-            + " c.ORDINAL_POSITION ORDINAL_POSITION, c.IS_NULLABLE IS_NULLABLE, NULL SCOPE_CATALOG, NULL SCOPE_SCHEMA, NULL SCOPE_TABLE, NULL SOURCE_DATA_TYPE,"
-            + " IF(c.EXTRA = 'auto_increment','YES','NO') IS_AUTOINCREMENT, "
-            + " IF(c.EXTRA in ('VIRTUAL', 'PERSISTENT', 'VIRTUAL GENERATED', 'STORED GENERATED', 'COMPUTED') ,'YES','NO') IS_GENERATEDCOLUMN "
-            + " FROM INFORMATION_SCHEMA.COLUMNS c "
-            + (canUseFlags
-                ? "LEFT JOIN INFORMATION_SCHEMA.TABLES AS t ON "
-                    + "(c.TABLE_NAME=t.TABLE_NAME AND c.TABLE_SCHEMA=t.TABLE_SCHEMA)"
-                : "LEFT JOIN INFORMATION_SCHEMA.ROUTINES AS r ON "
-                    + "(c.TABLE_NAME=r.ROUTINE_NAME AND c.TABLE_SCHEMA=r.ROUTINE_SCHEMA)")
-            + " WHERE "
-            + (canUseFlags
-                ? "CAST(t.FLAGS AS UNSIGNED INTEGER) & 1 = 0 AND "
-                : "r.ROUTINE_NAME IS NULL AND ")
-            + catalogCond("c.TABLE_SCHEMA", catalog)
-            + tablePatternCond("c.TABLE_NAME", tableNamePattern)
-            + patternCond("c.COLUMN_NAME", columnNamePattern)
-            + " ORDER BY TABLE_CAT, TABLE_SCHEM, TABLE_NAME, ORDINAL_POSITION";
-
-    return executeQuery(sql);
+    StringBuilder sb =
+        new StringBuilder(
+            "SELECT c.TABLE_SCHEMA TABLE_CAT, NULL TABLE_SCHEM, c.TABLE_NAME TABLE_NAME, c.COLUMN_NAME COLUMN_NAME,"
+                + dataTypeClause(fullTypeColumnName, "c.")
+                + " DATA_TYPE,"
+                + DataTypeClause(conf)
+                + " TYPE_NAME, "
+                + " CASE c.DATA_TYPE"
+                + DateTimeSizeClause(fullTypeColumnName)
+                + " WHEN 'year' THEN 4"
+                + " WHEN 'json' THEN "
+                + Integer.MAX_VALUE
+                + "  WHEN 'bson' THEN "
+                + Integer.MAX_VALUE
+                + "  WHEN 'vector' THEN "
+                + Integer.MAX_VALUE
+                + "  WHEN 'tinytext' THEN c.CHARACTER_OCTET_LENGTH"
+                + "  WHEN 'text' THEN c.CHARACTER_OCTET_LENGTH"
+                + "  WHEN 'mediumtext' THEN c.CHARACTER_OCTET_LENGTH"
+                + "  WHEN 'longtext' THEN LEAST(c.CHARACTER_OCTET_LENGTH,"
+                + Integer.MAX_VALUE
+                + ")"
+                + "  ELSE "
+                + "  IF(c.NUMERIC_PRECISION IS NULL, LEAST(c.CHARACTER_MAXIMUM_LENGTH,"
+                + Integer.MAX_VALUE
+                + "), c.NUMERIC_PRECISION) "
+                + " END"
+                + " COLUMN_SIZE, 65535 BUFFER_LENGTH, "
+                + " CONVERT (CASE c.DATA_TYPE"
+                + " WHEN 'year' THEN "
+                + (conf.yearIsDateType() ? "c.NUMERIC_SCALE" : "0")
+                + " WHEN 'tinyint' THEN "
+                + (conf.tinyInt1isBit() ? "0" : "c.NUMERIC_SCALE")
+                + " ELSE c.NUMERIC_SCALE END, UNSIGNED INTEGER) DECIMAL_DIGITS,"
+                + " 10 NUM_PREC_RADIX, IF(c.IS_NULLABLE = 'yes',1,0) NULLABLE,c.COLUMN_COMMENT REMARKS,"
+                + " c.COLUMN_DEFAULT COLUMN_DEF, 0 SQL_DATA_TYPE, 0 SQL_DATETIME_SUB,  "
+                + " LEAST(c.CHARACTER_OCTET_LENGTH,"
+                + Integer.MAX_VALUE
+                + ") CHAR_OCTET_LENGTH,"
+                + " c.ORDINAL_POSITION ORDINAL_POSITION, c.IS_NULLABLE IS_NULLABLE, NULL SCOPE_CATALOG, NULL SCOPE_SCHEMA, NULL SCOPE_TABLE, NULL SOURCE_DATA_TYPE,"
+                + " IF(c.EXTRA = 'auto_increment','YES','NO') IS_AUTOINCREMENT, "
+                + " IF(c.EXTRA in ('VIRTUAL', 'PERSISTENT', 'VIRTUAL GENERATED', 'STORED GENERATED', 'COMPUTED') ,'YES','NO') IS_GENERATEDCOLUMN "
+                + " FROM INFORMATION_SCHEMA.COLUMNS c "
+                + (canUseFlags
+                    ? "LEFT JOIN INFORMATION_SCHEMA.TABLES AS t ON "
+                        + "(c.TABLE_NAME=t.TABLE_NAME AND c.TABLE_SCHEMA=t.TABLE_SCHEMA)"
+                    : "LEFT JOIN INFORMATION_SCHEMA.ROUTINES AS r ON "
+                        + "(c.TABLE_NAME=r.ROUTINE_NAME AND c.TABLE_SCHEMA=r.ROUTINE_SCHEMA)")
+                + " WHERE "
+                + (canUseFlags
+                    ? "CAST(t.FLAGS AS UNSIGNED INTEGER) & 1 = 0"
+                    : "r.ROUTINE_NAME IS NULL"));
+    boolean firstCondition = databaseCond(false, sb, "c.TABLE_SCHEMA", catalog);
+    firstCondition = tablePatternCond(firstCondition, sb, "c.TABLE_NAME", tableNamePattern);
+    patternCond(firstCondition, sb, "c.COLUMN_NAME", columnNamePattern);
+    sb.append(" ORDER BY TABLE_CAT, TABLE_SCHEM, TABLE_NAME, ORDINAL_POSITION");
+    return executeQuery(sb.toString());
   }
 
   /**
@@ -889,9 +904,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param catalog a catalog name; must match the catalog name as it is stored in the database; ""
    *     retrieves those without a catalog; <code>null</code> means that the catalog name should not
    *     be used to narrow the search
-   * @param schema a schema name; must match the schema name as it is stored in the database; ""
-   *     retrieves those without a schema; <code>null</code> means that the schema name should not
-   *     be used to narrow the search
+   * @param schema ignored in SingleStore
    * @param table a table name; must match the table name as it is stored in the database
    * @param scope the scope of interest; use same values as SCOPE
    * @param nullable include columns that are nullable.
@@ -909,9 +922,8 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
 
     StringBuilder sbInner =
         new StringBuilder("SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE COLUMN_KEY = 'PRI'");
-    sbInner.append(" AND ").append(catalogCond("TABLE_SCHEMA", catalog));
-    sbInner.append(" AND TABLE_NAME = ").append(escapeQuote(table));
-
+    boolean firstCondition = databaseCond(false, sbInner, "TABLE_SCHEMA", catalog);
+    tablePatternCond(firstCondition, sbInner, "TABLE_NAME", table);
     StringBuilder sb =
         new StringBuilder(
             "SELECT "
@@ -928,8 +940,8 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
                 + " OR (COLUMN_KEY = 'UNI' AND NOT EXISTS ("
                 + sbInner
                 + " )))");
-    sb.append(" AND ").append(catalogCond("TABLE_SCHEMA", catalog));
-    sb.append(" AND TABLE_NAME = ").append(escapeQuote(table));
+    firstCondition = databaseCond(false, sb, "TABLE_SCHEMA", catalog);
+    tablePatternCond(firstCondition, sb, "TABLE_NAME", table);
     if (!nullable) sb.append(" AND IS_NULLABLE = 'NO'");
     return executeQuery(sb.toString());
   }
@@ -985,9 +997,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param catalog a catalog name; must match the catalog name as it is stored in the database; ""
    *     retrieves those without a catalog; <code>null</code> means that the catalog name should not
    *     be used to narrow the search
-   * @param schemaPattern a schema name pattern; must match the schema name as it is stored in the
-   *     database; "" retrieves those without a schema; <code>null</code> means that the schema name
-   *     should not be used to narrow the search
+   * @param schemaPattern ignored in SingleStore
    * @param tableNamePattern a table name pattern; must match the table name as it is stored in the
    *     database
    * @param columnNamePattern a column name pattern; must match the column name as it is stored in
@@ -1412,7 +1422,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
   }
 
   public boolean supportsLikeEscapeClause() {
-    return true;
+    return false;
   }
 
   public boolean supportsMultipleResultSets() {
@@ -1762,9 +1772,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param catalog a catalog name; must match the catalog name as it is stored in the database; ""
    *     retrieves those without a catalog; <code>null</code> means that the catalog name should not
    *     be used to narrow the search
-   * @param schemaPattern a schema name pattern; must match the schema name as it is stored in the
-   *     database; "" retrieves those without a schema; <code>null</code> means that the schema name
-   *     should not be used to narrow the search
+   * @param schemaPattern ignored in SingleStore
    * @param procedureNamePattern a procedure name pattern; must match the procedure name as it is
    *     stored in the database
    * @return <code>ResultSet</code> - each row is a procedure description
@@ -1774,21 +1782,21 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
   public ResultSet getProcedures(String catalog, String schemaPattern, String procedureNamePattern)
       throws SQLException {
 
-    String sql =
-        "SELECT ROUTINE_SCHEMA PROCEDURE_CAT,NULL PROCEDURE_SCHEM, ROUTINE_NAME PROCEDURE_NAME,"
-            + " NULL RESERVED1, NULL RESERVED2, NULL RESERVED3, ROUTINE_COMMENT REMARKS,"
-            + " IF( DATA_TYPE = '', "
-            + procedureNoResult
-            + ", "
-            + procedureReturnsResult
-            + ") PROCEDURE_TYPE,"
-            + " SPECIFIC_NAME "
-            + " FROM INFORMATION_SCHEMA.ROUTINES "
-            + " WHERE "
-            + catalogCond("ROUTINE_SCHEMA", catalog)
-            + patternCond("ROUTINE_NAME", procedureNamePattern)
-            + " AND ROUTINE_TYPE='PROCEDURE'";
-    return executeQuery(sql);
+    StringBuilder sb =
+        new StringBuilder(
+            "SELECT ROUTINE_SCHEMA PROCEDURE_CAT,NULL PROCEDURE_SCHEM, ROUTINE_NAME PROCEDURE_NAME,"
+                + " NULL RESERVED1, NULL RESERVED2, NULL RESERVED3, ROUTINE_COMMENT REMARKS,"
+                + " IF( DATA_TYPE = '', "
+                + procedureNoResult
+                + ", "
+                + procedureReturnsResult
+                + ") PROCEDURE_TYPE,"
+                + " SPECIFIC_NAME "
+                + " FROM INFORMATION_SCHEMA.ROUTINES");
+    boolean firstCondition = databaseCond(true, sb, "ROUTINE_SCHEMA", catalog);
+    firstCondition = patternCond(firstCondition, sb, "ROUTINE_NAME", procedureNamePattern);
+    sb.append(firstCondition ? " WHERE " : " AND ").append("ROUTINE_TYPE='PROCEDURE'");
+    return executeQuery(sb.toString());
   }
 
   /**
@@ -1873,9 +1881,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param catalog a catalog name; must match the catalog name as it is stored in the database; ""
    *     retrieves those without a catalog; <code>null</code> means that the catalog name should not
    *     be used to narrow the search
-   * @param schemaPattern a schema name pattern; must match the schema name as it is stored in the
-   *     database; "" retrieves those without a schema; <code>null</code> means that the schema name
-   *     should not be used to narrow the search
+   * @param schemaPattern ignored in SingleStore
    * @param procedureNamePattern a procedure name pattern; must match the procedure name as it is
    *     stored in the database
    * @param columnNamePattern a column name pattern; must match the column name as it is stored in
@@ -1887,30 +1893,35 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
   public ResultSet getProcedureColumns(
       String catalog, String schemaPattern, String procedureNamePattern, String columnNamePattern)
       throws SQLException {
-    String sql =
-        parameterClause(true, "ROUTINE_SCHEMA", "NULL", String.valueOf(procedureReturnsResult), "0")
-            + " FROM INFORMATION_SCHEMA.ROUTINES "
-            + " WHERE "
-            + catalogCond("ROUTINE_SCHEMA", catalog)
-            + patternCond("SPECIFIC_NAME", procedureNamePattern)
-            + patternCond("ROUTINE_NAME", columnNamePattern)
-            + " AND ROUTINE_TYPE='PROCEDURE' AND DATA_TYPE != ''"
-            + " ORDER BY PROCEDURE_CAT, SPECIFIC_NAME"
-            + " UNION "
-            + parameterClause(
+    StringBuilder sb =
+        new StringBuilder(
+            parameterClause(
+                    true, "ROUTINE_SCHEMA", "NULL", String.valueOf(procedureReturnsResult), "0")
+                + " FROM INFORMATION_SCHEMA.ROUTINES");
+    boolean firstCondition = databaseCond(true, sb, "ROUTINE_SCHEMA", catalog);
+    firstCondition = patternCond(firstCondition, sb, "SPECIFIC_NAME", procedureNamePattern);
+    firstCondition = patternCond(firstCondition, sb, "ROUTINE_NAME", columnNamePattern);
+    sb.append(firstCondition ? " WHERE " : " AND ")
+        .append(
+            "ROUTINE_TYPE='PROCEDURE' AND DATA_TYPE != ''"
+                + " ORDER BY PROCEDURE_CAT, SPECIFIC_NAME"
+                + " UNION ")
+        .append(
+            parameterClause(
                 true,
                 "SPECIFIC_SCHEMA",
                 "PARAMETER_NAME",
                 procedureReturnTypeClause(),
-                "ORDINAL_POSITION")
-            + " FROM INFORMATION_SCHEMA.PARAMETERS "
-            + " WHERE "
-            + catalogCond("SPECIFIC_SCHEMA", catalog)
-            + patternCond("SPECIFIC_NAME", procedureNamePattern)
-            + patternCond("PARAMETER_NAME", columnNamePattern)
-            + " AND ROUTINE_TYPE='PROCEDURE'"
-            + " ORDER BY PROCEDURE_CAT, SPECIFIC_NAME, ORDINAL_POSITION";
-    return executeQuery(sql);
+                "ORDINAL_POSITION"))
+        .append(" FROM INFORMATION_SCHEMA.PARAMETERS");
+    firstCondition = databaseCond(true, sb, "SPECIFIC_SCHEMA", catalog);
+    firstCondition = patternCond(firstCondition, sb, "SPECIFIC_NAME", procedureNamePattern);
+    firstCondition = patternCond(firstCondition, sb, "ROUTINE_NAME", columnNamePattern);
+    sb.append(firstCondition ? " WHERE " : " AND ")
+        .append(
+            "ROUTINE_TYPE='PROCEDURE'"
+                + " ORDER BY PROCEDURE_CAT, SPECIFIC_NAME, ORDINAL_POSITION");
+    return executeQuery(sb.toString());
   }
 
   /**
@@ -1985,9 +1996,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param catalog a catalog name; must match the catalog name as it is stored in the database; ""
    *     retrieves those without a catalog; <code>null</code> means that the catalog name should not
    *     be used to narrow the search
-   * @param schemaPattern a schema name pattern; must match the schema name as it is stored in the
-   *     database; "" retrieves those without a schema; <code>null</code> means that the schema name
-   *     should not be used to narrow the search
+   * @param schemaPattern ignored in SingleStore
    * @param functionNamePattern a procedure name pattern; must match the function name as it is
    *     stored in the database
    * @param columnNamePattern a parameter name pattern; must match the parameter or column name as
@@ -1998,44 +2007,48 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @see #getSearchStringEscape
    * @since 1.6
    */
+  @Override
   public ResultSet getFunctionColumns(
       String catalog, String schemaPattern, String functionNamePattern, String columnNamePattern)
       throws SQLException {
 
-    String sql =
-        parameterClause(false, "ROUTINE_SCHEMA", "NULL", String.valueOf(functionReturn), "0")
-            + " FROM INFORMATION_SCHEMA.ROUTINES "
-            + " WHERE "
-            + catalogCond("ROUTINE_SCHEMA", catalog)
-            + patternCond("SPECIFIC_NAME", functionNamePattern)
-            + patternCond("ROUTINE_NAME", columnNamePattern)
-            + " AND ROUTINE_TYPE='FUNCTION'"
-            + " ORDER BY FUNCTION_CAT, SPECIFIC_NAME"
-            + " UNION "
-            + parameterClause(
+    StringBuilder sb =
+        new StringBuilder(
+            parameterClause(false, "ROUTINE_SCHEMA", "NULL", String.valueOf(functionReturn), "0")
+                + " FROM INFORMATION_SCHEMA.ROUTINES");
+    boolean firstCondition = databaseCond(true, sb, "ROUTINE_SCHEMA", catalog);
+    firstCondition = patternCond(firstCondition, sb, "SPECIFIC_NAME", functionNamePattern);
+    firstCondition = patternCond(firstCondition, sb, "ROUTINE_NAME", columnNamePattern);
+    sb.append(firstCondition ? " WHERE " : " AND ")
+        .append("ROUTINE_TYPE='FUNCTION'" + " ORDER BY FUNCTION_CAT, SPECIFIC_NAME" + " UNION ")
+        .append(
+            parameterClause(
                 false,
                 "SPECIFIC_SCHEMA",
                 "PARAMETER_NAME",
                 functionReturnTypeClause(),
-                "ORDINAL_POSITION")
-            + " FROM INFORMATION_SCHEMA.PARAMETERS "
-            + " WHERE "
-            + catalogCond("SPECIFIC_SCHEMA", catalog)
-            + patternCond("SPECIFIC_NAME", functionNamePattern)
-            + patternCond("PARAMETER_NAME", columnNamePattern)
-            + " AND ROUTINE_TYPE='FUNCTION'"
-            + " ORDER BY FUNCTION_CAT, SPECIFIC_NAME, ORDINAL_POSITION";
-    return executeQuery(sql);
+                "ORDINAL_POSITION"))
+        .append(" FROM INFORMATION_SCHEMA.PARAMETERS");
+    firstCondition = databaseCond(true, sb, "SPECIFIC_SCHEMA", catalog);
+    firstCondition = patternCond(firstCondition, sb, "SPECIFIC_NAME", functionNamePattern);
+    firstCondition = patternCond(firstCondition, sb, "ROUTINE_NAME", columnNamePattern);
+    sb.append(firstCondition ? " WHERE " : " AND ")
+        .append(
+            "ROUTINE_TYPE='FUNCTION'" + " ORDER BY FUNCTION_CAT, SPECIFIC_NAME, ORDINAL_POSITION");
+    return executeQuery(sb.toString());
   }
 
+  @Override
   public ResultSet getSchemas() throws SQLException {
     return executeQuery("SELECT '' TABLE_SCHEM, '' TABLE_catalog  FROM DUAL WHERE 1=0");
   }
 
+  @Override
   public ResultSet getSchemas(String catalog, String schemaPattern) throws SQLException {
     return executeQuery("SELECT  ' ' table_schem, ' ' table_catalog FROM DUAL WHERE 1=0");
   }
 
+  @Override
   public ResultSet getCatalogs() throws SQLException {
     return executeQuery(
         "SELECT DATABASE_NAME TABLE_CAT FROM INFORMATION_SCHEMA.DISTRIBUTED_DATABASES ORDER BY 1 UNION "
@@ -2043,6 +2056,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
             + "ON s.SCHEMA_NAME = d.DATABASE_NAME where d.DATABASE_NAME is NULL;");
   }
 
+  @Override
   public ResultSet getTableTypes() throws SQLException {
     return executeQuery(
         "SELECT 'TABLE' TABLE_TYPE "
@@ -2086,24 +2100,23 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @throws SQLException if a database access error occurs
    * @see #getSearchStringEscape
    */
+  @Override
   public ResultSet getColumnPrivileges(
       String catalog, String schema, String table, String columnNamePattern) throws SQLException {
 
     if (table == null) {
       throw new SQLException("'table' parameter must not be null");
     }
-    String sql =
-        "SELECT TABLE_SCHEMA TABLE_CAT, NULL TABLE_SCHEM, TABLE_NAME,"
-            + " COLUMN_NAME, NULL AS GRANTOR, GRANTEE, PRIVILEGE_TYPE AS PRIVILEGE, IS_GRANTABLE FROM "
-            + " INFORMATION_SCHEMA.COLUMN_PRIVILEGES WHERE "
-            + catalogCond("TABLE_SCHEMA", catalog)
-            + " AND "
-            + " TABLE_NAME = "
-            + tableEscapeQuote(table)
-            + patternCond("COLUMN_NAME", columnNamePattern)
-            + " ORDER BY COLUMN_NAME, PRIVILEGE_TYPE";
-
-    return executeQuery(sql);
+    StringBuilder sb =
+        new StringBuilder(
+            "SELECT TABLE_SCHEMA TABLE_CAT, NULL TABLE_SCHEM, TABLE_NAME,"
+                + " COLUMN_NAME, NULL AS GRANTOR, GRANTEE, PRIVILEGE_TYPE AS PRIVILEGE, IS_GRANTABLE FROM "
+                + " INFORMATION_SCHEMA.COLUMN_PRIVILEGES");
+    boolean firstCondition = databaseCond(true, sb, "TABLE_SCHEMA", catalog);
+    firstCondition = tablePatternCond(firstCondition, sb, "TABLE_NAME", table);
+    patternCond(firstCondition, sb, "COLUMN_NAME", columnNamePattern);
+    sb.append(" ORDER BY COLUMN_NAME, PRIVILEGE_TYPE");
+    return executeQuery(sb.toString());
   }
 
   /**
@@ -2133,26 +2146,24 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param catalog a catalog name; must match the catalog name as it is stored in the database; ""
    *     retrieves those without a catalog; <code>null</code> means that the catalog name should not
    *     be used to narrow the search
-   * @param schemaPattern a schema name pattern; must match the schema name as it is stored in the
-   *     database; "" retrieves those without a schema; <code>null</code> means that the schema name
-   *     should not be used to narrow the search
+   * @param schemaPattern ignored in SingleStore
    * @param tableNamePattern a table name pattern; must match the table name as it is stored in the
    *     database
    * @return <code>ResultSet</code> - each row is a table privilege description
    * @throws SQLException if a database access error occurs
    * @see #getSearchStringEscape
    */
+  @Override
   public ResultSet getTablePrivileges(String catalog, String schemaPattern, String tableNamePattern)
       throws SQLException {
-    String sql =
-        "SELECT TABLE_SCHEMA TABLE_CAT,NULL  TABLE_SCHEM, TABLE_NAME, NULL GRANTOR,"
-            + "GRANTEE, PRIVILEGE_TYPE  PRIVILEGE, IS_GRANTABLE  FROM INFORMATION_SCHEMA.TABLE_PRIVILEGES "
-            + " WHERE "
-            + catalogCond("TABLE_SCHEMA", catalog)
-            + tablePatternCond("TABLE_NAME", tableNamePattern)
-            + "ORDER BY TABLE_SCHEMA, TABLE_NAME,  PRIVILEGE_TYPE ";
-
-    return executeQuery(sql);
+    StringBuilder sb =
+        new StringBuilder(
+            "SELECT TABLE_SCHEMA TABLE_CAT, NULL TABLE_SCHEM, TABLE_NAME, NULL GRANTOR,"
+                + "GRANTEE, PRIVILEGE_TYPE PRIVILEGE, IS_GRANTABLE FROM INFORMATION_SCHEMA.TABLE_PRIVILEGES");
+    boolean firstCondition = databaseCond(true, sb, "TABLE_SCHEMA", catalog);
+    tablePatternCond(firstCondition, sb, "TABLE_NAME", tableNamePattern);
+    sb.append(" ORDER BY TABLE_SCHEMA, TABLE_NAME, PRIVILEGE_TYPE");
+    return executeQuery(sb.toString());
   }
 
   /**
@@ -2188,9 +2199,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param catalog a catalog name; must match the catalog name as it is stored in the database; ""
    *     retrieves those without a catalog;<code>null</code> means that the catalog name should not
    *     be used to narrow the search
-   * @param schema a schema name; must match the schema name as it is stored in the database; ""
-   *     retrieves those without a schema; <code>null</code> means that the schema name should not
-   *     be used to narrow the search
+   * @param schema ignored in SingleStore
    * @param table a table name; must match the table name as it is stored in the database
    * @return a <code>ResultSet</code> object in which each row is a column description
    * @throws SQLException if a database access error occurs
@@ -2264,17 +2273,13 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param parentCatalog a catalog name; must match the catalog name as it is stored in the
    *     database; "" retrieves those without a catalog; <code>null</code> means drop catalog name
    *     from the selection criteria
-   * @param parentSchema a schema name; must match the schema name as it is stored in the database;
-   *     "" retrieves those without a schema; <code>null</code> means drop schema name from the
-   *     selection criteria
+   * @param parentSchema ignored in SingleStore
    * @param parentTable the name of the table that exports the key; pattern, or null (means any
    *     table) value
    * @param foreignCatalog a catalog name; must match the catalog name as it is stored in the
    *     database; "" retrieves those without a catalog; <code>null</code> means drop catalog name
    *     from the selection criteria
-   * @param foreignSchema a schema name; must match the schema name as it is stored in the database;
-   *     "" retrieves those without a schema; <code>null</code> means drop schema name from the
-   *     selection criteria
+   * @param foreignSchema ignored in SingleStore
    * @param foreignTable the name of the table that imports the key; pattern, or null (means any
    *     table) value is stored in the database
    * @return <code>ResultSet</code> - each row is a foreign key column description
@@ -3072,22 +3077,22 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     if (table == null) {
       throw new SQLException("'table' parameter must not be null");
     }
-    String sql =
-        "SELECT TABLE_SCHEMA TABLE_CAT, NULL TABLE_SCHEM, TABLE_NAME, NON_UNIQUE, "
-            + " TABLE_SCHEMA INDEX_QUALIFIER, INDEX_NAME, "
-            + tableIndexOther
-            + " TYPE,"
-            + " SEQ_IN_INDEX ORDINAL_POSITION, COLUMN_NAME, COLLATION ASC_OR_DESC,"
-            + " CARDINALITY, NULL PAGES, NULL FILTER_CONDITION"
-            + " FROM INFORMATION_SCHEMA.STATISTICS"
-            + " WHERE TABLE_NAME = "
-            + tableEscapeQuote(table)
-            + " AND "
-            + catalogCond("TABLE_SCHEMA", catalog)
-            + ((unique) ? " AND NON_UNIQUE = 0" : "")
-            + " ORDER BY NON_UNIQUE, TYPE, INDEX_NAME, ORDINAL_POSITION";
-
-    return executeQuery(sql);
+    StringBuilder sb =
+        new StringBuilder(
+            "SELECT TABLE_SCHEMA TABLE_CAT, NULL TABLE_SCHEM, TABLE_NAME, NON_UNIQUE, "
+                + " TABLE_SCHEMA INDEX_QUALIFIER, INDEX_NAME, "
+                + tableIndexOther
+                + " TYPE,"
+                + " SEQ_IN_INDEX ORDINAL_POSITION, COLUMN_NAME, COLLATION ASC_OR_DESC,"
+                + " CARDINALITY, NULL PAGES, NULL FILTER_CONDITION"
+                + " FROM INFORMATION_SCHEMA.STATISTICS");
+    boolean firstCondition = tablePatternCond(true, sb, "TABLE_NAME", table);
+    firstCondition = databaseCond(firstCondition, sb, "TABLE_SCHEMA", catalog);
+    if (unique) {
+      sb.append(firstCondition ? " WHERE " : " AND ").append("NON_UNIQUE = 0");
+    }
+    sb.append(" ORDER BY NON_UNIQUE, TYPE, INDEX_NAME, ORDINAL_POSITION");
+    return executeQuery(sb.toString());
   }
 
   /**
@@ -3204,9 +3209,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param catalog a catalog name; must match the catalog name as it is stored in the database; ""
    *     retrieves those without a catalog; <code>null</code> means that the catalog name should not
    *     be used to narrow the search
-   * @param schemaPattern a schema pattern name; must match the schema name as it is stored in the
-   *     database; "" retrieves those without a schema; <code>null</code> means that the schema name
-   *     should not be used to narrow the search
+   * @param schemaPattern ignored in SingleStore
    * @param typeNamePattern a type name pattern; must match the type name as it is stored in the
    *     database; may be a fully qualified name
    * @param types a list of user-defined types (JAVA_OBJECT, STRUCT, or DISTINCT) to include; <code>
@@ -3273,7 +3276,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    *
    * @param catalog a catalog name; "" retrieves those without a catalog; <code>null</code> means
    *     drop catalog name from the selection criteria
-   * @param schemaPattern a schema name pattern; "" retrieves those without a schema
+   * @param schemaPattern ignored in SingleStore
    * @param typeNamePattern a UDT name pattern; may be a fully-qualified name
    * @return a <code>ResultSet</code> object in which a row gives information about the designated
    *     UDT
@@ -3314,7 +3317,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    *
    * @param catalog a catalog name; "" retrieves those without a catalog; <code>null</code> means
    *     drop catalog name from the selection criteria
-   * @param schemaPattern a schema name pattern; "" retrieves those without a schema
+   * @param schemaPattern ignored in SingleStore
    * @param tableNamePattern a table name pattern; may be a fully-qualified name
    * @return a <code>ResultSet</code> object in which each row is a type description
    * @throws SQLException if a database access error occurs
@@ -3384,9 +3387,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param catalog a catalog name; must match the catalog name as it is stored in the database; ""
    *     retrieves those without a catalog; <code>null</code> means that the catalog name should not
    *     be used to narrow the search
-   * @param schemaPattern a schema name pattern; must match the schema name as it is stored in the
-   *     database; "" retrieves those without a schema; <code>null</code> means that the schema name
-   *     should not be used to narrow the search
+   * @param schemaPattern ignored in SingleStore
    * @param typeNamePattern a type name pattern; must match the type name as it is stored in the
    *     database
    * @param attributeNamePattern an attribute name pattern; must match the attribute name as it is
@@ -3491,17 +3492,17 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
             "The name of the application currently utilizing the connection"
           },
           new String[] {
+            "ClientHostname",
+            "16777215",
+            "",
+            "The hostname of the computer the application using the connection is running on"
+          },
+          new String[] {
             "ClientUser",
             "16777215",
             "",
             "The name of the user that the application using the connection is performing work for. "
                 + "This may not be the same as the user name that was used in establishing the connection."
-          },
-          new String[] {
-            "ClientHostname",
-            "16777215",
-            "",
-            "The hostname of the computer the application using the connection is running on"
           }
         };
 
@@ -3541,9 +3542,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @param catalog a catalog name; must match the catalog name as it is stored in the database; ""
    *     retrieves those without a catalog; <code>null</code> means that the catalog name should not
    *     be used to narrow the search
-   * @param schemaPattern a schema name pattern; must match the schema name as it is stored in the
-   *     database; "" retrieves those without a schema; <code>null</code> means that the schema name
-   *     should not be used to narrow the search
+   * @param schemaPattern ignored in SingleStore
    * @param functionNamePattern a function name pattern; must match the function name as it is
    *     stored in the database
    * @return <code>ResultSet</code> - each row is a function description
@@ -3553,30 +3552,31 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    */
   public ResultSet getFunctions(String catalog, String schemaPattern, String functionNamePattern)
       throws SQLException {
-    String sql =
-        "SELECT ROUTINE_SCHEMA FUNCTION_CAT,NULL FUNCTION_SCHEM, ROUTINE_NAME FUNCTION_NAME,"
-            + " ROUTINE_COMMENT REMARKS,"
-            + "IF( DTD_IDENTIFIER LIKE 'TABLE', "
-            + functionReturnsTable
-            + ", "
-            + functionNoTable
-            + ") FUNCTION_TYPE, SPECIFIC_NAME "
-            + " FROM INFORMATION_SCHEMA.ROUTINES "
-            + " WHERE "
-            + catalogCond("ROUTINE_SCHEMA", catalog)
-            + patternCond("ROUTINE_NAME", functionNamePattern)
-            + " AND ROUTINE_TYPE='FUNCTION'"
-            + " UNION"
-            + " SELECT AGGREGATE_SCHEMA FUNCTION_CAT,NULL FUNCTION_SCHEM, AGGREGATE_NAME FUNCTION_NAME,"
-            + " NULL REMARKS, "
-            + functionNoTable
-            + " FUNCTION_TYPE, AGGREGATE_NAME SPECIFIC_NAME "
-            + " FROM INFORMATION_SCHEMA.AGGREGATE_FUNCTIONS "
-            + " WHERE "
-            + catalogCond("AGGREGATE_SCHEMA", catalog)
-            + patternCond("AGGREGATE_NAME", functionNamePattern);
-
-    return executeQuery(sql);
+    StringBuilder sb =
+        new StringBuilder(
+            "SELECT ROUTINE_SCHEMA FUNCTION_CAT,NULL FUNCTION_SCHEM, ROUTINE_NAME FUNCTION_NAME,"
+                + " ROUTINE_COMMENT REMARKS,"
+                + "IF( DTD_IDENTIFIER LIKE 'TABLE', "
+                + functionReturnsTable
+                + ", "
+                + functionNoTable
+                + ") FUNCTION_TYPE, SPECIFIC_NAME "
+                + " FROM INFORMATION_SCHEMA.ROUTINES");
+    boolean firstCondition = databaseCond(true, sb, "ROUTINE_SCHEMA", catalog);
+    firstCondition = patternCond(firstCondition, sb, "ROUTINE_NAME", functionNamePattern);
+    sb.append(firstCondition ? " WHERE " : " AND ")
+        .append(
+            "ROUTINE_TYPE='FUNCTION'"
+                + " UNION"
+                + " SELECT AGGREGATE_SCHEMA FUNCTION_CAT,NULL FUNCTION_SCHEM, AGGREGATE_NAME FUNCTION_NAME,"
+                + " NULL REMARKS, "
+                + functionNoTable
+                + " FUNCTION_TYPE, AGGREGATE_NAME SPECIFIC_NAME "
+                + " FROM INFORMATION_SCHEMA.AGGREGATE_FUNCTIONS");
+    firstCondition = databaseCond(true, sb, "AGGREGATE_SCHEMA", catalog);
+    patternCond(firstCondition, sb, "AGGREGATE_NAME", functionNamePattern);
+    sb.append(" ORDER BY FUNCTION_CAT,FUNCTION_SCHEM,FUNCTION_NAME,SPECIFIC_NAME");
+    return executeQuery(sb.toString());
   }
 
   @Override

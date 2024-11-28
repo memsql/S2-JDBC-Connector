@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration;
 
@@ -369,18 +369,18 @@ public class DatabaseMetadataTest extends Common {
     DatabaseMetaData dbmd = sharedConn.getMetaData();
     ResultSet rs = dbmd.getTables(null, null, "prim_key", null);
 
-    assertEquals(true, rs.next());
+    assertTrue(rs.next());
     rs = dbmd.getTables("", null, "prim_key", null);
-    assertEquals(true, rs.next());
+    assertTrue(rs.next());
 
     rs = dbmd.getTables("", null, "prim_key", new String[] {"BASE TABLE", "OTHER"});
-    assertEquals(true, rs.next());
+    assertTrue(rs.next());
 
     rs = dbmd.getTables("", null, "prim_key", new String[] {"TABLE", null});
-    assertEquals(true, rs.next());
+    assertTrue(rs.next());
 
     rs = dbmd.getTables(null, null, null, new String[] {"TABLE"});
-    assertEquals(true, rs.next());
+    assertTrue(rs.next());
   }
 
   @Test
@@ -389,13 +389,13 @@ public class DatabaseMetadataTest extends Common {
     ResultSet rs =
         dbmd.getTables(
             "information_schema", null, "TABLE_PRIVILEGES", new String[] {"SYSTEM VIEW"});
-    assertEquals(true, rs.next());
-    assertEquals(false, rs.next());
+    assertTrue(rs.next());
+    assertFalse(rs.next());
     rs = dbmd.getTables("information_schema", null, "TABLE_PRIVILEGES", new String[] {"VIEW"});
-    assertEquals(true, rs.next());
-    assertEquals(false, rs.next());
+    assertTrue(rs.next());
+    assertFalse(rs.next());
     rs = dbmd.getTables(null, null, "TABLE_PRIVILEGES", new String[] {"TABLE"});
-    assertEquals(false, rs.next());
+    assertFalse(rs.next());
   }
 
   @Test
@@ -409,7 +409,7 @@ public class DatabaseMetadataTest extends Common {
     DatabaseMetaData dbmd = sharedConn.getMetaData();
     ResultSet tableSet = dbmd.getTables(null, null, "table_type_test", null);
 
-    assertEquals(true, tableSet.next());
+    assertTrue(tableSet.next());
 
     String tableName = tableSet.getString("TABLE_NAME");
     assertEquals("table_type_test", tableName);
@@ -426,11 +426,11 @@ public class DatabaseMetadataTest extends Common {
     ResultSet rs =
         dbmd.getTables(
             "information_schema", null, "TABLE_PRIVILEGES", new String[] {"SYSTEM VIEW"});
-    assertEquals(true, rs.next());
+    assertTrue(rs.next());
     String tableType = rs.getString("TABLE_TYPE");
     assertEquals("VIEW", tableType);
     rs = dbmd.getTables("information_schema", null, "TABLE_PRIVILEGES", new String[] {"VIEW"});
-    assertEquals(true, rs.next());
+    assertTrue(rs.next());
     tableType = rs.getString("TABLE_TYPE");
     assertEquals("VIEW", tableType);
   }
@@ -467,7 +467,7 @@ public class DatabaseMetadataTest extends Common {
 
     assertTrue(rs.next());
     assertEquals(sharedConn.getCatalog(), rs.getString(1)); // TABLE_CAT
-    assertEquals(null, rs.getString(2)); // TABLE_SCHEM
+    assertNull(rs.getString(2)); // TABLE_SCHEM
     assertEquals("table'getcolumns", rs.getString(3)); // TABLE_NAME
     assertEquals("a", rs.getString(4)); // COLUMN_NAME
     // In S2 type of auto_increment column is set to BIGINT for sharded tables
@@ -478,20 +478,20 @@ public class DatabaseMetadataTest extends Common {
     assertEquals(10, rs.getInt(10)); // NUM_PREC_RADIX
     assertEquals(0, rs.getInt(11)); // NULLABLE
     assertEquals("", rs.getString(12)); // REMARKS
-    assertEquals(null, rs.getString(13)); // COLUMN_DEF
+    assertNull(rs.getString(13)); // COLUMN_DEF
     assertEquals(0, rs.getInt(16)); // CHAR_OCTET_LENGTH
     assertEquals(1, rs.getInt(17)); // ORDINAL_POSITION
     assertEquals("NO", rs.getString(18)); // IS_NULLABLE
-    assertEquals(null, rs.getString(19)); // SCOPE_CATALOG
-    assertEquals(null, rs.getString(20)); // SCOPE_SCHEMA
-    assertEquals(null, rs.getString(21)); // SCOPE_TABLE
+    assertNull(rs.getString(19)); // SCOPE_CATALOG
+    assertNull(rs.getString(20)); // SCOPE_SCHEMA
+    assertNull(rs.getString(21)); // SCOPE_TABLE
     assertEquals(0, rs.getShort(22)); // SOURCE_DATA_TYPE
     assertEquals("YES", rs.getString(23)); // IS_AUTOINCREMENT
     assertEquals("NO", rs.getString(24)); // IS_GENERATEDCOLUMN
 
     assertTrue(rs.next());
     assertEquals(sharedConn.getCatalog(), rs.getString(1)); // TABLE_CAT
-    assertEquals(null, rs.getString(2)); // TABLE_SCHEM
+    assertNull(rs.getString(2)); // TABLE_SCHEM
     assertEquals("table'getcolumns", rs.getString(3)); // TABLE_NAME
     assertEquals("b", rs.getString(4)); // COLUMN_NAME
     assertEquals(Types.VARCHAR, rs.getInt(5)); // DATA_TYPEf
@@ -510,16 +510,16 @@ public class DatabaseMetadataTest extends Common {
     }
     assertEquals(2, rs.getInt(17)); // ORDINAL_POSITION
     assertEquals("YES", rs.getString(18)); // IS_NULLABLE
-    assertEquals(null, rs.getString(19)); // SCOPE_CATALOG
-    assertEquals(null, rs.getString(20)); // SCOPE_SCHEMA
-    assertEquals(null, rs.getString(21)); // SCOPE_TABLE
+    assertNull(rs.getString(19)); // SCOPE_CATALOG
+    assertNull(rs.getString(20)); // SCOPE_SCHEMA
+    assertNull(rs.getString(21)); // SCOPE_TABLE
     assertEquals(0, rs.getShort(22)); // SOURCE_DATA_TYPE
     assertEquals("NO", rs.getString(23)); // IS_AUTOINCREMENT
     assertEquals("NO", rs.getString(24)); // IS_GENERATEDCOLUMN
 
     assertTrue(rs.next());
     assertEquals(sharedConn.getCatalog(), rs.getString(1)); // TABLE_CAT
-    assertEquals(null, rs.getString(2)); // TABLE_SCHEM
+    assertNull(rs.getString(2)); // TABLE_SCHEM
     assertEquals("table'getcolumns", rs.getString(3)); // TABLE_NAME
     assertEquals("c", rs.getString(4)); // COLUMN_NAME
     assertEquals(Types.INTEGER, rs.getInt(5)); // DATA_TYPE
@@ -537,16 +537,16 @@ public class DatabaseMetadataTest extends Common {
     assertEquals(0, rs.getInt(16)); // CHAR_OCTET_LENGTH
     assertEquals(3, rs.getInt(17)); // ORDINAL_POSITION
     assertEquals("YES", rs.getString(18)); // IS_NULLABLE
-    assertEquals(null, rs.getString(19)); // SCOPE_CATALOG
-    assertEquals(null, rs.getString(20)); // SCOPE_SCHEMA
-    assertEquals(null, rs.getString(21)); // SCOPE_TABLE
+    assertNull(rs.getString(19)); // SCOPE_CATALOG
+    assertNull(rs.getString(20)); // SCOPE_SCHEMA
+    assertNull(rs.getString(21)); // SCOPE_TABLE
     assertEquals(0, rs.getShort(22)); // SOURCE_DATA_TYPE
     assertEquals("NO", rs.getString(23)); // IS_AUTOINCREMENT
     assertEquals("YES", rs.getString(24)); // IS_GENERATEDCOLUMN
 
     assertTrue(rs.next());
     assertEquals(sharedConn.getCatalog(), rs.getString(1)); // TABLE_CAT
-    assertEquals(null, rs.getString(2)); // TABLE_SCHEM
+    assertNull(rs.getString(2)); // TABLE_SCHEM
     assertEquals("table'getcolumns", rs.getString(3)); // TABLE_NAME
     assertEquals("d", rs.getString(4)); // COLUMN_NAME
     assertEquals(Types.VARCHAR, rs.getInt(5)); // DATA_TYPE
@@ -560,16 +560,16 @@ public class DatabaseMetadataTest extends Common {
     assertEquals(5 * 4, rs.getInt(16)); // CHAR_OCTET_LENGTH
     assertEquals(4, rs.getInt(17)); // ORDINAL_POSITION
     assertEquals("YES", rs.getString(18)); // IS_NULLABLE
-    assertEquals(null, rs.getString(19)); // SCOPE_CATALOG
-    assertEquals(null, rs.getString(20)); // SCOPE_SCHEMA
-    assertEquals(null, rs.getString(21)); // SCOPE_TABLE
+    assertNull(rs.getString(19)); // SCOPE_CATALOG
+    assertNull(rs.getString(20)); // SCOPE_SCHEMA
+    assertNull(rs.getString(21)); // SCOPE_TABLE
     assertEquals(0, rs.getShort(22)); // SOURCE_DATA_TYPE
     assertEquals("NO", rs.getString(23)); // IS_AUTOINCREMENT
     assertEquals("YES", rs.getString(24)); // IS_GENERATEDCOLUMN
 
     assertTrue(rs.next());
     assertEquals(sharedConn.getCatalog(), rs.getString(1)); // TABLE_CAT
-    assertEquals(null, rs.getString(2)); // TABLE_SCHEM
+    assertNull(rs.getString(2)); // TABLE_SCHEM
     assertEquals("table'getcolumns", rs.getString(3)); // TABLE_NAME
     assertEquals("e", rs.getString(4)); // COLUMN_NAME
     assertEquals(Types.INTEGER, rs.getInt(5)); // DATA_TYPE
@@ -991,20 +991,20 @@ public class DatabaseMetadataTest extends Common {
     assertEquals("The name of the application currently utilizing the connection", rs.getString(4));
 
     assertTrue(rs.next());
+    assertEquals("ClientHostname", rs.getString(1));
+    assertEquals(0x00ffffff, rs.getInt(2));
+    assertEquals("", rs.getString(3));
+    assertEquals(
+        "The hostname of the computer the application using the connection is running on",
+        rs.getString(4));
+
+    assertTrue(rs.next());
     assertEquals("ClientUser", rs.getString(1));
     assertEquals(0x00ffffff, rs.getInt(2));
     assertEquals("", rs.getString(3));
     assertEquals(
         "The name of the user that the application using the connection is performing work for. "
             + "This may not be the same as the user name that was used in establishing the connection.",
-        rs.getString(4));
-
-    assertTrue(rs.next());
-    assertEquals("ClientHostname", rs.getString(1));
-    assertEquals(0x00ffffff, rs.getInt(2));
-    assertEquals("", rs.getString(3));
-    assertEquals(
-        "The hostname of the computer the application using the connection is running on",
         rs.getString(4));
 
     assertFalse(rs.next());
@@ -1168,9 +1168,61 @@ public class DatabaseMetadataTest extends Common {
   }
 
   @Test
+  public void getFunctions() throws SQLException {
+    Statement stmt = sharedConn.createStatement();
+    stmt.execute("CREATE DATABASE IF NOT EXISTS dbTmpFct1");
+    stmt.execute("CREATE DATABASE IF NOT EXISTS dbTmpFct2");
+    try {
+      // order
+      stmt.execute(
+          "CREATE FUNCTION dbTmpFct2.dbTmpFcta2(a int, b int) RETURNS int AS BEGIN RETURN a+b; END");
+      stmt.execute(
+          "CREATE FUNCTION dbTmpFct2.dbTmpFcta1(a int, b int) RETURNS int AS BEGIN RETURN a+b; END");
+      stmt.execute(
+          "CREATE FUNCTION dbTmpFct1.dbTmpFctb1(a int, b int) RETURNS int AS BEGIN RETURN a+b; END");
+      DatabaseMetaData dmd = sharedConn.getMetaData();
+      ResultSet rs = dmd.getFunctions(null, null, "%dbTmpFct%");
+      assertTrue(rs.next());
+      assertEquals("dbTmpFctb1", rs.getString(3));
+      assertTrue(rs.next());
+      assertEquals("dbTmpFcta1", rs.getString(3));
+      assertTrue(rs.next());
+      assertEquals("dbTmpFcta2", rs.getString(3));
+      assertFalse(rs.next());
+      // current db
+      rs = dmd.getFunctions("", null, "%dbTmpFct%");
+      assertFalse(rs.next());
+      // current db
+      rs = dmd.getFunctions(sharedConn.getCatalog(), null, "%dbTmpFct%");
+      assertFalse(rs.next());
+      // database pattern
+      rs = dmd.getFunctions("dbTmp%", null, "%dbTmpFct%");
+      assertTrue(rs.next());
+      assertEquals("dbTmpFctb1", rs.getString(3));
+      assertTrue(rs.next());
+      assertEquals("dbTmpFcta1", rs.getString(3));
+      assertTrue(rs.next());
+      assertEquals("dbTmpFcta2", rs.getString(3));
+      assertFalse(rs.next());
+    } finally {
+      stmt.execute("DROP DATABASE dbTmpFct1");
+      stmt.execute("DROP DATABASE dbTmpFct2");
+    }
+  }
+
+  @Test
   public void getProceduresNotFunctions() throws SQLException {
     ResultSet rs;
+    rs = sharedConn.getMetaData().getProcedures(null, null, null);
+    assertTrue(rs.next());
     rs = sharedConn.getMetaData().getProcedures(null, null, "getProcTimePrecision");
+    assertTrue(rs.next());
+    rs =
+        sharedConn
+            .getMetaData()
+            .getProcedures(sharedConn.getCatalog(), null, "getProcTimePrecision");
+    assertTrue(rs.next());
+    rs = sharedConn.getMetaData().getProcedures("", null, "getProcTimePrecision");
     assertTrue(rs.next());
     rs = sharedConn.getMetaData().getProcedures(null, null, "getProcTimePrecision2");
     assertTrue(rs.next());
@@ -1200,16 +1252,6 @@ public class DatabaseMetadataTest extends Common {
       }
     }
     assertEquals(true, foundTestUnitsJdbc);
-  }
-
-  /* Verify default behavior for nullCatalogMeansCurrent (=true) */
-  @Test
-  public void nullCatalogMeansCurrent() throws Exception {
-    String catalog = sharedConn.getCatalog();
-    ResultSet rs = sharedConn.getMetaData().getColumns(null, null, null, null);
-    while (rs.next()) {
-      assertTrue(rs.getString("TABLE_CAT").equalsIgnoreCase(catalog));
-    }
   }
 
   @Test
@@ -1443,8 +1485,6 @@ public class DatabaseMetadataTest extends Common {
    */
   @Test
   public void metaTimeNoPrecisionProcedureResultSet() throws SQLException {
-    Statement stmt = sharedConn.createStatement();
-
     final int precisionField = 8;
     final int lengthField = 9;
     final int scaleField = 10;
@@ -1483,8 +1523,6 @@ public class DatabaseMetadataTest extends Common {
    */
   @Test
   public void metaTimeProcedureResultSet() throws SQLException {
-    Statement stmt = sharedConn.createStatement();
-
     final int precisionField = 8;
     final int lengthField = 9;
     final int scaleField = 10;
@@ -1726,7 +1764,7 @@ public class DatabaseMetadataTest extends Common {
     assertTrue(meta.supportsGroupBy());
     assertTrue(meta.supportsGroupByUnrelated());
     assertTrue(meta.supportsGroupByBeyondSelect());
-    assertTrue(meta.supportsLikeEscapeClause());
+    assertFalse(meta.supportsLikeEscapeClause());
     assertTrue(meta.supportsMultipleResultSets());
     assertTrue(meta.supportsMultipleTransactions());
     assertTrue(meta.supportsNonNullableColumns());
