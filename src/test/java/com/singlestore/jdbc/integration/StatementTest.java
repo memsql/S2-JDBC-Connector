@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration;
 
@@ -16,6 +16,7 @@ import com.singlestore.jdbc.ClientPreparedStatement;
 import com.singlestore.jdbc.Connection;
 import com.singlestore.jdbc.ServerPreparedStatement;
 import com.singlestore.jdbc.Statement;
+import com.singlestore.jdbc.client.util.ClosableLock;
 import java.sql.BatchUpdateException;
 import java.sql.DriverManager;
 import java.sql.JDBCType;
@@ -31,7 +32,6 @@ import java.sql.SQLWarning;
 import java.sql.Types;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.ReentrantLock;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -677,7 +677,7 @@ public class StatementTest extends Common {
           new ClientPreparedStatement(
               sql,
               con,
-              new ReentrantLock(),
+              new ClosableLock(),
               ResultSet.FETCH_FORWARD,
               ResultSet.CONCUR_READ_ONLY,
               Statement.NO_GENERATED_KEYS,
@@ -691,7 +691,7 @@ public class StatementTest extends Common {
           new ServerPreparedStatement(
               sql,
               con,
-              new ReentrantLock(),
+              new ClosableLock(),
               false,
               ResultSet.FETCH_FORWARD,
               ResultSet.CONCUR_READ_ONLY,
@@ -736,6 +736,34 @@ public class StatementTest extends Common {
               stmt.executeQuery(
                   "select {fn timestampdiff(SQL_TSI_HOUR, '2003-02-01','2003-05-01')} df df "),
           "select timestampdiff(HOUR, '2003-02-01','2003-05-01') df df ");
+    }
+  }
+
+  @Test
+  public void ensureJdbcErrorWhenNoResultset() throws SQLException {
+    try (PreparedStatement ps =
+        sharedConn.prepareStatement("SET @a = 5 + ?", Statement.RETURN_GENERATED_KEYS)) {
+      ps.setInt(1, 1);
+      ps.execute();
+      assertThrowsContains(
+          SQLException.class,
+          () -> ps.executeQuery(),
+          "PrepareStatement.executeQuery() command does NOT return a result-set as expected. Either"
+              + " use PrepareStatement.execute(), PrepareStatement.executeUpdate(), or correct"
+              + " command");
+      ps.execute();
+    }
+    try (PreparedStatement ps =
+        sharedConnBinary.prepareStatement("SET @a = 5 + ?", Statement.RETURN_GENERATED_KEYS)) {
+      ps.setInt(1, 1);
+      ps.execute();
+      assertThrowsContains(
+          SQLException.class,
+          () -> ps.executeQuery(),
+          "PrepareStatement.executeQuery() command does NOT return a result-set as expected. Either"
+              + " use PrepareStatement.execute(), PrepareStatement.executeUpdate(), or correct"
+              + " command");
+      ps.execute();
     }
   }
 

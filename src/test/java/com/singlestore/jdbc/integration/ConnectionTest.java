@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration;
 
@@ -877,6 +877,8 @@ public class ConnectionTest extends Common {
     return isLocal;
   }
 
+  public static int staticTestValue = 0;
+
   @Test
   public void socketFactoryTest() throws SQLException {
     try (Connection conn = createCon("socketFactory=" + SocketFactoryTest.class.getName())) {
@@ -886,6 +888,13 @@ public class ConnectionTest extends Common {
         SQLNonTransientConnectionException.class,
         () -> createCon("socketFactory=wrongClass"),
         "Socket factory failed to initialized with option \"socketFactory\" set to \"wrongClass\"");
+    assertEquals(0, staticTestValue);
+    Common.assertThrowsContains(
+        SQLNonTransientConnectionException.class,
+        () ->
+            createCon("socketFactory=com.singlestore.jdbc.integration.util.WrongSocketFactoryTest"),
+        "Socket factory failed to initialized with option \"socketFactory\" set to \"com.singlestore.jdbc.integration.util.WrongSocketFactoryTest\"");
+    assertEquals(0, staticTestValue);
   }
 
   @Test

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc;
 
+import com.singlestore.jdbc.client.util.ClosableLock;
 import com.singlestore.jdbc.export.ExceptionFactory;
 import com.singlestore.jdbc.util.NativeSql;
 import com.singlestore.jdbc.util.ParameterList;
@@ -33,7 +34,6 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Calendar;
 import java.util.Map;
-import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class BaseCallableStatement extends ServerPreparedStatement
     implements CallableStatement {
@@ -66,7 +66,7 @@ public abstract class BaseCallableStatement extends ServerPreparedStatement
   public BaseCallableStatement(
       String sql,
       Connection con,
-      ReentrantLock lock,
+      ClosableLock lock,
       String databaseName,
       String procedureName,
       boolean canCachePrepStmts,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.result;
 
@@ -11,6 +11,7 @@ import com.singlestore.jdbc.client.impl.StandardReadableByteBuf;
 import com.singlestore.jdbc.client.result.rowdecoder.BinaryRowDecoder;
 import com.singlestore.jdbc.client.result.rowdecoder.RowDecoder;
 import com.singlestore.jdbc.client.result.rowdecoder.TextRowDecoder;
+import com.singlestore.jdbc.client.util.ClosableLock;
 import com.singlestore.jdbc.client.util.MutableInt;
 import com.singlestore.jdbc.export.ExceptionFactory;
 import com.singlestore.jdbc.message.server.ErrorPacket;
@@ -28,7 +29,6 @@ import java.net.URL;
 import java.sql.*;
 import java.sql.Date;
 import java.util.*;
-import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class Result implements ResultSet, Completion {
 
@@ -351,13 +351,10 @@ public abstract class Result implements ResultSet, Completion {
    * @param lock thread locker object
    * @throws SQLException if any error occurs
    */
-  public void closeFromStmtClose(ReentrantLock lock) throws SQLException {
-    lock.lock();
-    try {
+  public void closeFromStmtClose(ClosableLock lock) throws SQLException {
+    try (ClosableLock ignore = lock.closeableLock()) {
       this.fetchRemaining();
       this.closed = true;
-    } finally {
-      lock.unlock();
     }
   }
 

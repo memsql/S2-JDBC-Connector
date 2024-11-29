@@ -16,10 +16,13 @@ module com.singlestore.jdbc {
 
   exports com.singlestore.jdbc;
   exports com.singlestore.jdbc.client;
+  exports com.singlestore.jdbc.client.util;
   exports com.singlestore.jdbc.client.socket;
   exports com.singlestore.jdbc.message;
   exports com.singlestore.jdbc.type;
   exports com.singlestore.jdbc.export;
+  exports com.singlestore.jdbc.util.constants;
+  exports com.singlestore.jdbc.util.timeout;
   exports com.singlestore.jdbc.plugin;
   exports com.singlestore.jdbc.plugin.codec;
   exports com.singlestore.jdbc.plugin.authentication.standard;
@@ -27,6 +30,7 @@ module com.singlestore.jdbc {
   exports com.singlestore.jdbc.plugin.credential.aws;
   exports com.singlestore.jdbc.plugin.credential.env;
   exports com.singlestore.jdbc.plugin.credential.system;
+  exports com.singlestore.jdbc.plugin.tls.main;
 
   uses java.sql.Driver;
   uses com.singlestore.jdbc.plugin.CredentialPlugin;
@@ -72,7 +76,8 @@ module com.singlestore.jdbc {
       TimeCodec,
       TimestampCodec,
       UuidCodec,
-      ZonedDateTimeCodec;
+      ZonedDateTimeCodec,
+      VectorCodec;
   provides com.singlestore.jdbc.plugin.CredentialPlugin with
       com.singlestore.jdbc.plugin.credential.aws.AwsIamCredentialPlugin,
       com.singlestore.jdbc.plugin.credential.browser.BrowserCredentialPlugin,

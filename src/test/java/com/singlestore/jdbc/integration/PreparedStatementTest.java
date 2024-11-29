@@ -193,8 +193,7 @@ public class PreparedStatementTest extends Common {
           "Parameter at position 1 is not set");
       preparedStatement.setInt(2, 11);
       preparedStatement.setInt(1, 6);
-      ResultSet rs0 = preparedStatement.executeQuery();
-      assertFalse(rs0.next());
+      preparedStatement.executeUpdate();
 
       // verification
       ResultSet rs = stmt.executeQuery("SELECT * FROM prepare1 ORDER BY t1");
@@ -1388,7 +1387,7 @@ public class PreparedStatementTest extends Common {
           con.prepareStatement(
               "/*client prepare*/INSERT INTO prepare4 VALUES(?); SELECT * FROM prepare4 where t1 = 1000 ")) {
         prep.setInt(1, 1000);
-        prep.executeQuery();
+        prep.executeUpdate();
         assertTrue(prep.getMoreResults(Statement.CLOSE_CURRENT_RESULT));
         ResultSet rs = prep.getResultSet();
         assertTrue(rs.next());

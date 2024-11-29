@@ -26,7 +26,7 @@
         <waffle-jna.version>3.3.0</waffle-jna.version>
         <bnd-maven-plugin.version>6.3.1</bnd-maven-plugin.version>
         <spotless.version>2.40.0</spotless.version>
-        <jna.version>5.11.0</jna.version>
+        <jna.version>5.13.0</jna.version>
         <mysql-connector-java.version>8.0.33</mysql-connector-java.version>
         <mariadb-connector-java.version>3.3.0</mariadb-connector-java.version>
     </properties>
@@ -324,15 +324,6 @@
             <version>${junit-pioneer.version}</version>
             <scope>test</scope>
         </dependency>
-
-        <!--GSSAPI authentication plugin dependency-->
-        <dependency>
-            <groupId>com.github.waffle</groupId>
-            <artifactId>waffle-jna</artifactId>
-            <version>1.9.1</version>
-            <optional>true</optional>
-        </dependency>
-
         <!--AWS-IAM BROWSER credential plugin dependency-->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
@@ -351,6 +342,12 @@
             <groupId>de.swiesend</groupId>
             <artifactId>secret-service</artifactId>
             <version>1.7.0</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.github.waffle</groupId>
+            <artifactId>waffle-jna</artifactId>
+            <version>${waffle-jna.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>
@@ -437,7 +434,7 @@
                         <!--create an uberjar with BROWSER_SSO dependencies-->
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-shade-plugin</artifactId>
-                        <version>3.2.1</version>
+                        <version>3.4.0</version>
                         <executions>
                             <execution>
                                 <phase>package</phase>
@@ -445,7 +442,7 @@
                                     <goal>shade</goal>
                                 </goals>
                                 <configuration>
-                                    <finalName>singlestore-jdbc-client-${version}-browser-sso-uber</finalName>
+                                    <finalName>singlestore-jdbc-client-${project.version}-browser-sso-uber</finalName>
                                     <filters>
                                         <filter>
                                             <artifact>*:*</artifact>

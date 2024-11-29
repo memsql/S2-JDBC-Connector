@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc;
 
@@ -9,6 +9,7 @@ import com.singlestore.jdbc.client.Client;
 import com.singlestore.jdbc.client.impl.FailoverClient;
 import com.singlestore.jdbc.client.impl.ReplayClient;
 import com.singlestore.jdbc.client.impl.StandardClient;
+import com.singlestore.jdbc.client.util.ClosableLock;
 import com.singlestore.jdbc.pool.Pools;
 import com.singlestore.jdbc.util.VersionFactory;
 import java.io.IOException;
@@ -21,7 +22,6 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.locks.ReentrantLock;
 
 public final class Driver implements java.sql.Driver {
 
@@ -41,7 +41,7 @@ public final class Driver implements java.sql.Driver {
    * @throws SQLException if connect fails
    */
   public static Connection connect(Configuration configuration) throws SQLException {
-    ReentrantLock lock = new ReentrantLock();
+    ClosableLock lock = new ClosableLock();
     Client client;
     switch (configuration.haMode()) {
       case LOADBALANCE:
@@ -50,7 +50,7 @@ public final class Driver implements java.sql.Driver {
         break;
 
       default:
-        ClientInstance<Configuration, HostAddress, ReentrantLock, Boolean, Client> clientInstance =
+        ClientInstance<Configuration, HostAddress, ClosableLock, Boolean, Client> clientInstance =
             (configuration.transactionReplay()) ? ReplayClient::new : StandardClient::new;
 
         if (configuration.addresses().isEmpty()) {

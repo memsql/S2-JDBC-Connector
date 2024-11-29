@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
-
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 package com.singlestore.jdbc.client.impl;
 
 import com.singlestore.jdbc.Configuration;
@@ -22,6 +21,7 @@ import com.singlestore.jdbc.client.socket.impl.CompressOutputStream;
 import com.singlestore.jdbc.client.socket.impl.PacketReader;
 import com.singlestore.jdbc.client.socket.impl.PacketWriter;
 import com.singlestore.jdbc.client.socket.impl.ReadAheadBufferedStream;
+import com.singlestore.jdbc.client.util.ClosableLock;
 import com.singlestore.jdbc.client.util.MutableByte;
 import com.singlestore.jdbc.export.ExceptionFactory;
 import com.singlestore.jdbc.export.MaxAllowedPacketException;
@@ -51,6 +51,7 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLInvalidAuthorizationSpecException;
@@ -58,10 +59,7 @@ import java.sql.SQLNonTransientConnectionException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.Executor;
-import java.util.concurrent.locks.ReentrantLock;
 import javax.net.ssl.SSLSocket;
 
 public class StandardClient implements Client, AutoCloseable {
@@ -70,7 +68,7 @@ public class StandardClient implements Client, AutoCloseable {
   private Socket socket;
   private final MutableByte sequence = new MutableByte();
   private final MutableByte compressionSequence = new MutableByte();
-  private final ReentrantLock lock;
+  private final ClosableLock lock;
   private final Configuration conf;
   private final HostAddress hostAddress;
   private final boolean disablePipeline;
@@ -81,11 +79,9 @@ public class StandardClient implements Client, AutoCloseable {
   private com.singlestore.jdbc.Statement streamStmt = null;
   private ClientMessage streamMsg = null;
   private int socketTimeout;
-  protected boolean timeOut;
   private BigInteger aggregatorId;
   private BigInteger initialSqlSelectLimit;
   private Version singleStoreVersion;
-  private transient Timer cancelTimer;
 
   /**
    * Constructor
@@ -98,7 +94,7 @@ public class StandardClient implements Client, AutoCloseable {
    */
   @SuppressWarnings({"this-escape"})
   public StandardClient(
-      Configuration conf, HostAddress hostAddress, ReentrantLock lock, boolean skipPostCommands)
+      Configuration conf, HostAddress hostAddress, ClosableLock lock, boolean skipPostCommands)
       throws SQLException {
 
     this.conf = conf;
@@ -434,15 +430,9 @@ public class StandardClient implements Client, AutoCloseable {
                 "Packet too big for current server max_allowed_packet value", "HZ000", ioException);
       }
       destroySocket();
-      if (timeOut) {
-        throw exceptionFactory
-            .withSql(message.description())
-            .create("Query execution was interrupted", "70100", ioException);
-      } else {
-        throw exceptionFactory
-            .withSql(message.description())
-            .create("Socket error", "08000", ioException);
-      }
+      throw exceptionFactory
+          .withSql(message.description())
+          .create("Socket error", "08000", ioException);
     }
   }
 
@@ -583,54 +573,6 @@ public class StandardClient implements Client, AutoCloseable {
     }
   }
 
-  private CancelQueryTask startQueryTimer(com.singlestore.jdbc.Statement stmt) throws SQLException {
-    if (stmt != null && stmt.getQueryTimeout() > 0) {
-      Loggers.getLogger(StandardClient.class)
-          .debug(
-              "start cancel query task {} with timeout {}",
-              context.getThreadId(),
-              stmt.getQueryTimeout());
-      CancelQueryTask cancelQueryTask = new CancelQueryTask();
-      this.getCancelTimer().schedule(cancelQueryTask, stmt.getQueryTimeout() * 1000);
-      return cancelQueryTask;
-    }
-    return null;
-  }
-
-  private void stopQueryTimer(
-      CancelQueryTask cancelQueryTask, boolean rethrowCancelReason, boolean checkCancelTimeout)
-      throws SQLException {
-    if (cancelQueryTask != null) {
-      Loggers.getLogger(StandardClient.class)
-          .debug("stop cancel query task {}", context.getThreadId());
-      cancelQueryTask.cancel();
-      if (rethrowCancelReason && cancelQueryTask.getCaughtWhileCancelling() != null) {
-        Throwable t = cancelQueryTask.getCaughtWhileCancelling();
-        throw exceptionFactory.create(t.getMessage());
-      }
-      this.cancelTimer.purge();
-      if (checkCancelTimeout) {
-        checkCancelTimeout();
-      }
-    }
-  }
-
-  private synchronized Timer getCancelTimer() {
-    if (this.cancelTimer == null) {
-      this.cancelTimer = new Timer("SingleStore Statement Cancellation Timer", Boolean.TRUE);
-    }
-    return this.cancelTimer;
-  }
-
-  private void checkCancelTimeout() throws SQLException {
-    if (timeOut) {
-      SQLException cause =
-          exceptionFactory.create("Query execution was interrupted", "70100", 1220);
-      timeOut = false;
-      throw cause;
-    }
-  }
-
   @Override
   public List<Completion> execute(
       ClientMessage message,
@@ -642,26 +584,16 @@ public class StandardClient implements Client, AutoCloseable {
       boolean closeOnCompletion,
       boolean canRedo)
       throws SQLException {
-    CancelQueryTask timeoutTask = null;
-    try {
-      timeoutTask = startQueryTimer(stmt);
-      List<Completion> completions =
-          executeInternal(
-              message,
-              stmt,
-              fetchSize,
-              maxRows,
-              resultSetConcurrency,
-              resultSetType,
-              closeOnCompletion);
-      if (timeoutTask != null) {
-        stopQueryTimer(timeoutTask, true, true);
-        timeoutTask = null;
-      }
-      return completions;
-    } finally {
-      stopQueryTimer(timeoutTask, false, false);
-    }
+    List<Completion> completions =
+        executeInternal(
+            message,
+            stmt,
+            fetchSize,
+            maxRows,
+            resultSetConcurrency,
+            resultSetType,
+            closeOnCompletion);
+    return completions;
   }
 
   private List<Completion> executeInternal(
@@ -914,15 +846,14 @@ public class StandardClient implements Client, AutoCloseable {
       return completion;
     } catch (IOException ioException) {
       destroySocket();
-      if (timeOut) {
-        throw exceptionFactory
-            .withSql(message.description())
-            .create("Query execution was interrupted", "70100", ioException);
-      } else {
-        throw exceptionFactory
-            .withSql(message.description())
-            .create("Socket error", "08000", ioException);
-      }
+      throw exceptionFactory
+          .withSql(message.description())
+          .create(
+              ioException instanceof SocketTimeoutException
+                  ? "Socket timeout error"
+                  : "Socket error",
+              "08000",
+              ioException);
     }
   }
 
@@ -933,11 +864,7 @@ public class StandardClient implements Client, AutoCloseable {
    */
   protected void checkNotClosed() throws SQLException {
     if (closed) {
-      if (timeOut) {
-        throw exceptionFactory.create("Query execution was interrupted", "70100", 1220);
-      } else {
-        throw exceptionFactory.create("Connection is closed", "08000", 1220);
-      }
+      throw exceptionFactory.create("Connection is closed", "08000", 1220);
     }
   }
 
@@ -991,8 +918,7 @@ public class StandardClient implements Client, AutoCloseable {
       if (!lockStatus) {
         // lock not available : query is running
         // force end by executing an KILL connection
-        try (StandardClient cli =
-            new StandardClient(conf, hostAddress, new ReentrantLock(), true)) {
+        try (StandardClient cli = new StandardClient(conf, hostAddress, new ClosableLock(), true)) {
           cli.execute(new QueryPacket("KILL " + context.getThreadId()), false);
         } catch (SQLException e) {
           // eat
@@ -1079,58 +1005,5 @@ public class StandardClient implements Client, AutoCloseable {
   public void reset() {
     context.resetStateFlag();
     context.resetPrepareCache();
-  }
-
-  private class CancelQueryTask extends TimerTask {
-
-    Throwable caughtWhileCancelling = null;
-
-    @Override
-    public void run() {
-      Thread cancelThread =
-          new Thread(
-              () -> {
-                try {
-                  boolean lockStatus = lock.tryLock();
-                  Loggers.getLogger(CancelQueryTask.class)
-                      .debug("execute kill query {}", context.getThreadId());
-                  if (!closed) {
-                    closed = true;
-                    timeOut = true;
-                    if (!lockStatus) {
-                      // lock not available : query is running
-                      // force end by executing an KILL connection
-                      try (StandardClient cli =
-                          new StandardClient(conf, hostAddress, new ReentrantLock(), true)) {
-                        String killQuery =
-                            String.format("KILL QUERY %d %d", context.getThreadId(), aggregatorId);
-                        cli.execute(new QueryPacket(killQuery), false);
-                      }
-                    } else {
-                      QuitPacket.INSTANCE.encode(writer, context);
-                    }
-                    if (streamStmt != null) {
-                      streamStmt.abort();
-                    }
-                    closeSocket();
-                  }
-
-                  if (lockStatus) {
-                    lock.unlock();
-                  }
-                } catch (Throwable t) {
-                  CancelQueryTask.this.setCaughtWhileCancelling(t);
-                }
-              });
-      cancelThread.start();
-    }
-
-    Throwable getCaughtWhileCancelling() {
-      return this.caughtWhileCancelling;
-    }
-
-    void setCaughtWhileCancelling(Throwable caughtWhileCancelling) {
-      this.caughtWhileCancelling = caughtWhileCancelling;
-    }
   }
 }

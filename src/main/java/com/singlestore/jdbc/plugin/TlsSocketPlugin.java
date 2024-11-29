@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.plugin;
 
@@ -10,10 +10,7 @@ import com.singlestore.jdbc.export.ExceptionFactory;
 import java.io.IOException;
 import java.net.Socket;
 import java.sql.SQLException;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.*;
 
 public interface TlsSocketPlugin {
 
@@ -24,16 +21,10 @@ public interface TlsSocketPlugin {
    */
   String type();
 
-  /**
-   * Get socket factory.
-   *
-   * @param conf connection string option. Non standard option are stored in `nonMappedOptions` if
-   *     any specific option is needed.
-   * @param exceptionFactory exception handler
-   * @return custom SSL socket factory
-   * @throws SQLException if socket factory configuration failed.
-   */
-  SSLSocketFactory getSocketFactory(Configuration conf, ExceptionFactory exceptionFactory)
+  TrustManager[] getTrustManager(Configuration conf, ExceptionFactory exceptionFactory)
+      throws SQLException;
+
+  KeyManager[] getKeyManager(Configuration conf, ExceptionFactory exceptionFactory)
       throws SQLException;
 
   /**

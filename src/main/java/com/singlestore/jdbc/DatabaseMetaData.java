@@ -632,7 +632,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
       sqlType.append(")");
       if (mustAddType) sb.append(sqlType);
     }
-    sb.append(" ORDER BY TABLE_TYPE, TABLE_SCHEMA, TABLE_NAME");
+    sb.append(" ORDER BY TABLE_TYPE,TABLE_CAT,TABLE_SCHEMA,TABLE_NAME");
     return executeQuery(sb.toString());
   }
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.impl;
 
@@ -9,6 +9,7 @@ import com.singlestore.jdbc.Configuration;
 import com.singlestore.jdbc.HostAddress;
 import com.singlestore.jdbc.client.Completion;
 import com.singlestore.jdbc.client.context.RedoContext;
+import com.singlestore.jdbc.client.util.ClosableLock;
 import com.singlestore.jdbc.export.MaxAllowedPacketException;
 import com.singlestore.jdbc.export.Prepare;
 import com.singlestore.jdbc.message.ClientMessage;
@@ -21,7 +22,6 @@ import com.singlestore.jdbc.util.log.Loggers;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
 
 /** Replay client wrapper */
 public class ReplayClient extends StandardClient {
@@ -38,7 +38,7 @@ public class ReplayClient extends StandardClient {
    * @throws SQLException if connection fails
    */
   public ReplayClient(
-      Configuration conf, HostAddress hostAddress, ReentrantLock lock, boolean skipPostCommands)
+      Configuration conf, HostAddress hostAddress, ClosableLock lock, boolean skipPostCommands)
       throws SQLException {
     super(conf, hostAddress, lock, skipPostCommands);
     logger = Loggers.getLogger(ReplayClient.class);
@@ -68,15 +68,9 @@ public class ReplayClient extends StandardClient {
                 "Packet too big for current server max_allowed_packet value", "HZ000", ioException);
       }
       destroySocket();
-      if (timeOut) {
-        throw exceptionFactory
-            .withSql(message.description())
-            .create("Socket error: query timed out", "08000", ioException);
-      } else {
-        throw exceptionFactory
-            .withSql(message.description())
-            .create("Socket error", "08000", ioException);
-      }
+      throw exceptionFactory
+          .withSql(message.description())
+          .create("Socket error", "08000", ioException);
     }
   }
 

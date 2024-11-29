@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc;
 
 import com.singlestore.jdbc.client.Client;
 import com.singlestore.jdbc.client.Context;
 import com.singlestore.jdbc.client.impl.StandardClient;
+import com.singlestore.jdbc.client.util.ClosableLock;
 import com.singlestore.jdbc.export.ExceptionFactory;
 import com.singlestore.jdbc.message.client.ChangeDbPacket;
 import com.singlestore.jdbc.message.client.PingPacket;
@@ -17,6 +18,8 @@ import com.singlestore.jdbc.util.NativeSql;
 import com.singlestore.jdbc.util.constants.Capabilities;
 import com.singlestore.jdbc.util.constants.ConnectionState;
 import com.singlestore.jdbc.util.constants.ServerStatus;
+import com.singlestore.jdbc.util.timeout.QueryTimeoutHandler;
+import com.singlestore.jdbc.util.timeout.QueryTimeoutHandlerImpl;
 import java.math.BigInteger;
 import java.sql.Array;
 import java.sql.Blob;
@@ -36,7 +39,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.sql.ConnectionEvent;
@@ -45,12 +47,12 @@ public class Connection implements java.sql.Connection {
 
   private static final Pattern CALLABLE_STATEMENT_PATTERN =
       Pattern.compile(
-          "^(\\s*\\{)?\\s*((\\?\\s*=)?(\\s*\\/\\*([^\\*]|\\*[^\\/])*\\*\\/)*\\s*"
-              + "call(\\s*\\/\\*([^\\*]|\\*[^\\/])*\\*\\/)*\\s*((((`[^`]+`)|([^`\\}]+))\\.)?"
-              + "((`[^`]+`)|([^`\\}\\(]+)))\\s*(\\(.*\\))?(\\s*\\/\\*([^\\*]|\\*[^\\/])*\\*\\/)*"
+          "^(\\s*\\{)?\\s*((\\?\\s*=)?(\\s*/\\*([^*]|\\*[^/])*\\*/)*\\s*"
+              + "call(\\s*/\\*([^*]|\\*[^/])*\\*/)*\\s*((((`[^`]+`)|([^`\\}]+))\\.)?"
+              + "((`[^`]+`)|([^`\\}(]+)))\\s*(\\(.*\\))?(\\s*/\\*([^*]|\\*[^/])*\\*/)*"
               + "\\s*(#.*)?)\\s*(\\}\\s*)?$",
           Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-  private final ReentrantLock lock;
+  private final ClosableLock lock;
   private final Configuration conf;
   private ExceptionFactory exceptionFactory;
   private final Client client;
@@ -62,9 +64,10 @@ public class Connection implements java.sql.Connection {
   private SingleStorePoolConnection poolConnection;
   private final boolean forceTransactionEnd;
   private long sqlSelectLimit;
+  private QueryTimeoutHandler queryTimeoutHandler;
 
   @SuppressWarnings({"this-escape"})
-  public Connection(Configuration conf, ReentrantLock lock, Client client) {
+  public Connection(Configuration conf, ClosableLock lock, Client client) {
     this.conf = conf;
     this.forceTransactionEnd =
         Boolean.parseBoolean(conf.nonMappedOptions().getProperty("forceTransactionEnd", "false"));
@@ -78,6 +81,7 @@ public class Connection implements java.sql.Connection {
             : client.getInitialSqlSelectLimit().longValue();
     this.canCachePrepStmts = context.getConf().cachePrepStmts();
     this.defaultFetchSize = context.getConf().defaultFetchSize();
+    this.queryTimeoutHandler = new QueryTimeoutHandlerImpl(this, lock);
   }
 
   public void setPoolConnection(SingleStorePoolConnection poolConnection) {
@@ -98,7 +102,7 @@ public class Connection implements java.sql.Connection {
         currentIp == null
             ? client.getHostAddress()
             : HostAddress.from(currentIp, client.getHostAddress().port);
-    try (Client cli = new StandardClient(conf, hostAddress, new ReentrantLock(), true)) {
+    try (Client cli = new StandardClient(conf, hostAddress, new ClosableLock(), true)) {
       BigInteger aggregatorId = client.getAggregatorId();
       String killQuery =
           String.format("KILL QUERY %d %d", client.getContext().getThreadId(), aggregatorId);
@@ -215,37 +219,28 @@ public class Connection implements java.sql.Connection {
     if (autoCommit == getAutoCommit()) {
       return;
     }
-    lock.lock();
-    try {
+    try (ClosableLock ignore = lock.closeableLock()) {
       getContext().addStateFlag(ConnectionState.STATE_AUTOCOMMIT);
       client.execute(new QueryPacket("set autocommit=" + ((autoCommit) ? "true" : "false")), true);
-    } finally {
-      lock.unlock();
     }
   }
 
   @Override
   public void commit() throws SQLException {
-    lock.lock();
-    try {
+    try (ClosableLock ignore = lock.closeableLock()) {
       if ((client.getContext().getServerStatus() & ServerStatus.IN_TRANSACTION) > 0) {
         client.execute(new QueryPacket("COMMIT"), false);
       }
-    } finally {
-      lock.unlock();
     }
   }
 
   @Override
   public void rollback() throws SQLException {
-    lock.lock();
-    try {
+    try (ClosableLock ignore = lock.closeableLock()) {
       if (forceTransactionEnd
           || (client.getContext().getServerStatus() & ServerStatus.IN_TRANSACTION) > 0) {
         client.execute(new QueryPacket("ROLLBACK"), false);
       }
-    } finally {
-      lock.unlock();
     }
   }
 
@@ -306,15 +301,12 @@ public class Connection implements java.sql.Connection {
 
   @Override
   public void setReadOnly(boolean readOnly) throws SQLException {
-    lock.lock();
-    try {
+    try (ClosableLock ignore = lock.closeableLock()) {
       if (this.readOnly != readOnly) {
         client.setReadOnly(readOnly);
       }
       this.readOnly = readOnly;
       getContext().addStateFlag(ConnectionState.STATE_READ_ONLY);
-    } finally {
-      lock.unlock();
     }
   }
 
@@ -341,13 +333,10 @@ public class Connection implements java.sql.Connection {
             && catalog.equals(client.getContext().getDatabase()))) {
       return;
     }
-    lock.lock();
-    try {
+    try (ClosableLock ignore = lock.closeableLock()) {
       getContext().addStateFlag(ConnectionState.STATE_DATABASE);
       client.execute(new ChangeDbPacket(catalog), true);
       client.getContext().setDatabase(catalog);
-    } finally {
-      lock.unlock();
     }
   }
 
@@ -364,14 +353,11 @@ public class Connection implements java.sql.Connection {
     } else {
       throw new SQLException("Unsupported transaction isolation level");
     }
-    lock.lock();
-    try {
+    try (ClosableLock ignore = lock.closeableLock()) {
       checkNotClosed();
       getContext().addStateFlag(ConnectionState.STATE_TRANSACTION_ISOLATION);
       client.getContext().setTransactionIsolationLevel(level);
       client.execute(new QueryPacket(query), true);
-    } finally {
-      lock.unlock();
     }
   }
 
@@ -596,14 +582,11 @@ public class Connection implements java.sql.Connection {
     if (timeout < 0) {
       throw exceptionFactory.create("the value supplied for timeout is negative");
     }
-    lock.lock();
-    try {
+    try (ClosableLock ignore = lock.closeableLock()) {
       client.execute(PingPacket.INSTANCE, true);
       return true;
     } catch (SQLException sqle) {
       return false;
-    } finally {
-      lock.unlock();
     }
   }
 
@@ -673,11 +656,8 @@ public class Connection implements java.sql.Connection {
     }
     getContext().addStateFlag(ConnectionState.STATE_NETWORK_TIMEOUT);
 
-    lock.lock();
-    try {
+    try (ClosableLock ignore = lock.closeableLock()) {
       client.setSocketTimeout(milliseconds);
-    } finally {
-      lock.unlock();
     }
   }
 
@@ -775,5 +755,9 @@ public class Connection implements java.sql.Connection {
 
   protected ExceptionFactory getExceptionFactory() {
     return exceptionFactory;
+  }
+
+  public QueryTimeoutHandler handleTimeout(int queryTimeout) {
+    return queryTimeoutHandler.create(queryTimeout);
   }
 }
