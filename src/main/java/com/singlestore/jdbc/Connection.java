@@ -14,6 +14,7 @@ import com.singlestore.jdbc.message.client.ChangeDbPacket;
 import com.singlestore.jdbc.message.client.PingPacket;
 import com.singlestore.jdbc.message.client.QueryPacket;
 import com.singlestore.jdbc.message.client.ResetPacket;
+import com.singlestore.jdbc.plugin.array.FloatArray;
 import com.singlestore.jdbc.util.NativeSql;
 import com.singlestore.jdbc.util.constants.Capabilities;
 import com.singlestore.jdbc.util.constants.ConnectionState;
@@ -21,6 +22,7 @@ import com.singlestore.jdbc.util.constants.ServerStatus;
 import com.singlestore.jdbc.util.timeout.QueryTimeoutHandler;
 import com.singlestore.jdbc.util.timeout.QueryTimeoutHandlerImpl;
 import java.math.BigInteger;
+import java.nio.FloatBuffer;
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -35,6 +37,7 @@ import java.sql.SQLWarning;
 import java.sql.SQLXML;
 import java.sql.Savepoint;
 import java.sql.Struct;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -614,7 +617,37 @@ public class Connection implements java.sql.Connection {
 
   @Override
   public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
-    throw exceptionFactory.notSupported("Array type is not supported");
+    return createArrayOf(typeName, (Object) elements);
+  }
+
+  public Array createArrayOf(String typeName, Object elements) throws SQLException {
+    if (typeName == null) throw exceptionFactory.notSupported("typeName is not mandatory");
+    if (elements == null) return null;
+
+    switch (typeName) {
+      case "float":
+      case "Float":
+        if (float[].class.equals(elements.getClass())) {
+          return new FloatArray((float[]) elements, client.getContext());
+        }
+        if (Float[].class.equals(elements.getClass())) {
+          float[] result =
+              Arrays.stream(((Float[]) elements))
+                  .collect(
+                      () -> FloatBuffer.allocate(((Float[]) elements).length),
+                      FloatBuffer::put,
+                      (left, right) -> {
+                        throw new UnsupportedOperationException();
+                      })
+                  .array();
+          return new FloatArray(result, client.getContext());
+        }
+        throw exceptionFactory.notSupported(
+            "elements class is expect to be float[]/Float[] for 'float/Float' typeName");
+      default:
+        throw exceptionFactory.notSupported(
+            String.format("typeName %s is not supported", typeName));
+    }
   }
 
   @Override
@@ -757,6 +790,12 @@ public class Connection implements java.sql.Connection {
     return exceptionFactory;
   }
 
+  /**
+   * Return a QueryTimeoutHandler.
+   *
+   * @param queryTimeout query timeout
+   * @return a query timeout handler
+   */
   public QueryTimeoutHandler handleTimeout(int queryTimeout) {
     return queryTimeoutHandler.create(queryTimeout);
   }

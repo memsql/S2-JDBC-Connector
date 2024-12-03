@@ -386,7 +386,8 @@ public class ConnectionTest extends Common {
     assertTrue(sharedConn.createClob() instanceof Clob);
     assertTrue(sharedConn.createNClob() instanceof NClob);
     assertThrows(SQLException.class, () -> sharedConn.createSQLXML());
-    assertThrows(SQLException.class, () -> sharedConn.createArrayOf("", null));
+    assertNull(sharedConn.createArrayOf("", null));
+    assertThrows(SQLException.class, () -> sharedConn.createArrayOf("string", "ddd"));
     assertThrows(SQLException.class, () -> sharedConn.createStruct("", null));
     assertNull(sharedConn.getSchema());
     sharedConn.setSchema("fff");
@@ -670,7 +671,8 @@ public class ConnectionTest extends Common {
     stmt.execute("GRANT SELECT ON *.* TO 'test_pam'");
 
     try (Connection connection =
-        createCon("user=test_pam&password=test_pass&restrictedAuth=mysql_clear_password")) {
+        createCon(
+            "user=test_pam&password=test_pass&restrictedAuth=mysql_clear_password&sslMode=trust")) {
       connection.getCatalog();
     }
     Common.assertThrowsContains(
@@ -961,6 +963,17 @@ public class ConnectionTest extends Common {
       assertTrue((capabilities & Capabilities.CONNECT_ATTRS) > 0);
     } else {
       assertEquals(0, (capabilities & Capabilities.CONNECT_ATTRS));
+    }
+  }
+
+  @Test
+  public void loopHost() throws SQLException {
+    String connStr =
+        String.format(
+            "jdbc:singlestore://wronghost,%s:%s/%s?user=%s&password=%s",
+            hostname, port, database, user, password);
+    try (Connection con = DriverManager.getConnection(connStr)) {
+      con.createStatement().executeQuery("SELECT 1");
     }
   }
 }

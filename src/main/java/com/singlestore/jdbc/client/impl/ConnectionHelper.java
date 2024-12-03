@@ -31,10 +31,12 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.sql.SQLNonTransientConnectionException;
+import java.sql.SQLTimeoutException;
 import java.util.Arrays;
 import java.util.List;
 import javax.net.SocketFactory;
@@ -135,7 +137,11 @@ public final class ConnectionHelper {
         socket.connect(sockAddr, conf.connectTimeout());
       }
       return socket;
-
+    } catch (SocketTimeoutException ste) {
+      throw new SQLTimeoutException(
+          String.format("Socket timeout when connecting to %s. %s", hostAddress, ste.getMessage()),
+          "08000",
+          ste);
     } catch (IOException ioe) {
       throw new SQLNonTransientConnectionException(
           String.format(
@@ -244,7 +250,15 @@ public final class ConnectionHelper {
           AuthSwitchPacket authSwitchPacket = AuthSwitchPacket.decode(buf);
           AuthenticationPlugin authenticationPlugin =
               AuthenticationPluginLoader.get(authSwitchPacket.getPlugin(), conf);
-
+          if (authenticationPlugin.requireSsl() && !context.hasClientCapability(Capabilities.SSL)) {
+            throw context
+                .getExceptionFactory()
+                .create(
+                    "Cannot use authentication plugin "
+                        + authenticationPlugin.type()
+                        + " if SSL is not enabled.",
+                    "08000");
+          }
           authenticationPlugin.initialize(
               credential.getPassword(), authSwitchPacket.getSeed(), conf);
           buf = authenticationPlugin.process(writer, reader, context);

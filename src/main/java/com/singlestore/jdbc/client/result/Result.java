@@ -16,6 +16,7 @@ import com.singlestore.jdbc.client.util.MutableInt;
 import com.singlestore.jdbc.export.ExceptionFactory;
 import com.singlestore.jdbc.message.server.ErrorPacket;
 import com.singlestore.jdbc.plugin.Codec;
+import com.singlestore.jdbc.plugin.array.FloatArray;
 import com.singlestore.jdbc.plugin.codec.*;
 import com.singlestore.jdbc.util.constants.ServerStatus;
 import java.io.IOException;
@@ -1206,7 +1207,17 @@ public abstract class Result implements ResultSet, Completion {
 
   @Override
   public Array getArray(int columnIndex) throws SQLException {
-    throw exceptionFactory.notSupported("Method ResultSet.getArray not supported");
+    checkIndex(columnIndex);
+    fieldLength.set(
+        rowDecoder.setPosition(
+            columnIndex - 1, fieldIndex, maxIndex, rowBuf, nullBitmap, metadataList));
+    if (fieldLength.get() == NULL_LENGTH) {
+      return null;
+    }
+    float[] val =
+        rowDecoder.decode(
+            FloatArrayCodec.INSTANCE, null, rowBuf, fieldLength, metadataList, fieldIndex);
+    return new FloatArray(val, context);
   }
 
   @Override
@@ -1235,7 +1246,7 @@ public abstract class Result implements ResultSet, Completion {
 
   @Override
   public Array getArray(String columnLabel) throws SQLException {
-    throw exceptionFactory.notSupported("Method ResultSet.getArray not supported");
+    return getArray(findColumn(columnLabel));
   }
 
   @Override
@@ -1352,7 +1363,7 @@ public abstract class Result implements ResultSet, Completion {
 
   @Override
   public void updateArray(String columnLabel, Array x) throws SQLException {
-    throw exceptionFactory.notSupported("Array are not supported");
+    updateArray(findColumn(columnLabel), x);
   }
 
   @Override
