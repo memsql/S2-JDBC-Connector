@@ -35,17 +35,17 @@ module com.singlestore.jdbc {
   uses java.sql.Driver;
   uses com.singlestore.jdbc.plugin.CredentialPlugin;
   uses com.singlestore.jdbc.plugin.Codec;
-  uses com.singlestore.jdbc.plugin.AuthenticationPlugin;
+  uses com.singlestore.jdbc.plugin.AuthenticationPluginFactory;
   uses com.singlestore.jdbc.plugin.TlsSocketPlugin;
 
   provides java.sql.Driver with
       com.singlestore.jdbc.Driver;
-  provides com.singlestore.jdbc.plugin.AuthenticationPlugin with
-      com.singlestore.jdbc.plugin.authentication.addon.ClearPasswordPlugin,
-      com.singlestore.jdbc.plugin.authentication.addon.SendGssApiAuthPacket,
-      com.singlestore.jdbc.plugin.authentication.standard.Ed25519PasswordPlugin,
-      com.singlestore.jdbc.plugin.authentication.standard.NativePasswordPlugin,
-      com.singlestore.jdbc.plugin.authentication.standard.SendPamAuthPacket;
+  provides com.singlestore.jdbc.plugin.AuthenticationPluginFactory with
+      com.singlestore.jdbc.plugin.authentication.addon.ClearPasswordPluginFactory,
+      com.singlestore.jdbc.plugin.authentication.addon.SendGssApiAuthPacketFactory,
+      com.singlestore.jdbc.plugin.authentication.standard.Ed25519PasswordPluginFactory,
+      com.singlestore.jdbc.plugin.authentication.standard.NativePasswordPluginFactory,
+      com.singlestore.jdbc.plugin.authentication.standard.SendPamAuthPacketFactory;
   provides com.singlestore.jdbc.plugin.Codec with
       BigDecimalCodec,
       BigIntegerCodec,
@@ -58,7 +58,9 @@ module com.singlestore.jdbc {
       DateCodec,
       DoubleCodec,
       DurationCodec,
+      FloatArrayCodec,
       FloatCodec,
+      FloatObjectArrayCodec,
       InstantCodec,
       IntCodec,
       LineStringCodec,

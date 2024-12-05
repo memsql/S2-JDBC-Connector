@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
-
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 package com.singlestore.jdbc.plugin.authentication;
 
 import com.singlestore.jdbc.Configuration;
 import com.singlestore.jdbc.Driver;
-import com.singlestore.jdbc.plugin.AuthenticationPlugin;
+import com.singlestore.jdbc.plugin.AuthenticationPluginFactory;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.ServiceLoader;
@@ -23,14 +22,15 @@ public final class AuthenticationPluginLoader {
    * @return Authentication plugin corresponding to type
    * @throws SQLException if no authentication plugin in classpath have indicated type
    */
-  public static AuthenticationPlugin get(String type, Configuration conf) throws SQLException {
+  public static AuthenticationPluginFactory get(String type, Configuration conf)
+      throws SQLException {
 
-    ServiceLoader<AuthenticationPlugin> loader =
-        ServiceLoader.load(AuthenticationPlugin.class, Driver.class.getClassLoader());
+    ServiceLoader<AuthenticationPluginFactory> loader =
+        ServiceLoader.load(AuthenticationPluginFactory.class, Driver.class.getClassLoader());
 
     String[] authList = (conf.restrictedAuth() != null) ? conf.restrictedAuth().split(",") : null;
 
-    for (AuthenticationPlugin implClass : loader) {
+    for (AuthenticationPluginFactory implClass : loader) {
       if (type.equals(implClass.type())) {
         if (authList == null || Arrays.stream(authList).anyMatch(type::contains)) {
           return implClass;

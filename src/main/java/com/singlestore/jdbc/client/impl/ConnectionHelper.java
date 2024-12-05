@@ -2,7 +2,6 @@
 // Copyright (c) 2012-2014 Monty Program Ab
 // Copyright (c) 2015-2024 MariaDB Corporation Ab
 // Copyright (c) 2021-2024 SingleStore, Inc.
-
 package com.singlestore.jdbc.client.impl;
 
 import com.singlestore.jdbc.Configuration;
@@ -19,10 +18,7 @@ import com.singlestore.jdbc.message.client.SslRequestPacket;
 import com.singlestore.jdbc.message.server.AuthSwitchPacket;
 import com.singlestore.jdbc.message.server.ErrorPacket;
 import com.singlestore.jdbc.message.server.OkPacket;
-import com.singlestore.jdbc.plugin.AuthenticationPlugin;
-import com.singlestore.jdbc.plugin.Credential;
-import com.singlestore.jdbc.plugin.CredentialPlugin;
-import com.singlestore.jdbc.plugin.TlsSocketPlugin;
+import com.singlestore.jdbc.plugin.*;
 import com.singlestore.jdbc.plugin.authentication.AuthenticationPluginLoader;
 import com.singlestore.jdbc.plugin.tls.TlsSocketPluginLoader;
 import com.singlestore.jdbc.util.ConfigurableSocketFactory;
@@ -248,19 +244,20 @@ public final class ConnectionHelper {
           // https://mariadb.com/kb/en/library/connection/#authentication-switch-request
           // *************************************************************************************
           AuthSwitchPacket authSwitchPacket = AuthSwitchPacket.decode(buf);
-          AuthenticationPlugin authenticationPlugin =
+          AuthenticationPluginFactory authPluginFactory =
               AuthenticationPluginLoader.get(authSwitchPacket.getPlugin(), conf);
-          if (authenticationPlugin.requireSsl() && !context.hasClientCapability(Capabilities.SSL)) {
+          if (authPluginFactory.requireSsl() && !context.hasClientCapability(Capabilities.SSL)) {
             throw context
                 .getExceptionFactory()
                 .create(
                     "Cannot use authentication plugin "
-                        + authenticationPlugin.type()
+                        + authPluginFactory.type()
                         + " if SSL is not enabled.",
                     "08000");
           }
-          authenticationPlugin.initialize(
-              credential.getPassword(), authSwitchPacket.getSeed(), conf);
+          AuthenticationPlugin authenticationPlugin =
+              authPluginFactory.initialize(
+                  credential.getPassword(), authSwitchPacket.getSeed(), conf);
           buf = authenticationPlugin.process(writer, reader, context);
           break;
 

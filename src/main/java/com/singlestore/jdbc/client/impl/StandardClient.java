@@ -36,6 +36,7 @@ import com.singlestore.jdbc.message.server.InitialHandshakePacket;
 import com.singlestore.jdbc.message.server.PrepareResultPacket;
 import com.singlestore.jdbc.plugin.Credential;
 import com.singlestore.jdbc.plugin.CredentialPlugin;
+import com.singlestore.jdbc.plugin.authentication.addon.ClearPasswordPluginFactory;
 import com.singlestore.jdbc.plugin.credential.browser.BrowserCredentialPlugin;
 import com.singlestore.jdbc.util.Security;
 import com.singlestore.jdbc.util.Version;
@@ -214,9 +215,15 @@ public class StandardClient implements Client, AutoCloseable {
         authenticationPluginType = credentialPlugin.defaultAuthenticationPluginType();
       }
 
-      if ("mysql_clear_password".equals(authenticationPluginType) && sslSocket == null) {
-        throw new IllegalStateException(
-            "Cannot send password in clear text if SSL is not enabled.");
+      if (ClearPasswordPluginFactory.TYPE.equals(authenticationPluginType)
+          && !context.hasClientCapability(Capabilities.SSL)) {
+        throw context
+            .getExceptionFactory()
+            .create(
+                "Cannot use authentication plugin "
+                    + ClearPasswordPluginFactory.TYPE
+                    + " if SSL is not enabled.",
+                "08000");
       }
 
       Credential credential = ConnectionHelper.loadCredential(credentialPlugin, conf, hostAddress);

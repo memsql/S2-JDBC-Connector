@@ -1,0 +1,5 @@
+com.singlestore.jdbc.plugin.authentication.addon.ClearPasswordPluginFactory
+com.singlestore.jdbc.plugin.authentication.addon.SendGssApiAuthPacketFactory
+com.singlestore.jdbc.plugin.authentication.standard.Ed25519PasswordPluginFactory
+com.singlestore.jdbc.plugin.authentication.standard.NativePasswordPluginFactory
+com.singlestore.jdbc.plugin.authentication.standard.SendPamAuthPacketFactory

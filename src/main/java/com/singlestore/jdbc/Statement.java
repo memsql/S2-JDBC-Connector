@@ -2,7 +2,6 @@
 // Copyright (c) 2012-2014 Monty Program Ab
 // Copyright (c) 2015-2024 MariaDB Corporation Ab
 // Copyright (c) 2021-2024 SingleStore, Inc.
-
 package com.singlestore.jdbc;
 
 import static com.singlestore.jdbc.util.constants.Capabilities.LOCAL_FILES;
@@ -30,30 +29,10 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLTimeoutException;
 import java.sql.SQLWarning;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class Statement implements java.sql.Statement {
-  private static final Pattern identifierPattern =
-      Pattern.compile("[0-9a-zA-Z$_\\u0080-\\uFFFF]*", Pattern.UNICODE_CASE | Pattern.CANON_EQ);
-  private static final Pattern escapePattern = Pattern.compile("[\u0000'\"\b\n\r\t\u001A\\\\]");
-  private static final Map<String, String> mapper = new HashMap<>();
-
-  static {
-    mapper.put("\u0000", "\\0");
-    mapper.put("'", "\\\\'");
-    mapper.put("\"", "\\\\\"");
-    mapper.put("\b", "\\\\b");
-    mapper.put("\n", "\\\\n");
-    mapper.put("\r", "\\\\r");
-    mapper.put("\t", "\\\\t");
-    mapper.put("\u001A", "\\\\Z");
-    mapper.put("\\", "\\\\");
-  }
 
   private final Logger logger;
 
@@ -1607,19 +1586,11 @@ public class Statement implements java.sql.Statement {
    */
   // @Override when not supporting java 8
   public String enquoteLiteral(String val) {
-    Matcher matcher = escapePattern.matcher(val);
-    StringBuffer escapedVal = new StringBuffer("'");
-
-    while (matcher.find()) {
-      matcher.appendReplacement(escapedVal, mapper.get(matcher.group()));
-    }
-    matcher.appendTail(escapedVal);
-    escapedVal.append("'");
-    return escapedVal.toString();
+    return Driver.enquoteLiteral(val);
   }
 
   /**
-   * Escaped identifier according to MariaDB requirement.
+   * Escaped identifier according to requirement.
    *
    * @param identifier identifier
    * @param alwaysQuote indicate if identifier must be enquoted even if not necessary.
@@ -1628,33 +1599,7 @@ public class Statement implements java.sql.Statement {
    */
   // @Override when not supporting java 8
   public String enquoteIdentifier(String identifier, boolean alwaysQuote) throws SQLException {
-    if (isSimpleIdentifier(identifier)) {
-      return alwaysQuote ? "`" + identifier + "`" : identifier;
-    } else {
-      if (identifier.contains("\u0000")) {
-        throw exceptionFactory().create("Invalid name - containing u0000 character", "42000");
-      }
-
-      if (identifier.matches("^`.+`$")) {
-        identifier = identifier.substring(1, identifier.length() - 1);
-      }
-      return "`" + identifier.replace("`", "``") + "`";
-    }
-  }
-
-  /**
-   * Retrieves whether identifier is a simple SQL identifier. The first character is an alphabetic
-   * character from a through z, or from A through Z The string only contains alphanumeric
-   * characters or the characters "_" and "$"
-   *
-   * @param identifier identifier
-   * @return true if identifier doesn't have to be quoted
-   */
-  // @Override when not supporting java 8
-  public boolean isSimpleIdentifier(String identifier) {
-    return identifier != null
-        && !identifier.isEmpty()
-        && identifierPattern.matcher(identifier).matches();
+    return Driver.enquoteIdentifier(identifier, alwaysQuote);
   }
 
   public String getLastSql() {

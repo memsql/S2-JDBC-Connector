@@ -21,6 +21,9 @@
   * [CONJ-1205] permit use of Array parameter
   * [CONJ-1205] permit setObject with ARRAY dataType
   * [CONJ-1196] setObject on java.util.Date was considered was a java.sql.Date and truncate hour/minutes/seconds/ms while it must be considered like a java.sql.Timestamp
+  * [misc] permits JDBC enquoteIdentifier and enquoteLiteral use at static level
+  * [misc] ensure not having race condition on authentication plugin states
+  * [misc] bump waffle-jna version
 
 * [PLAT-7270] Fix DatabaseMetaData catalog condition.
 * [PLAT-7262] Add log for cause exception on failure in JDBC failover mode

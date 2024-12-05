@@ -7,6 +7,7 @@ package com.singlestore.jdbc.util.timeout;
 import com.singlestore.jdbc.Connection;
 import com.singlestore.jdbc.client.util.ClosableLock;
 import com.singlestore.jdbc.client.util.SchedulerProvider;
+import com.singlestore.jdbc.util.log.Loggers;
 import java.util.concurrent.*;
 
 public class QueryTimeoutHandlerImpl implements QueryTimeoutHandler {
@@ -25,7 +26,8 @@ public class QueryTimeoutHandlerImpl implements QueryTimeoutHandler {
                 try {
                   conn.cancelCurrentQuery();
                 } catch (Throwable e) {
-                  // eat
+                  Loggers.getLogger(QueryTimeoutHandlerImpl.class.getName())
+                      .error(e.getMessage(), e);
                 }
               },
               queryTimeout,
