@@ -29,3 +29,5 @@ com.singlestore.jdbc.plugin.codec.TimeCodec
 com.singlestore.jdbc.plugin.codec.TimestampCodec
 com.singlestore.jdbc.plugin.codec.ZonedDateTimeCodec
 com.singlestore.jdbc.plugin.codec.VectorCodec
+com.singlestore.jdbc.plugin.codec.FloatArrayCodec
+com.singlestore.jdbc.plugin.codec.FloatObjectArrayCodec

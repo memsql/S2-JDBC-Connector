@@ -99,7 +99,7 @@ System.out.println(vector);
 
 ### Requirements
 * [Maven](https://maven.apache.org/download.cgi)
-* Java JDK
+* JDK 11
 
 Clone the respository:
 ```script

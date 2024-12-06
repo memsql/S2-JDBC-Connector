@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration;
 
@@ -18,6 +18,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.Calendar;
+import java.util.Map;
 import java.util.TimeZone;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
@@ -340,8 +341,75 @@ public class PreparedStatementParametersTest extends Common {
           "REF parameter are not supported");
       Common.assertThrowsContains(
           SQLException.class,
-          () -> preparedStatement.setArray(1, null),
-          "Array parameter are not supported");
+          () -> preparedStatement.setObject(1, "", Types.REF),
+          "Type not supported");
+      preparedStatement.setArray(1, null);
+      Common.assertThrowsContains(
+          SQLException.class,
+          () -> con.createArrayOf("String", new Float[] {1f}),
+          "typeName String is not supported");
+      Common.assertThrowsContains(
+          SQLException.class,
+          () ->
+              preparedStatement.setArray(
+                  1,
+                  new Array() {
+                    @Override
+                    public String getBaseTypeName() throws SQLException {
+                      return null;
+                    }
+
+                    @Override
+                    public int getBaseType() throws SQLException {
+                      return 0;
+                    }
+
+                    @Override
+                    public Object getArray() throws SQLException {
+                      return null;
+                    }
+
+                    @Override
+                    public Object getArray(Map<String, Class<?>> map) throws SQLException {
+                      return null;
+                    }
+
+                    @Override
+                    public Object getArray(long index, int count) throws SQLException {
+                      return null;
+                    }
+
+                    @Override
+                    public Object getArray(long index, int count, Map<String, Class<?>> map)
+                        throws SQLException {
+                      return null;
+                    }
+
+                    @Override
+                    public ResultSet getResultSet() throws SQLException {
+                      return null;
+                    }
+
+                    @Override
+                    public ResultSet getResultSet(Map<String, Class<?>> map) throws SQLException {
+                      return null;
+                    }
+
+                    @Override
+                    public ResultSet getResultSet(long index, int count) throws SQLException {
+                      return null;
+                    }
+
+                    @Override
+                    public ResultSet getResultSet(long index, int count, Map<String, Class<?>> map)
+                        throws SQLException {
+                      return null;
+                    }
+
+                    @Override
+                    public void free() throws SQLException {}
+                  }),
+          "this type of Array parameter");
       Common.assertThrowsContains(
           SQLException.class,
           () -> preparedStatement.setRowId(1, null),

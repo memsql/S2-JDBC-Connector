@@ -1,27 +1,20 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.column;
-
-import static com.singlestore.jdbc.client.result.Result.NULL_LENGTH;
-import static com.singlestore.jdbc.plugin.codec.TimeCodec.EPOCH_DATE;
 
 import com.singlestore.jdbc.Configuration;
 import com.singlestore.jdbc.client.ColumnDecoder;
 import com.singlestore.jdbc.client.DataType;
 import com.singlestore.jdbc.client.ReadableByteBuf;
+import com.singlestore.jdbc.client.result.Result;
 import com.singlestore.jdbc.client.util.MutableInt;
 import com.singlestore.jdbc.message.server.ColumnDefinitionPacket;
 import com.singlestore.jdbc.plugin.codec.LocalDateTimeCodec;
-import java.sql.Date;
-import java.sql.SQLDataException;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.sql.Types;
+import java.sql.*;
 import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 
@@ -64,6 +57,11 @@ public class TimestampColumn extends ColumnDefinitionPacket implements ColumnDec
         false);
   }
 
+  /**
+   * Recreate new column using alias as name.
+   *
+   * @param prev current column
+   */
   protected TimestampColumn(TimestampColumn prev) {
     super(prev, true);
   }
@@ -250,90 +248,75 @@ public class TimestampColumn extends ColumnDefinitionPacket implements ColumnDec
   @Override
   public Date decodeDateText(ReadableByteBuf buf, MutableInt length, Calendar cal)
       throws SQLDataException {
-
-    int pos = buf.pos();
-    int nanoBegin = -1;
-    int[] timestampsPart = new int[] {0, 0, 0, 0, 0, 0, 0};
-    int partIdx = 0;
-    for (int begin = 0; begin < length.get(); begin++) {
-      byte b = buf.readByte();
-      if (b == '-' || b == ' ' || b == ':') {
-        partIdx++;
-        continue;
-      }
-      if (b == '.') {
-        partIdx++;
-        nanoBegin = begin;
-        continue;
-      }
-      if (b < '0' || b > '9') {
-        buf.pos(pos);
-        throw new SQLDataException(
-            String.format(
-                "value '%s' (%s) cannot be decoded as Timestamp",
-                buf.readString(length.get()), dataType));
-      }
-
-      timestampsPart[partIdx] = timestampsPart[partIdx] * 10 + b - 48;
-    }
-    if (timestampsPart[0] == 0
-        && timestampsPart[1] == 0
-        && timestampsPart[2] == 0
-        && timestampsPart[3] == 0
-        && timestampsPart[4] == 0
-        && timestampsPart[5] == 0
-        && timestampsPart[6] == 0) {
-      length.set(NULL_LENGTH);
-      return null;
-    }
-
-    // fix non-leading tray for nanoseconds
-    if (nanoBegin > 0) {
-      for (int begin = 0; begin < 6 - (length.get() - nanoBegin - 1); begin++) {
-        timestampsPart[6] = timestampsPart[6] * 10;
-      }
-    }
-
-    Timestamp timestamp;
-    if (cal == null) {
-      Calendar c = Calendar.getInstance();
-      c.set(
-          timestampsPart[0],
-          timestampsPart[1] - 1,
-          timestampsPart[2],
-          timestampsPart[3],
-          timestampsPart[4],
-          timestampsPart[5]);
-      timestamp = new Timestamp(c.getTime().getTime());
-      timestamp.setNanos(timestampsPart[6] * 1000);
-    } else {
-      synchronized (cal) {
-        cal.clear();
-        cal.set(
-            timestampsPart[0],
-            timestampsPart[1] - 1,
-            timestampsPart[2],
-            timestampsPart[3],
-            timestampsPart[4],
-            timestampsPart[5]);
-        timestamp = new Timestamp(cal.getTime().getTime());
-        timestamp.setNanos(timestampsPart[6] * 1000);
-      }
-    }
-
-    String st = timestamp.toString();
-    return Date.valueOf(st.substring(0, 10));
+    LocalDateTime ldt = parseText(buf, length);
+    if (ldt == null) return null;
+    return new Date(localDateTimeToInstant(ldt, cal) + ldt.getNano() / 1_000_000);
   }
 
   @Override
   public Date decodeDateBinary(ReadableByteBuf buf, MutableInt length, Calendar calParam)
       throws SQLDataException {
-    Calendar cal = calParam == null ? Calendar.getInstance() : calParam;
+    LocalDateTime ldt = parseBinary(buf, length);
+    if (ldt == null) return null;
+    return new Date(localDateTimeToInstant(ldt, calParam) + ldt.getNano() / 1_000_000);
+  }
 
-    if (length.get() == 0) {
-      length.set(NULL_LENGTH);
+  @Override
+  public Time decodeTimeText(ReadableByteBuf buf, MutableInt length, Calendar cal)
+      throws SQLDataException {
+    LocalDateTime ldt = parseText(buf, length);
+    if (ldt == null) return null;
+    return new Time(
+        localDateTimeToInstant(ldt.withYear(1970).withMonth(1).withDayOfMonth(1), cal)
+            + ldt.getNano() / 1_000_000);
+  }
+
+  @Override
+  public Time decodeTimeBinary(ReadableByteBuf buf, MutableInt length, Calendar calParam)
+      throws SQLDataException {
+    LocalDateTime ldt = parseBinary(buf, length);
+    if (ldt == null) return null;
+    return new Time(
+        localDateTimeToInstant(ldt.withYear(1970).withMonth(1).withDayOfMonth(1), calParam)
+            + ldt.getNano() / 1_000_000);
+  }
+
+  @Override
+  public Timestamp decodeTimestampText(ReadableByteBuf buf, MutableInt length, Calendar calParam)
+      throws SQLDataException {
+    LocalDateTime ldt = parseText(buf, length);
+    if (ldt == null) return null;
+    Timestamp res = new Timestamp(localDateTimeToInstant(ldt, calParam));
+    res.setNanos(ldt.getNano());
+    return res;
+  }
+
+  @Override
+  public Timestamp decodeTimestampBinary(ReadableByteBuf buf, MutableInt length, Calendar calParam)
+      throws SQLDataException {
+    LocalDateTime ldt = parseBinary(buf, length);
+    if (ldt == null) return null;
+    Timestamp res = new Timestamp(localDateTimeToInstant(ldt, calParam));
+    res.setNanos(ldt.getNano());
+    return res;
+  }
+
+  private LocalDateTime parseText(final ReadableByteBuf buf, final MutableInt length) {
+    int[] parts = LocalDateTimeCodec.parseTimestamp(buf.readAscii(length.get()));
+    if (parts == null) {
+      length.set(Result.NULL_LENGTH);
       return null;
     }
+    return LocalDateTime.of(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5])
+        .plusNanos(parts[6]);
+  }
+
+  private LocalDateTime parseBinary(final ReadableByteBuf buf, final MutableInt length) {
+    if (length.get() == 0) {
+      length.set(Result.NULL_LENGTH);
+      return null;
+    }
+
     int year = buf.readUnsignedShort();
     int month = buf.readByte();
     int dayOfMonth = buf.readByte();
@@ -351,8 +334,6 @@ public class TimestampColumn extends ColumnDefinitionPacket implements ColumnDec
         microseconds = buf.readUnsignedInt();
       }
     }
-
-    // xpand workaround https://jira.mariadb.org/browse/XPT-274
     if (year == 0
         && month == 0
         && dayOfMonth == 0
@@ -360,185 +341,36 @@ public class TimestampColumn extends ColumnDefinitionPacket implements ColumnDec
         && minutes == 0
         && seconds == 0
         && microseconds == 0) {
-      length.set(NULL_LENGTH);
+      length.set(Result.NULL_LENGTH);
       return null;
     }
-
-    Timestamp timestamp;
-    synchronized (cal) {
-      cal.clear();
-      cal.set(year, month - 1, dayOfMonth, hour, minutes, seconds);
-      timestamp = new Timestamp(cal.getTimeInMillis());
-    }
-    timestamp.setNanos((int) (microseconds * 1000));
-    String st = timestamp.toString();
-    return Date.valueOf(st.substring(0, 10));
+    return LocalDateTime.of(year, month, dayOfMonth, hour, minutes, seconds)
+        .plusNanos(microseconds * 1000);
   }
 
-  @Override
-  public Time decodeTimeText(ReadableByteBuf buf, MutableInt length, Calendar cal)
-      throws SQLDataException {
-    LocalDateTime lt = LocalDateTimeCodec.INSTANCE.decodeText(buf, length, this, cal);
-    if (lt == null) {
-      length.set(NULL_LENGTH);
-      return null;
-    }
-    Calendar cc = cal == null ? Calendar.getInstance() : cal;
-    ZonedDateTime d = EPOCH_DATE.atTime(lt.toLocalTime()).atZone(cc.getTimeZone().toZoneId());
-    return new Time(d.toEpochSecond() * 1000 + d.getNano() / 1_000_000);
-  }
-
-  @Override
-  public Time decodeTimeBinary(ReadableByteBuf buf, MutableInt length, Calendar calParam)
-      throws SQLDataException {
-    Calendar cal = calParam == null ? Calendar.getInstance() : calParam;
-    long dayOfMonth;
-    int hour = 0;
-    int minutes = 0;
-    int seconds = 0;
-    long microseconds = 0;
-    if (length.get() == 0) {
-      length.set(NULL_LENGTH);
-      return null;
-    }
-    int year = buf.readUnsignedShort();
-    int month = buf.readByte();
-    dayOfMonth = buf.readByte();
-
-    if (length.get() > 4) {
-      hour = buf.readByte();
-      minutes = buf.readByte();
-      seconds = buf.readByte();
-
-      if (length.get() > 7) {
-        microseconds = buf.readUnsignedInt();
-      }
-    }
-    if (year == 0 && month == 0 && dayOfMonth == 0 && hour == 0 && minutes == 0 && seconds == 0) {
-      length.set(NULL_LENGTH);
-      return null;
-    }
-    synchronized (cal) {
-      cal.clear();
-      cal.set(1970, Calendar.JANUARY, 1, hour, minutes, seconds);
-      return new Time(cal.getTimeInMillis() + microseconds / 1_000);
-    }
-  }
-
-  @Override
-  public Timestamp decodeTimestampText(ReadableByteBuf buf, MutableInt length, Calendar calParam)
-      throws SQLDataException {
-    int pos = buf.pos();
-    int nanoBegin = -1;
-    int[] timestampsPart = new int[] {0, 0, 0, 0, 0, 0, 0};
-    int partIdx = 0;
-    for (int begin = 0; begin < length.get(); begin++) {
-      byte b = buf.readByte();
-      if (b == '-' || b == ' ' || b == ':') {
-        partIdx++;
-        continue;
-      }
-      if (b == '.') {
-        partIdx++;
-        nanoBegin = begin;
-        continue;
-      }
-      if (b < '0' || b > '9') {
-        buf.pos(pos);
-        throw new SQLDataException(
-            String.format(
-                "value '%s' (%s) cannot be decoded as Timestamp",
-                buf.readString(length.get()), dataType.name()));
-      }
-
-      timestampsPart[partIdx] = timestampsPart[partIdx] * 10 + b - 48;
-    }
-    if (timestampsPart[0] == 0
-        && timestampsPart[1] == 0
-        && timestampsPart[2] == 0
-        && timestampsPart[3] == 0
-        && timestampsPart[4] == 0
-        && timestampsPart[5] == 0
-        && timestampsPart[6] == 0) {
-      return null;
-    }
-
-    // fix non leading tray for nanoseconds
-    if (nanoBegin > 0) {
-      for (int begin = 0; begin < 6 - (length.get() - nanoBegin - 1); begin++) {
-        timestampsPart[6] = timestampsPart[6] * 10;
-      }
-    }
-
-    Timestamp timestamp;
+  public static long localDateTimeToInstant(final LocalDateTime ldt, final Calendar calParam) {
     if (calParam == null) {
-      Calendar c = Calendar.getInstance();
-      c.set(
-          timestampsPart[0],
-          timestampsPart[1] - 1,
-          timestampsPart[2],
-          timestampsPart[3],
-          timestampsPart[4],
-          timestampsPart[5]);
-      timestamp = new Timestamp(c.getTime().getTime());
-      timestamp.setNanos(timestampsPart[6] * 1000);
-    } else {
-      synchronized (calParam) {
-        calParam.clear();
-        calParam.set(
-            timestampsPart[0],
-            timestampsPart[1] - 1,
-            timestampsPart[2],
-            timestampsPart[3],
-            timestampsPart[4],
-            timestampsPart[5]);
-        timestamp = new Timestamp(calParam.getTime().getTime());
-        timestamp.setNanos(timestampsPart[6] * 1000);
-      }
+      Calendar cal = Calendar.getInstance();
+      cal.set(
+          ldt.getYear(),
+          ldt.getMonthValue() - 1,
+          ldt.getDayOfMonth(),
+          ldt.getHour(),
+          ldt.getMinute(),
+          ldt.getSecond());
+      cal.set(Calendar.MILLISECOND, 0);
+      return cal.getTimeInMillis();
     }
-    return timestamp;
-  }
-
-  @Override
-  public Timestamp decodeTimestampBinary(ReadableByteBuf buf, MutableInt length, Calendar calParam)
-      throws SQLDataException {
-    Calendar cal = calParam == null ? Calendar.getInstance() : calParam;
-    int year;
-    int month = 1;
-    long dayOfMonth = 1;
-    int hour = 0;
-    int minutes = 0;
-    int seconds = 0;
-    long microseconds = 0;
-    if (length.get() == 0) return null;
-    year = buf.readUnsignedShort();
-    month = buf.readByte();
-    dayOfMonth = buf.readByte();
-
-    if (length.get() > 4) {
-      hour = buf.readByte();
-      minutes = buf.readByte();
-      seconds = buf.readByte();
-
-      if (length.get() > 7) {
-        microseconds = buf.readUnsignedInt();
-      }
+    synchronized (calParam) {
+      calParam.clear();
+      calParam.set(
+          ldt.getYear(),
+          ldt.getMonthValue() - 1,
+          ldt.getDayOfMonth(),
+          ldt.getHour(),
+          ldt.getMinute(),
+          ldt.getSecond());
+      return calParam.getTimeInMillis();
     }
-
-    if (year == 0
-        && month == 0
-        && dayOfMonth == 0
-        && hour == 0
-        && minutes == 0
-        && seconds == 0
-        && microseconds == 0) return null;
-    Timestamp timestamp;
-    synchronized (cal) {
-      cal.clear();
-      cal.set(year, month - 1, (int) dayOfMonth, hour, minutes, seconds);
-      timestamp = new Timestamp(cal.getTimeInMillis());
-    }
-    timestamp.setNanos((int) (microseconds * 1000));
-    return timestamp;
   }
 }

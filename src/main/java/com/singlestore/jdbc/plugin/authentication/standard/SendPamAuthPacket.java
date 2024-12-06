@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
-
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 package com.singlestore.jdbc.plugin.authentication.standard;
 
 import com.singlestore.jdbc.Configuration;
@@ -17,23 +16,17 @@ import java.sql.SQLException;
 
 public class SendPamAuthPacket implements AuthenticationPlugin {
 
-  private String authenticationData;
-  private Configuration conf;
+  private final String authenticationData;
+  private final Configuration conf;
   private int counter = 0;
-
-  @Override
-  public String type() {
-    return "dialog";
-  }
 
   /**
    * Initialization.
    *
    * @param authenticationData authentication data (password/token)
-   * @param seed server provided seed
    * @param conf Connection string options
    */
-  public void initialize(String authenticationData, byte[] seed, Configuration conf) {
+  public SendPamAuthPacket(String authenticationData, Configuration conf) {
     this.authenticationData = authenticationData;
     this.conf = conf;
   }

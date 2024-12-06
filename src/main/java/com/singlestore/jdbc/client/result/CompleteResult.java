@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.result;
 
@@ -9,13 +9,13 @@ import com.singlestore.jdbc.Statement;
 import com.singlestore.jdbc.client.ColumnDecoder;
 import com.singlestore.jdbc.client.Context;
 import com.singlestore.jdbc.client.DataType;
+import com.singlestore.jdbc.client.util.ClosableLock;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
 
 /** Result-set that will retrieve all rows immediately before returning the result-set. */
 public class CompleteResult extends Result {
@@ -231,7 +231,7 @@ public class CompleteResult extends Result {
   public void fetchRemaining() {}
 
   @Override
-  public void closeFromStmtClose(ReentrantLock lock) {
+  public void closeFromStmtClose(ClosableLock lock) {
     this.closed = true;
   }
 

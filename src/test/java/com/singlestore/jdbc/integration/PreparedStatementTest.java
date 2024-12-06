@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration;
 
@@ -47,6 +47,15 @@ public class PreparedStatementTest extends Common {
     stmt.execute("CREATE TABLE prepare3 (t1 LONGTEXT, t2 LONGTEXT, t3 LONGTEXT, t4 LONGTEXT)");
     stmt.execute("CREATE TABLE prepare4 (t1 int)");
     stmt.execute("INSERT INTO prepare4 VALUES (1),(2),(3),(4),(5)");
+  }
+
+  @Test
+  public void prepToString() throws SQLException {
+    try (PreparedStatement stmt = sharedConn.prepareStatement("SELECT ?,?")) {
+      stmt.setNull(2, Types.INTEGER);
+      Assertions.assertEquals(
+          "ClientPreparedStatement{sql:'SELECT ?,?', parameters:[null,null]}", stmt.toString());
+    }
   }
 
   @Test
@@ -193,8 +202,7 @@ public class PreparedStatementTest extends Common {
           "Parameter at position 1 is not set");
       preparedStatement.setInt(2, 11);
       preparedStatement.setInt(1, 6);
-      ResultSet rs0 = preparedStatement.executeQuery();
-      assertFalse(rs0.next());
+      preparedStatement.executeUpdate();
 
       // verification
       ResultSet rs = stmt.executeQuery("SELECT * FROM prepare1 ORDER BY t1");
@@ -1388,10 +1396,48 @@ public class PreparedStatementTest extends Common {
           con.prepareStatement(
               "/*client prepare*/INSERT INTO prepare4 VALUES(?); SELECT * FROM prepare4 where t1 = 1000 ")) {
         prep.setInt(1, 1000);
-        prep.executeQuery();
+        prep.executeUpdate();
         assertTrue(prep.getMoreResults(Statement.CLOSE_CURRENT_RESULT));
         ResultSet rs = prep.getResultSet();
         assertTrue(rs.next());
+      }
+    }
+  }
+
+  @Test
+  public void prepCacheMultiDb() throws SQLException {
+    Statement stmt = sharedConn.createStatement();
+    stmt.execute("DROP DATABASE IF EXISTS dbtest1");
+    stmt.execute("DROP DATABASE IF EXISTS dbtest2");
+    stmt.execute("CREATE DATABASE dbtest1");
+    stmt.execute("CREATE DATABASE dbtest2");
+    stmt.execute("CREATE TABLE dbtest1.commontable(t1 varchar(32))");
+    stmt.execute("CREATE TABLE dbtest2.commontable(t2 varchar(32))");
+
+    stmt.execute("INSERT INTO dbtest1.commontable VALUES ('db1')");
+    stmt.execute("INSERT INTO dbtest2.commontable VALUES ('db2')");
+    try (Connection con = createCon("&cachePrepStmts&useServerPrepStmts")) {
+      con.setCatalog("dbtest1");
+      try (PreparedStatement prep = con.prepareStatement("SELECT * FROM commontable")) {
+        ResultSet rs = prep.executeQuery();
+        rs.next();
+        assertEquals("db1", rs.getString(1));
+      }
+      try (PreparedStatement prep = con.prepareStatement("SELECT * FROM commontable")) {
+        ResultSet rs = prep.executeQuery();
+        rs.next();
+        assertEquals("db1", rs.getString(1));
+      }
+      con.setCatalog("dbtest2");
+      try (PreparedStatement prep = con.prepareStatement("SELECT * FROM commontable")) {
+        ResultSet rs = prep.executeQuery();
+        rs.next();
+        assertEquals("db2", rs.getString(1));
+      }
+      try (PreparedStatement prep = con.prepareStatement("SELECT * FROM commontable")) {
+        ResultSet rs = prep.executeQuery();
+        rs.next();
+        assertEquals("db2", rs.getString(1));
       }
     }
   }

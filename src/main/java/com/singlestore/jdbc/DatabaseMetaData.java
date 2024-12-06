@@ -452,10 +452,12 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
   private boolean databaseCond(
       boolean firstCondition, StringBuilder sb, String columnName, String database) {
     // null database => searching without any database restriction
-    if (database == null) return firstCondition;
+    if ((database == null && !conf.nullDatabaseMeansCurrent()) || "%".equals(database))
+      return firstCondition;
 
     // empty database => search restricting to current database
-    if (database.isEmpty()) {
+    if ((database == null && conf.nullDatabaseMeansCurrent())
+        || (database != null && database.isEmpty())) {
       sb.append(firstCondition ? " WHERE (" : " AND (")
           .append(columnName)
           .append(" = database()")
@@ -632,7 +634,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
       sqlType.append(")");
       if (mustAddType) sb.append(sqlType);
     }
-    sb.append(" ORDER BY TABLE_TYPE, TABLE_SCHEMA, TABLE_NAME");
+    sb.append(" ORDER BY TABLE_TYPE,TABLE_CAT,TABLE_SCHEMA,TABLE_NAME");
     return executeQuery(sb.toString());
   }
 

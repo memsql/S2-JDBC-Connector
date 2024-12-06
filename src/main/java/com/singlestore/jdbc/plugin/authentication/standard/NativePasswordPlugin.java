@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
-
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 package com.singlestore.jdbc.plugin.authentication.standard;
 
-import com.singlestore.jdbc.Configuration;
 import com.singlestore.jdbc.client.Context;
 import com.singlestore.jdbc.client.ReadableByteBuf;
 import com.singlestore.jdbc.client.socket.Reader;
@@ -19,10 +17,19 @@ import java.security.NoSuchAlgorithmException;
 
 public class NativePasswordPlugin implements AuthenticationPlugin {
 
-  public static final String TYPE = "mysql_native_password";
-
   private String authenticationData;
   private byte[] seed;
+
+  /**
+   * Initialized data.
+   *
+   * @param authenticationData authentication data (password/token)
+   * @param seed server provided seed
+   */
+  public NativePasswordPlugin(String authenticationData, byte[] seed) {
+    this.seed = seed;
+    this.authenticationData = authenticationData;
+  }
 
   /**
    * Encrypts a password.
@@ -63,23 +70,6 @@ public class NativePasswordPlugin implements AuthenticationPlugin {
     } catch (NoSuchAlgorithmException e) {
       throw new RuntimeException("Could not use SHA-1, failing", e);
     }
-  }
-
-  @Override
-  public String type() {
-    return TYPE;
-  }
-
-  /**
-   * Initialized data.
-   *
-   * @param authenticationData authentication data (password/token)
-   * @param seed server provided seed
-   * @param conf Connection string options
-   */
-  public void initialize(String authenticationData, byte[] seed, Configuration conf) {
-    this.seed = seed;
-    this.authenticationData = authenticationData;
   }
 
   /**

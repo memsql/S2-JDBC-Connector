@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.message.server;
 
@@ -15,8 +15,6 @@ import com.singlestore.jdbc.util.log.Loggers;
 
 public class OkPacket implements Completion {
 
-  private final Logger logger;
-
   private final long affectedRows;
   private final long lastInsertId;
 
@@ -27,7 +25,7 @@ public class OkPacket implements Completion {
    * @param context connection context
    */
   public OkPacket(ReadableByteBuf buf, Context context) {
-    logger = Loggers.getLogger(OkPacket.class);
+    Logger logger = Loggers.getLogger(OkPacket.class);
     buf.skip(); // ok header
     this.affectedRows = buf.readLongLengthEncodedNotNull();
     this.lastInsertId = buf.readLongLengthEncodedNotNull();

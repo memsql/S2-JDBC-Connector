@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration;
 
@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
+import java.util.Map;
 import org.junit.jupiter.api.*;
 
 public class UpdateBatchResultSetTest extends Common {
@@ -1066,9 +1067,9 @@ public class UpdateBatchResultSetTest extends Common {
       Common.assertThrowsContains(
           SQLException.class, () -> rs.updateRef("t1", null), "not supported");
       Common.assertThrowsContains(
-          SQLException.class, () -> rs.updateArray(2, null), "not supported");
+          SQLException.class, () -> rs.updateArray(2, new FakeArray()), "not supported");
       Common.assertThrowsContains(
-          SQLException.class, () -> rs.updateArray("t1", null), "not supported");
+          SQLException.class, () -> rs.updateArray("t1", new FakeArray()), "not supported");
       Common.assertThrowsContains(
           SQLException.class, () -> rs.updateRowId(2, null), "not supported");
       Common.assertThrowsContains(
@@ -1105,5 +1106,61 @@ public class UpdateBatchResultSetTest extends Common {
       for (int i = 0; i < 11; i++) rs.next();
       assertEquals("11", rs.getString("t1"));
     }
+  }
+
+  private class FakeArray implements Array {
+    @Override
+    public String getBaseTypeName() throws SQLException {
+      return null;
+    }
+
+    @Override
+    public int getBaseType() throws SQLException {
+      return 0;
+    }
+
+    @Override
+    public Object getArray() throws SQLException {
+      return null;
+    }
+
+    @Override
+    public Object getArray(Map<String, Class<?>> map) throws SQLException {
+      return null;
+    }
+
+    @Override
+    public Object getArray(long index, int count) throws SQLException {
+      return null;
+    }
+
+    @Override
+    public Object getArray(long index, int count, Map<String, Class<?>> map) throws SQLException {
+      return null;
+    }
+
+    @Override
+    public ResultSet getResultSet() throws SQLException {
+      return null;
+    }
+
+    @Override
+    public ResultSet getResultSet(Map<String, Class<?>> map) throws SQLException {
+      return null;
+    }
+
+    @Override
+    public ResultSet getResultSet(long index, int count) throws SQLException {
+      return null;
+    }
+
+    @Override
+    public ResultSet getResultSet(long index, int count, Map<String, Class<?>> map)
+        throws SQLException {
+      return null;
+    }
+
+    @Override
+    public void free() throws SQLException {}
   }
 }

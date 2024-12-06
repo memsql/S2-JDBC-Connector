@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.context;
 
+import com.singlestore.jdbc.BasePreparedStatement;
 import com.singlestore.jdbc.Configuration;
 import com.singlestore.jdbc.HostAddress;
 import com.singlestore.jdbc.client.ColumnDecoder;
@@ -12,6 +13,7 @@ import com.singlestore.jdbc.client.Context;
 import com.singlestore.jdbc.client.PrepareCache;
 import com.singlestore.jdbc.client.ReadableByteBuf;
 import com.singlestore.jdbc.export.ExceptionFactory;
+import com.singlestore.jdbc.export.Prepare;
 import com.singlestore.jdbc.message.server.InitialHandshakePacket;
 import com.singlestore.jdbc.util.constants.Capabilities;
 import com.singlestore.jdbc.util.constants.ConnectionState;
@@ -165,8 +167,15 @@ public class BaseContext implements Context {
     this.transactionIsolationLevel = transactionIsolationLevel;
   }
 
-  public PrepareCache getPrepareCache() {
-    return prepareCache;
+  @Override
+  public Prepare getPrepareCacheCmd(String sql, BasePreparedStatement preparedStatement) {
+    return prepareCache.get(database + "|" + sql, preparedStatement);
+  }
+
+  @Override
+  public Prepare putPrepareCacheCmd(
+      String sql, Prepare result, BasePreparedStatement preparedStatement) {
+    return prepareCache.put(database + "|" + sql, result, preparedStatement);
   }
 
   @Override

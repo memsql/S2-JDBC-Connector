@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.result;
 
 import com.singlestore.jdbc.Statement;
 import com.singlestore.jdbc.client.ColumnDecoder;
 import com.singlestore.jdbc.client.Context;
+import com.singlestore.jdbc.client.util.ClosableLock;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class StreamingResult extends Result {
 
   private static final int MAX_FETCH_SIZE = 16384;
-  private final ReentrantLock lock;
+  private final ClosableLock lock;
   private int dataFetchTime;
   private int requestedFetchSize;
 
@@ -44,7 +44,7 @@ public class StreamingResult extends Result {
       com.singlestore.jdbc.client.socket.Reader reader,
       Context context,
       int fetchSize,
-      ReentrantLock lock,
+      ClosableLock lock,
       int resultSetType,
       boolean closeOnCompletion,
       boolean traceEnable)
@@ -92,8 +92,7 @@ public class StreamingResult extends Result {
   }
 
   private void addStreamingValue() throws SQLException {
-    lock.lock();
-    try {
+    try (ClosableLock ignore = lock.closeableLock()) {
       // read only fetchSize values
       int fetchSizeTmp =
           (maxRows <= 0)
@@ -111,8 +110,6 @@ public class StreamingResult extends Result {
         skipRemaining();
     } catch (IOException ioe) {
       throw exceptionFactory.create("Error while streaming resultSet data", "08000", ioe);
-    } finally {
-      lock.unlock();
     }
   }
 
@@ -140,13 +137,10 @@ public class StreamingResult extends Result {
       return true;
     } else {
       if (!loaded) {
-        lock.lock();
-        try {
+        try (ClosableLock ignore = lock.closeableLock()) {
           if (!loaded) {
             nextStreamingValue();
           }
-        } finally {
-          lock.unlock();
         }
 
         if (resultSetType == TYPE_FORWARD_ONLY) {

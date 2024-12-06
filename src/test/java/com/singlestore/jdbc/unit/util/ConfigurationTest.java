@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.unit.util;
 
@@ -773,11 +773,12 @@ public class ConfigurationTest extends Common {
             .tcpKeepInterval(50)
             .poolValidMinDelay(260)
             .useResetConnection(true)
+            .nullDatabaseMeansCurrent(true)
             .cachePrepStmts(false)
             .serverSslCert("mycertPath")
             .build();
     assertEquals(
-        "jdbc:singlestore://address=(host=host1)(port=3305),address=(host=host2)(port=3307)/db?user=me&password=***&autocommit=false&defaultFetchSize=10&maxQuerySizeToLog=100&geometryDefaultType=default&restrictedAuth=mysql_native_password,client_ed25519&socketFactory=someSocketFactory&connectTimeout=22&pipe=pipeName&localSocket=localSocket&tcpKeepAlive=false&tcpKeepIdle=10&tcpKeepCount=50&tcpKeepInterval=50&tcpAbortiveClose=true&localSocketAddress=localSocketAddress&socketTimeout=1000&tlsSocketType=TLStype&sslMode=TRUST&serverSslCert=mycertPath&keyStore=/tmp&keyStorePassword=MyPWD&keyStoreType=JKS&enabledSslCipherSuites=myCipher,cipher2&enabledSslProtocolSuites=TLSv1.2&allowMultiQueries=true&allowLocalInfile=true&useCompression=true&useAffectedRows=true&cachePrepStmts=false&prepStmtCacheSize=2&useServerPrepStmts=true&credentialType=ENV&sessionVariables=blabla&connectionAttributes=bla=bla&servicePrincipalName=SPN&blankTableNameMeta=true&tinyInt1isBit=false&yearIsDateType=false&dumpQueriesOnException=true&includeThreadDumpInDeadlockExceptions=true&retriesAllDown=10&transactionReplay=true&pool=true&poolName=myPool&maxPoolSize=16&minPoolSize=12&maxIdleTime=25000&registerJmxPool=false&poolValidMinDelay=260&useResetConnection=true",
+        "jdbc:singlestore://address=(host=host1)(port=3305),address=(host=host2)(port=3307)/db?user=me&password=***&autocommit=false&nullDatabaseMeansCurrent=true&defaultFetchSize=10&maxQuerySizeToLog=100&geometryDefaultType=default&restrictedAuth=mysql_native_password,client_ed25519&socketFactory=someSocketFactory&connectTimeout=22&pipe=pipeName&localSocket=localSocket&tcpKeepAlive=false&tcpKeepIdle=10&tcpKeepCount=50&tcpKeepInterval=50&tcpAbortiveClose=true&localSocketAddress=localSocketAddress&socketTimeout=1000&tlsSocketType=TLStype&sslMode=TRUST&serverSslCert=mycertPath&keyStore=/tmp&keyStorePassword=MyPWD&keyStoreType=JKS&enabledSslCipherSuites=myCipher,cipher2&enabledSslProtocolSuites=TLSv1.2&allowMultiQueries=true&allowLocalInfile=true&useCompression=true&useAffectedRows=true&cachePrepStmts=false&prepStmtCacheSize=2&useServerPrepStmts=true&credentialType=ENV&sessionVariables=blabla&connectionAttributes=bla=bla&servicePrincipalName=SPN&blankTableNameMeta=true&tinyInt1isBit=false&yearIsDateType=false&dumpQueriesOnException=true&includeThreadDumpInDeadlockExceptions=true&retriesAllDown=10&transactionReplay=true&pool=true&poolName=myPool&maxPoolSize=16&minPoolSize=12&maxIdleTime=25000&registerJmxPool=false&poolValidMinDelay=260&useResetConnection=true",
         conf.toString());
   }
 

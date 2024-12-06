@@ -1,21 +1,16 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
-
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 package com.singlestore.jdbc.integration;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.singlestore.jdbc.ClientPreparedStatement;
 import com.singlestore.jdbc.Connection;
 import com.singlestore.jdbc.ServerPreparedStatement;
 import com.singlestore.jdbc.Statement;
+import com.singlestore.jdbc.client.util.ClosableLock;
 import java.sql.BatchUpdateException;
 import java.sql.DriverManager;
 import java.sql.JDBCType;
@@ -31,11 +26,12 @@ import java.sql.SQLWarning;
 import java.sql.Types;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.ReentrantLock;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 public class StatementTest extends Common {
 
@@ -677,7 +673,7 @@ public class StatementTest extends Common {
           new ClientPreparedStatement(
               sql,
               con,
-              new ReentrantLock(),
+              new ClosableLock(),
               ResultSet.FETCH_FORWARD,
               ResultSet.CONCUR_READ_ONLY,
               Statement.NO_GENERATED_KEYS,
@@ -691,7 +687,7 @@ public class StatementTest extends Common {
           new ServerPreparedStatement(
               sql,
               con,
-              new ReentrantLock(),
+              new ClosableLock(),
               false,
               ResultSet.FETCH_FORWARD,
               ResultSet.CONCUR_READ_ONLY,
@@ -736,6 +732,34 @@ public class StatementTest extends Common {
               stmt.executeQuery(
                   "select {fn timestampdiff(SQL_TSI_HOUR, '2003-02-01','2003-05-01')} df df "),
           "select timestampdiff(HOUR, '2003-02-01','2003-05-01') df df ");
+    }
+  }
+
+  @Test
+  public void ensureJdbcErrorWhenNoResultset() throws SQLException {
+    try (PreparedStatement ps =
+        sharedConn.prepareStatement("SET @a = 5 + ?", Statement.RETURN_GENERATED_KEYS)) {
+      ps.setInt(1, 1);
+      ps.execute();
+      assertThrowsContains(
+          SQLException.class,
+          () -> ps.executeQuery(),
+          "PrepareStatement.executeQuery() command does NOT return a result-set as expected. Either"
+              + " use PrepareStatement.execute(), PrepareStatement.executeUpdate(), or correct"
+              + " command");
+      ps.execute();
+    }
+    try (PreparedStatement ps =
+        sharedConnBinary.prepareStatement("SET @a = 5 + ?", Statement.RETURN_GENERATED_KEYS)) {
+      ps.setInt(1, 1);
+      ps.execute();
+      assertThrowsContains(
+          SQLException.class,
+          () -> ps.executeQuery(),
+          "PrepareStatement.executeQuery() command does NOT return a result-set as expected. Either"
+              + " use PrepareStatement.execute(), PrepareStatement.executeUpdate(), or correct"
+              + " command");
+      ps.execute();
     }
   }
 
@@ -1124,6 +1148,71 @@ public class StatementTest extends Common {
         st.execute("DROP TABLE IF EXISTS getUpdateCountValueOnFail");
       }
     }
+  }
+
+  @Test
+  public void statementIdentifier() throws SQLException {
+    assertTrue(com.singlestore.jdbc.Driver.isSimpleIdentifier("good_$one"));
+    assertTrue(com.singlestore.jdbc.Driver.isSimpleIdentifier("anotherçone"));
+    assertFalse(com.singlestore.jdbc.Driver.isSimpleIdentifier("another'çone"));
+    assertFalse(com.singlestore.jdbc.Driver.isSimpleIdentifier(null));
+    assertFalse(com.singlestore.jdbc.Driver.isSimpleIdentifier(""));
+  }
+
+  @ParameterizedTest(name = "{0} - enquote identifier validation")
+  @CsvSource({
+    // Standard valid cases
+    "good_$one, false, good_$one",
+    "good_$one, true, `good_$one`",
+    "`good_$one`, true, `good_$one`",
+    "🌟s, true, `🌟s`",
+    "🌟s, false, `🌟s`",
+    "🌟`s, false, `🌟``s`",
+    "9999, true, `9999`",
+    "9999, false, `9999`",
+  })
+  public void validEnquoteIdentifier(String identifier, boolean alwaysQuote, String expected)
+      throws SQLException {
+    com.singlestore.jdbc.Statement stmt = sharedConn.createStatement();
+    assertEquals(expected, stmt.enquoteIdentifier(identifier, alwaysQuote));
+  }
+
+  @ParameterizedTest(name = "{0} - enquote identifier error")
+  @CsvSource({
+    // Standard valid cases
+    "s\u0000ff, false, Invalid name - containing u0000",
+    "s\u0000ff, true, Invalid name - containing u0000",
+  })
+  public void errorEnquoteIdentifier(String identifier, boolean alwaysQuote, String expectedError) {
+    com.singlestore.jdbc.Statement stmt = sharedConn.createStatement();
+    assertThrowsContains(
+        SQLException.class, () -> stmt.enquoteIdentifier(identifier, alwaysQuote), expectedError);
+  }
+
+  @Test
+  public void statementEnquoteIdentifier() throws SQLException {
+    com.singlestore.jdbc.Statement stmt = sharedConn.createStatement();
+    try {
+      stmt.enquoteIdentifier("\u0000ff", true);
+      fail("must have thrown exception");
+    } catch (SQLException e) {
+      // expected
+    }
+  }
+
+  @Test
+  public void statementEnquoteString() throws SQLException {
+    com.singlestore.jdbc.Statement stmt = sharedConn.createStatement();
+
+    assertEquals("'good_$one'", stmt.enquoteLiteral("good_$one"));
+    assertEquals(
+        "'another\\Z\\'\\\"one\\n \\b test'", stmt.enquoteLiteral("another\u001A'\"one\n \b test"));
+  }
+
+  @Test
+  public void statementEnquoteNCharLiteral() throws SQLException {
+    com.singlestore.jdbc.Statement stmt = sharedConn.createStatement();
+    assertEquals("N'good''one'", stmt.enquoteNCharLiteral("good'one"));
   }
 
   @Test

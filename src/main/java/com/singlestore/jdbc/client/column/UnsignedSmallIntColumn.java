@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.column;
 
@@ -57,6 +57,11 @@ public class UnsignedSmallIntColumn extends ColumnDefinitionPacket implements Co
         false);
   }
 
+  /**
+   * Recreate new column using alias as name.
+   *
+   * @param prev current column
+   */
   protected UnsignedSmallIntColumn(UnsignedSmallIntColumn prev) {
     super(prev, true);
   }

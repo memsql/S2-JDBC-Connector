@@ -40,6 +40,11 @@ public class BsonColumn extends BlobColumn {
     super(buf, charset, length, dataType, decimals, flags, stringPos, extTypeName, extTypeFormat);
   }
 
+  /**
+   * Recreate new column using alias as name.
+   *
+   * @param prev current column
+   */
   public BsonColumn(BsonColumn prev) {
     super(prev);
   }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.plugin.tls.main;
 
@@ -22,9 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.security.GeneralSecurityException;
-import java.security.KeyManagementException;
 import java.security.KeyStore;
-import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -32,10 +30,8 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.UUID;
 import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
@@ -124,12 +120,9 @@ public class DefaultTlsSocketPlugin implements TlsSocketPlugin {
   }
 
   @Override
-  public SSLSocketFactory getSocketFactory(Configuration conf, ExceptionFactory exceptionFactory)
+  public TrustManager[] getTrustManager(Configuration conf, ExceptionFactory exceptionFactory)
       throws SQLException {
-
     TrustManager[] trustManager = null;
-    KeyManager[] keyManager = null;
-
     if (conf.sslMode() == SslMode.TRUST) {
       trustManager = new X509TrustManager[] {new SingleStoreX509TrustingManager()};
     } else {
@@ -200,7 +193,13 @@ public class DefaultTlsSocketPlugin implements TlsSocketPlugin {
         }
       }
     }
+    return trustManager;
+  }
 
+  @Override
+  public KeyManager[] getKeyManager(Configuration conf, ExceptionFactory exceptionFactory)
+      throws SQLException {
+    KeyManager[] keyManager = null;
     if (conf.keyStore() != null) {
       keyManager =
           new KeyManager[] {
@@ -230,17 +229,7 @@ public class DefaultTlsSocketPlugin implements TlsSocketPlugin {
         }
       }
     }
-
-    try {
-      SSLContext sslContext = SSLContext.getInstance("TLS");
-      sslContext.init(keyManager, trustManager, null);
-      return sslContext.getSocketFactory();
-    } catch (KeyManagementException keyManagementEx) {
-      throw exceptionFactory.create("Could not initialize SSL context", "08000", keyManagementEx);
-    } catch (NoSuchAlgorithmException noSuchAlgorithmEx) {
-      throw exceptionFactory.create(
-          "SSLContext TLS Algorithm not unknown", "08000", noSuchAlgorithmEx);
-    }
+    return keyManager;
   }
 
   @Override

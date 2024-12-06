@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.result;
 
@@ -14,6 +14,7 @@ import com.singlestore.jdbc.client.Context;
 import com.singlestore.jdbc.client.result.rowdecoder.BinaryRowDecoder;
 import com.singlestore.jdbc.codec.Parameter;
 import com.singlestore.jdbc.plugin.Codec;
+import com.singlestore.jdbc.plugin.array.FloatArray;
 import com.singlestore.jdbc.plugin.codec.BigDecimalCodec;
 import com.singlestore.jdbc.plugin.codec.BlobCodec;
 import com.singlestore.jdbc.plugin.codec.BooleanCodec;
@@ -22,6 +23,7 @@ import com.singlestore.jdbc.plugin.codec.ByteCodec;
 import com.singlestore.jdbc.plugin.codec.ClobCodec;
 import com.singlestore.jdbc.plugin.codec.DateCodec;
 import com.singlestore.jdbc.plugin.codec.DoubleCodec;
+import com.singlestore.jdbc.plugin.codec.FloatArrayCodec;
 import com.singlestore.jdbc.plugin.codec.FloatCodec;
 import com.singlestore.jdbc.plugin.codec.IntCodec;
 import com.singlestore.jdbc.plugin.codec.LongCodec;
@@ -36,17 +38,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
-import java.sql.Blob;
-import java.sql.Clob;
-import java.sql.Date;
-import java.sql.NClob;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLDataException;
-import java.sql.SQLException;
-import java.sql.SQLType;
-import java.sql.Time;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -190,9 +182,13 @@ public class UpdatableResult extends CompleteResult {
       }
     }
 
+    // DB-50840 primary keys are identified as UNI keys for columnsore table in SingleStore < 8.5.1
     if (primaryColumns.isEmpty()) {
       canUpdate = false;
-      changeError = "Cannot update rows, since no primary field is present in query";
+      changeError =
+          "Cannot update rows, since no primary field is present in query "
+              + "(If the SingleStore version is earlier than 8.5.1, primary keys on columnstore tables are treated as unique (UNI) keys. "
+              + "Use rowstore tables instead for proper primary key functionality.)";
     } else {
       primaryCols = primaryColumns.toArray(new String[0]);
     }
@@ -481,7 +477,7 @@ public class UpdatableResult extends CompleteResult {
                 .setParameter(paramPos++, Parameter.NULL_PARAMETER);
           }
         }
-        insertPreparedStatement.executeQuery();
+        insertPreparedStatement.execute();
         if (isAutoincrementPk) {
           // primary is auto_increment (only one field)
           ResultSet rsKey = insertPreparedStatement.getGeneratedKeys();
@@ -819,6 +815,18 @@ public class UpdatableResult extends CompleteResult {
   public void updateClob(int columnIndex, Clob x) throws SQLException {
     checkUpdatable(columnIndex);
     parameters.set(columnIndex - 1, new Parameter<>(ClobCodec.INSTANCE, x));
+  }
+
+  @Override
+  public void updateArray(int columnIndex, Array x) throws SQLException {
+    checkUpdatable(columnIndex);
+    if (x instanceof FloatArray) {
+      parameters.set(
+          columnIndex - 1, new Parameter<>(FloatArrayCodec.INSTANCE, (float[]) x.getArray()));
+      return;
+    }
+    throw exceptionFactory.notSupported(
+        String.format("this type of Array parameter %s is not supported", x.getClass()));
   }
 
   @Override

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.impl;
 
@@ -12,6 +12,7 @@ import com.singlestore.jdbc.client.Client;
 import com.singlestore.jdbc.client.Completion;
 import com.singlestore.jdbc.client.Context;
 import com.singlestore.jdbc.client.context.RedoContext;
+import com.singlestore.jdbc.client.util.ClosableLock;
 import com.singlestore.jdbc.export.ExceptionFactory;
 import com.singlestore.jdbc.export.Prepare;
 import com.singlestore.jdbc.message.ClientMessage;
@@ -27,15 +28,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLNonTransientConnectionException;
 import java.sql.SQLTransientConnectionException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Handling connection failing automatic reconnection transparently when possible for multi-host
@@ -55,7 +51,7 @@ public class FailoverClient implements Client {
   /** is connections explicitly closed */
   protected boolean closed = false;
   /** thread locker */
-  protected final ReentrantLock lock;
+  protected final ClosableLock lock;
   /** current client */
   protected Client currentClient;
 
@@ -67,7 +63,7 @@ public class FailoverClient implements Client {
    * @throws SQLException if fail to connect
    */
   @SuppressWarnings({"this-escape"})
-  public FailoverClient(Configuration conf, ReentrantLock lock) throws SQLException {
+  public FailoverClient(Configuration conf, ClosableLock lock) throws SQLException {
     this.conf = conf;
     this.lock = lock;
     deniedListTimeout =

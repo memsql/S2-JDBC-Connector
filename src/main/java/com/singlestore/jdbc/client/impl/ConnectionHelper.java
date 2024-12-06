@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
-
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 package com.singlestore.jdbc.client.impl;
 
 import com.singlestore.jdbc.Configuration;
@@ -19,10 +18,7 @@ import com.singlestore.jdbc.message.client.SslRequestPacket;
 import com.singlestore.jdbc.message.server.AuthSwitchPacket;
 import com.singlestore.jdbc.message.server.ErrorPacket;
 import com.singlestore.jdbc.message.server.OkPacket;
-import com.singlestore.jdbc.plugin.AuthenticationPlugin;
-import com.singlestore.jdbc.plugin.Credential;
-import com.singlestore.jdbc.plugin.CredentialPlugin;
-import com.singlestore.jdbc.plugin.TlsSocketPlugin;
+import com.singlestore.jdbc.plugin.*;
 import com.singlestore.jdbc.plugin.authentication.AuthenticationPluginLoader;
 import com.singlestore.jdbc.plugin.tls.TlsSocketPluginLoader;
 import com.singlestore.jdbc.util.ConfigurableSocketFactory;
@@ -31,15 +27,16 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.sql.SQLNonTransientConnectionException;
+import java.sql.SQLTimeoutException;
 import java.util.Arrays;
 import java.util.List;
 import javax.net.SocketFactory;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.*;
 
 /** Connection creation helper class */
 public final class ConnectionHelper {
@@ -84,11 +81,15 @@ public final class ConnectionHelper {
     SocketFactory socketFactory;
     String socketFactoryName = conf.socketFactory();
     if (socketFactoryName != null) {
-      if (hostAddress == null) throw new SQLException("hostname must be set to connect socket");
       try {
         @SuppressWarnings("unchecked")
-        Class<? extends SocketFactory> socketFactoryClass =
-            (Class<? extends SocketFactory>) Class.forName(socketFactoryName);
+        Class<SocketFactory> socketFactoryClass =
+            (Class<SocketFactory>)
+                Class.forName(socketFactoryName, false, ConnectionHelper.class.getClassLoader());
+        if (!SocketFactory.class.isAssignableFrom(socketFactoryClass)) {
+          throw new IOException(
+              "Wrong Socket factory implementation '" + conf.socketFactory() + "'");
+        }
         Constructor<? extends SocketFactory> constructor = socketFactoryClass.getConstructor();
         socketFactory = constructor.newInstance();
         if (socketFactory instanceof ConfigurableSocketFactory) {
@@ -132,7 +133,11 @@ public final class ConnectionHelper {
         socket.connect(sockAddr, conf.connectTimeout());
       }
       return socket;
-
+    } catch (SocketTimeoutException ste) {
+      throw new SQLTimeoutException(
+          String.format("Socket timeout when connecting to %s. %s", hostAddress, ste.getMessage()),
+          "08000",
+          ste);
     } catch (IOException ioe) {
       throw new SQLNonTransientConnectionException(
           String.format(
@@ -239,11 +244,20 @@ public final class ConnectionHelper {
           // https://mariadb.com/kb/en/library/connection/#authentication-switch-request
           // *************************************************************************************
           AuthSwitchPacket authSwitchPacket = AuthSwitchPacket.decode(buf);
-          AuthenticationPlugin authenticationPlugin =
+          AuthenticationPluginFactory authPluginFactory =
               AuthenticationPluginLoader.get(authSwitchPacket.getPlugin(), conf);
-
-          authenticationPlugin.initialize(
-              credential.getPassword(), authSwitchPacket.getSeed(), conf);
+          if (authPluginFactory.requireSsl() && !context.hasClientCapability(Capabilities.SSL)) {
+            throw context
+                .getExceptionFactory()
+                .create(
+                    "Cannot use authentication plugin "
+                        + authPluginFactory.type()
+                        + " if SSL is not enabled.",
+                    "08000");
+          }
+          AuthenticationPlugin authenticationPlugin =
+              authPluginFactory.initialize(
+                  credential.getPassword(), authSwitchPacket.getSeed(), conf);
           buf = authenticationPlugin.process(writer, reader, context);
           break;
 
@@ -320,7 +334,7 @@ public final class ConnectionHelper {
     Configuration conf = context.getConf();
     if (conf.sslMode() != SslMode.DISABLE) {
 
-      if ((context.getServerCapabilities() & Capabilities.SSL) == 0) {
+      if (!context.hasServerCapability(Capabilities.SSL)) {
         throw context
             .getExceptionFactory()
             .create("Trying to connect with ssl, but ssl not enabled in the server", "08000");
@@ -330,8 +344,23 @@ public final class ConnectionHelper {
       SslRequestPacket.create(clientCapabilities, exchangeCharset).encode(writer, context);
 
       TlsSocketPlugin socketPlugin = TlsSocketPluginLoader.get(conf.tlsSocketType());
-      SSLSocketFactory sslSocketFactory =
-          socketPlugin.getSocketFactory(conf, context.getExceptionFactory());
+      SSLSocketFactory sslSocketFactory;
+      TrustManager[] trustManagers =
+          socketPlugin.getTrustManager(conf, context.getExceptionFactory());
+      try {
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(
+            socketPlugin.getKeyManager(conf, context.getExceptionFactory()), trustManagers, null);
+        sslSocketFactory = sslContext.getSocketFactory();
+      } catch (KeyManagementException keyManagementEx) {
+        throw context
+            .getExceptionFactory()
+            .create("Could not initialize SSL context", "08000", keyManagementEx);
+      } catch (NoSuchAlgorithmException noSuchAlgorithmEx) {
+        throw context
+            .getExceptionFactory()
+            .create("SSLContext TLS Algorithm not unknown", "08000", noSuchAlgorithmEx);
+      }
       SSLSocket sslSocket = socketPlugin.createSocket(socket, sslSocketFactory);
 
       enabledSslProtocolSuites(sslSocket, conf);

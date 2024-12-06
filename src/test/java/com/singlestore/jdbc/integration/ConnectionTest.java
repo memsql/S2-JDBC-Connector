@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration;
 
@@ -386,7 +386,8 @@ public class ConnectionTest extends Common {
     assertTrue(sharedConn.createClob() instanceof Clob);
     assertTrue(sharedConn.createNClob() instanceof NClob);
     assertThrows(SQLException.class, () -> sharedConn.createSQLXML());
-    assertThrows(SQLException.class, () -> sharedConn.createArrayOf("", null));
+    assertNull(sharedConn.createArrayOf("", null));
+    assertThrows(SQLException.class, () -> sharedConn.createArrayOf("string", "ddd"));
     assertThrows(SQLException.class, () -> sharedConn.createStruct("", null));
     assertNull(sharedConn.getSchema());
     sharedConn.setSchema("fff");
@@ -670,7 +671,8 @@ public class ConnectionTest extends Common {
     stmt.execute("GRANT SELECT ON *.* TO 'test_pam'");
 
     try (Connection connection =
-        createCon("user=test_pam&password=test_pass&restrictedAuth=mysql_clear_password")) {
+        createCon(
+            "user=test_pam&password=test_pass&restrictedAuth=mysql_clear_password&sslMode=trust")) {
       connection.getCatalog();
     }
     Common.assertThrowsContains(
@@ -877,6 +879,8 @@ public class ConnectionTest extends Common {
     return isLocal;
   }
 
+  public static int staticTestValue = 0;
+
   @Test
   public void socketFactoryTest() throws SQLException {
     try (Connection conn = createCon("socketFactory=" + SocketFactoryTest.class.getName())) {
@@ -886,6 +890,13 @@ public class ConnectionTest extends Common {
         SQLNonTransientConnectionException.class,
         () -> createCon("socketFactory=wrongClass"),
         "Socket factory failed to initialized with option \"socketFactory\" set to \"wrongClass\"");
+    assertEquals(0, staticTestValue);
+    Common.assertThrowsContains(
+        SQLNonTransientConnectionException.class,
+        () ->
+            createCon("socketFactory=com.singlestore.jdbc.integration.util.WrongSocketFactoryTest"),
+        "Socket factory failed to initialized with option \"socketFactory\" set to \"com.singlestore.jdbc.integration.util.WrongSocketFactoryTest\"");
+    assertEquals(0, staticTestValue);
   }
 
   @Test
@@ -952,6 +963,17 @@ public class ConnectionTest extends Common {
       assertTrue((capabilities & Capabilities.CONNECT_ATTRS) > 0);
     } else {
       assertEquals(0, (capabilities & Capabilities.CONNECT_ATTRS));
+    }
+  }
+
+  @Test
+  public void loopHost() throws SQLException {
+    String connStr =
+        String.format(
+            "jdbc:singlestore://wronghost,%s:%s/%s?user=%s&password=%s",
+            hostname, port, database, user, password);
+    try (Connection con = DriverManager.getConnection(connStr)) {
+      con.createStatement().executeQuery("SELECT 1");
     }
   }
 }

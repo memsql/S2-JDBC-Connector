@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration.tools;
 
@@ -55,10 +55,11 @@ public class TcpProxySocket implements Runnable {
   }
 
   /** Kill proxy. */
-  public void kill() {
+  public void kill(boolean rst) {
     stop = true;
     try {
       if (server != null) {
+        if (rst) server.setSoLinger(true, 0);
         server.close();
       }
     } catch (IOException e) {
@@ -66,6 +67,7 @@ public class TcpProxySocket implements Runnable {
     }
     try {
       if (client != null) {
+        if (rst) client.setSoLinger(true, 0);
         client.close();
       }
     } catch (IOException e) {

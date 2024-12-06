@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration.codec;
 
@@ -906,11 +906,11 @@ public class IntCodecTest extends CommonCodecTest {
 
   private void getArray(ResultSet rs) throws SQLException {
     assertThrowsContains(
-        SQLException.class, () -> rs.getArray(1), "Method ResultSet.getArray not supported");
+        SQLException.class, () -> rs.getArray(1), "Data type INT cannot be decoded as float[]");
     assertThrowsContains(
         SQLException.class,
         () -> rs.getArray("t1alias"),
-        "Method ResultSet.getArray not supported");
+        "Data type INT cannot be decoded as float[]");
   }
 
   @Test

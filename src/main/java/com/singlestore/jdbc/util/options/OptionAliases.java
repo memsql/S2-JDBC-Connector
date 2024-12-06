@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.util.options;
 
@@ -17,5 +17,9 @@ public final class OptionAliases {
     OPTIONS_ALIASES.put("clientcertificatekeystoreurl", "keyStore");
     OPTIONS_ALIASES.put("clientcertificatekeystorepassword", "keyStorePassword");
     OPTIONS_ALIASES.put("clientcertificatekeystoretype", "keyStoreType");
+    OPTIONS_ALIASES.put("trustcertificatekeystoreurl", "trustStore");
+    OPTIONS_ALIASES.put("trustcertificatekeystorepassword", "keyStorePassword");
+    OPTIONS_ALIASES.put("trustcertificatekeystoretype", "trustStoreType");
+    OPTIONS_ALIASES.put("nullcatalogmeanscurrent", "nullDatabaseMeansCurrent");
   }
 }

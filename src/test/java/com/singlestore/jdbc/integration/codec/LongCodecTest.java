@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration.codec;
 
@@ -889,11 +889,11 @@ public class LongCodecTest extends CommonCodecTest {
 
   private void getArray(ResultSet rs) throws SQLException {
     assertThrowsContains(
-        SQLException.class, () -> rs.getArray(1), "Method ResultSet.getArray not supported");
+        SQLException.class, () -> rs.getArray(1), "Data type BIGINT cannot be decoded as float[]");
     assertThrowsContains(
         SQLException.class,
         () -> rs.getArray("t1alias"),
-        "Method ResultSet.getArray not supported");
+        "Data type BIGINT cannot be decoded as float[]");
   }
 
   @Test
@@ -959,7 +959,7 @@ public class LongCodecTest extends CommonCodecTest {
     assertEquals("t1", meta.getColumnName(1));
     assertEquals(Types.BIGINT, meta.getColumnType(1));
     assertEquals(4, meta.getColumnCount());
-    assertEquals(19, meta.getPrecision(1));
+    assertEquals(20, meta.getPrecision(1));
     assertEquals(0, meta.getScale(1));
     assertEquals("", meta.getSchemaName(1));
     assertEquals(20, meta.getColumnDisplaySize(1));

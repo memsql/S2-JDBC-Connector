@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client;
 
+import com.singlestore.jdbc.BasePreparedStatement;
 import com.singlestore.jdbc.Configuration;
 import com.singlestore.jdbc.export.ExceptionFactory;
+import com.singlestore.jdbc.export.Prepare;
 import java.util.function.Function;
 
 public interface Context {
@@ -148,11 +150,23 @@ public interface Context {
   void setTransactionIsolationLevel(int transactionIsolationLevel);
 
   /**
-   * get LRU prepare cache object
+   * Return cached prepare if key match
    *
-   * @return prepare cache
+   * @param sql sql command
+   * @param preparedStatement current statement
+   * @return Prepare if found, null if not
    */
-  PrepareCache getPrepareCache();
+  Prepare getPrepareCacheCmd(String sql, BasePreparedStatement preparedStatement);
+
+  /**
+   * Put prepare result in cache
+   *
+   * @param sql sql command
+   * @param result prepare result
+   * @param preparedStatement current statement
+   * @return Prepare if was already cached
+   */
+  Prepare putPrepareCacheCmd(String sql, Prepare result, BasePreparedStatement preparedStatement);
 
   /** Reset prepare cache (after a failover) */
   void resetPrepareCache();

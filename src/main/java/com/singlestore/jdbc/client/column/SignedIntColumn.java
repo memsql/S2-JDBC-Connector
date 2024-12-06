@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.column;
 
@@ -57,6 +57,11 @@ public class SignedIntColumn extends ColumnDefinitionPacket implements ColumnDec
         false);
   }
 
+  /**
+   * Recreate new column using alias as name.
+   *
+   * @param prev current column
+   */
   protected SignedIntColumn(SignedIntColumn prev) {
     super(prev, true);
   }
@@ -83,7 +88,9 @@ public class SignedIntColumn extends ColumnDefinitionPacket implements ColumnDec
 
   @Override
   public int getPrecision() {
-    return 10;
+    // UNSIGNED INT :             0..4294967295 digits=10 nchars=10
+    // SIGNED INT   :   -2147483648..2147483647 digits=10 nchars=11
+    return Math.min(10, (int) columnLength);
   }
 
   @Override

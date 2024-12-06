@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration.codec;
 
@@ -152,6 +152,16 @@ public class DateTimeCodecTest extends CommonCodecTest {
     testErrObject(rs, Reader.class);
     testObject(rs, LocalDate.class, LocalDate.parse("2010-01-12"));
     testObject(rs, LocalDateTime.class, LocalDateTime.parse("2010-01-12T01:55:12"));
+    // get OffsetDateTime for "2010-01-12T01:55:12" corresponding with current zone id:
+    OffsetDateTime expOffsetDateTime =
+        OffsetDateTime.ofInstant(
+            Timestamp.valueOf("2010-01-12 01:55:12").toInstant(), ZoneId.systemDefault());
+    testObject(rs, OffsetDateTime.class, expOffsetDateTime);
+    testObject(
+        rs,
+        Instant.class,
+        ZonedDateTime.of(LocalDateTime.parse("2010-01-12T01:55:12"), ZoneId.systemDefault())
+            .toInstant());
     testObject(rs, LocalTime.class, LocalTime.parse("01:55:12"));
     testObject(rs, Time.class, Time.valueOf("01:55:12"));
     testObject(rs, Timestamp.class, Timestamp.valueOf("2010-01-12 01:55:12"));
@@ -159,17 +169,15 @@ public class DateTimeCodecTest extends CommonCodecTest {
         rs,
         ZonedDateTime.class,
         LocalDateTime.parse("2010-01-12T01:55:12").atZone(ZoneId.systemDefault()));
-    testObject(rs, java.util.Date.class, Date.valueOf("2010-01-12"));
     testObject(
         rs,
-        Instant.class,
-        LocalDateTime.parse("2010-01-12T01:55:12").atZone(ZoneId.systemDefault()).toInstant());
-    testObject(
-        rs,
-        OffsetDateTime.class,
-        LocalDateTime.parse("2010-01-12T01:55:12")
-            .atZone(ZoneId.systemDefault())
-            .toOffsetDateTime());
+        java.util.Date.class,
+        new Date(
+            ZonedDateTime.of(
+                        LocalDateTime.parse("2010-01-12T01:55:12.0"),
+                        TimeZone.getDefault().toZoneId())
+                    .toEpochSecond()
+                * 1000));
   }
 
   @Test
@@ -411,38 +419,33 @@ public class DateTimeCodecTest extends CommonCodecTest {
   }
 
   public void getDate(ResultSet rs) throws SQLException {
-    testDate(
-        rs,
-        1263261312000l,
-        1); // Passing the millisecond time of the UTC Date (2010-01-12 01:55:12) which is stored in
-    // the database at index 1.
-    assertFalse(rs.wasNull());
-
     assertEquals(
-        1263254400000L
-            - TimeZone.getDefault().getOffset(Timestamp.valueOf("2010-01-12 01:55:12").getTime()),
+        ZonedDateTime.of(LocalDateTime.parse("2010-01-12T01:55:12.0"), ZoneId.of("UTC"))
+                .toEpochSecond()
+            * 1000,
+        rs.getDate(1, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).getTime());
+    assertFalse(rs.wasNull());
+    assertEquals(
+        ZonedDateTime.of(
+                    LocalDateTime.parse("2010-01-12T01:55:12.0"), TimeZone.getDefault().toZoneId())
+                .toEpochSecond()
+            * 1000,
         rs.getDate(1).getTime());
     assertFalse(rs.wasNull());
 
-    testDate(
-        rs,
-        -30609785100000l,
-        2); // Passing the millisecond time of the UTC Date (1000-01-01 01:55:13.2) which is stored
-    // in the database at index 2.
-    assertFalse(rs.wasNull());
-
     assertEquals(
-        -30609792000000L
-            - TimeZone.getDefault().getOffset(Timestamp.valueOf("1000-01-01 01:55:13").getTime()),
-        rs.getDate(2).getTime());
-
+        "1000-01-01", rs.getDate(2, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).toString());
     assertFalse(rs.wasNull());
-
+    assertEquals(Timestamp.valueOf("1000-01-01 01:55:13.21234").getTime(), rs.getDate(2).getTime());
+    assertFalse(rs.wasNull());
     assertEquals(
-        253402214400000L
-            - TimeZone.getDefault().getOffset(Timestamp.valueOf("9999-12-31 18:30:12").getTime()),
+        ZonedDateTime.of(
+                        LocalDateTime.parse("9999-12-31T18:30:12.55"),
+                        TimeZone.getDefault().toZoneId())
+                    .toEpochSecond()
+                * 1000
+            + 550,
         rs.getDate(3).getTime());
-
     assertFalse(rs.wasNull());
     assertNull(rs.getDate(4));
     assertTrue(rs.wasNull());
@@ -916,7 +919,7 @@ public class DateTimeCodecTest extends CommonCodecTest {
       prep.setTimestamp(2, Timestamp.valueOf("2015-12-12 01:55:12.654"));
       prep.execute();
       prep.setInt(1, 15);
-      prep.setObject(2, Timestamp.valueOf("2016-12-12 01:55:12"));
+      prep.setObject(2, new java.util.Date(Timestamp.valueOf("2016-12-18 01:55:12.2").getTime()));
       prep.execute();
       prep.setInt(1, 16);
       prep.setObject(2, Timestamp.valueOf("2016-12-12 01:55:12.654"));
@@ -1036,9 +1039,12 @@ public class DateTimeCodecTest extends CommonCodecTest {
     assertTrue(rs.next());
     assertEquals(Timestamp.valueOf("2015-12-12 01:55:12.654"), rs.getTimestamp(2));
     assertTrue(rs.next());
-    assertEquals(Timestamp.valueOf("2016-12-12 01:55:12"), rs.getTimestamp(2));
+    assertEquals(Timestamp.valueOf("2016-12-18 01:55:12.2"), rs.getTimestamp(2));
     assertTrue(rs.next());
     assertEquals(Timestamp.valueOf("2016-12-12 01:55:12.654"), rs.getTimestamp(2));
+    assertEquals(
+        new java.util.Date(Timestamp.valueOf("2016-12-12 01:55:12.654").getTime()),
+        rs.getObject(2, java.util.Date.class));
     assertTrue(rs.next());
     assertEquals(
         LocalDateTime.parse("2017-01-12T01:55:12.111").atZone(ZoneId.systemDefault()).toInstant(),

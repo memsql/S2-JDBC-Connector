@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration.tools;
 
@@ -31,7 +31,7 @@ public class TcpProxy {
   }
 
   public void stop() {
-    socket.kill();
+    socket.kill(false);
   }
 
   public void setDelay(int delay) {
@@ -48,7 +48,11 @@ public class TcpProxy {
    * @param sleepTime sleep time in milliseconds
    */
   public void restart(long sleepTime) {
-    socket.kill();
+    restart(sleepTime, false);
+  }
+
+  public void restart(long sleepTime, boolean rst) {
+    socket.kill(rst);
     logger.trace("host proxy port " + socket.getLocalport() + " for " + host + " started");
     Executors.newSingleThreadScheduledExecutor().schedule(socket, sleepTime, TimeUnit.MILLISECONDS);
   }
