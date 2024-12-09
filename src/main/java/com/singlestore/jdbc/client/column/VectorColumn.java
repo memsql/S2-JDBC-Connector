@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
 // Copyright (c) 2021-2024 SingleStore, Inc.
-
 package com.singlestore.jdbc.client.column;
 
 import com.singlestore.jdbc.Configuration;
@@ -65,7 +64,7 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
 
   @Override
   public String defaultClassname(Configuration conf) {
-    if (extTypeName != null) {
+    if (extTypeFormat != null) {
       return Vector.class.getName();
     }
     return isBinary() ? byte[].class.getName() : String.class.getName();
@@ -73,7 +72,7 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
 
   @Override
   public int getColumnType(Configuration conf) {
-    if (extTypeName != null) {
+    if (extTypeFormat != null) {
       return Types.OTHER;
     }
     return isBinary() ? Types.VARBINARY : Types.VARCHAR;
@@ -81,8 +80,12 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
 
   @Override
   public String getColumnTypeName(Configuration conf) {
-    if (extTypeName != null) {
-      return VECTOR_TYPE_NAME;
+    if (extTypeFormat != null) {
+      if (conf.vectorExtendedMetadata()) {
+        return String.format("VECTOR(%s)", extTypeFormat);
+      } else {
+        return VECTOR_TYPE_NAME;
+      }
     }
     return isBinary() ? "VARBINARY" : "VARCHAR";
   }

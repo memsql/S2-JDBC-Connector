@@ -70,6 +70,13 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
               + ")";
       upperCaseWithoutSize =
           " IF(c.COLUMN_TYPE LIKE 'bson%', " + "'LONGBLOB'" + ", " + upperCaseWithoutSize + ")";
+    } else if (conf.vectorExtendedMetadata()) {
+      upperCaseWithoutSize =
+          " IF(c.COLUMN_TYPE LIKE 'vector%', "
+              + "UCASE(COLUMN_TYPE)"
+              + ", "
+              + upperCaseWithoutSize
+              + ")";
     }
     return upperCaseWithoutSize;
   }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc;
 
@@ -161,6 +161,7 @@ public class Configuration {
   private Integer maxPrintStackSizeToLog = 10;
   private boolean enableExtendedDataTypes = false;
   private String vectorTypeOutputFormat = null;
+  private boolean vectorExtendedMetadata = false;
 
   private Configuration() {
     this.logger = Loggers.getLogger(Configuration.class);
@@ -243,7 +244,8 @@ public class Configuration {
       boolean printStackTrace,
       int maxPrintStackSizeToLog,
       boolean enableExtendedDataTypes,
-      String vectorTypeOutputFormat) {
+      String vectorTypeOutputFormat,
+      boolean vectorExtendedMetadata) {
     this.user = user;
     this.password = password;
     this.database = database;
@@ -321,6 +323,7 @@ public class Configuration {
     this.maxPrintStackSizeToLog = maxPrintStackSizeToLog;
     this.enableExtendedDataTypes = enableExtendedDataTypes;
     this.vectorTypeOutputFormat = vectorTypeOutputFormat;
+    this.vectorExtendedMetadata = vectorExtendedMetadata;
     this.initialUrl = buildUrl(this);
     this.logger = Loggers.getLogger(Configuration.class);
   }
@@ -402,7 +405,8 @@ public class Configuration {
       Boolean printStackTrace,
       Integer maxPrintStackSizeToLog,
       Boolean enableExtendedDataTypes,
-      String vectorTypeOutputFormat)
+      String vectorTypeOutputFormat,
+      Boolean vectorExtendedMetadata)
       throws SQLException {
     this.consoleLogLevel = consoleLogLevel;
     this.consoleLogFilepath = consoleLogFilepath;
@@ -522,6 +526,7 @@ public class Configuration {
       }
       this.vectorTypeOutputFormat = vectorTypeOutputFormat;
     }
+    if (vectorExtendedMetadata != null) this.vectorExtendedMetadata = vectorExtendedMetadata;
 
     // *************************************************************
     // option value verification
@@ -952,7 +957,8 @@ public class Configuration {
         this.printStackTrace,
         this.maxPrintStackSizeToLog,
         this.enableExtendedDataTypes,
-        this.vectorTypeOutputFormat);
+        this.vectorTypeOutputFormat,
+        this.vectorExtendedMetadata);
   }
 
   /**
@@ -1519,6 +1525,10 @@ public class Configuration {
     return vectorTypeOutputFormat;
   }
 
+  public boolean vectorExtendedMetadata() {
+    return vectorExtendedMetadata;
+  }
+
   /**
    * ToString implementation.
    *
@@ -1776,6 +1786,7 @@ public class Configuration {
 
     private Boolean enableExtendedDataTypes;
     private String vectorTypeOutputFormat;
+    private Boolean vectorExtendedMetadata;
 
     public Builder user(String user) {
       this.user = nullOrEmpty(user);
@@ -2369,6 +2380,17 @@ public class Configuration {
     }
 
     /**
+     * Enable extended metadata for VECTOR(<N> [ , <elementType> ]) data type.
+     *
+     * @param vectorExtendedMetadata to enable extended metadata for VECTOR
+     * @return this {@link Builder}
+     */
+    public Builder vectorExtendedMetadata(Boolean vectorExtendedMetadata) {
+      this.vectorExtendedMetadata = vectorExtendedMetadata;
+      return this;
+    }
+
+    /**
      * Build a configuration
      *
      * @return a Configuration object
@@ -2453,7 +2475,8 @@ public class Configuration {
               this.printStackTrace,
               this.maxPrintStackSizeToLog,
               this.enableExtendedDataTypes,
-              this.vectorTypeOutputFormat);
+              this.vectorTypeOutputFormat,
+              this.vectorExtendedMetadata);
       conf.initialUrl = buildUrl(conf);
       return conf;
     }
