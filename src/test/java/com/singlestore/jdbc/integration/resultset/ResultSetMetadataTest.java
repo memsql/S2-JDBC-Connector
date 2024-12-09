@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
-
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 package com.singlestore.jdbc.integration.resultset;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -11,6 +10,7 @@ import com.singlestore.jdbc.Statement;
 import com.singlestore.jdbc.integration.Common;
 import java.sql.*;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -47,23 +47,18 @@ public class ResultSetMetadataTest extends Common {
     stmt.execute("CREATE TABLE resultsetmetadatatest2(id int, name varchar(20))");
     stmt.execute("CREATE TABLE resultsetmetadatatest3(id int, name varchar(20))");
 
-    String extendedTypes = "v1 VECTOR(4, F32), v2 VECTOR(2, I64), bs1 BSON";
     stmt.execute(
-        String.format(
-            "CREATE TABLE IF NOT EXISTS test_rsmd_types (a1 CHAR(7), a2 BINARY(8), a3 VARCHAR(9), "
-                + "a4 VARBINARY(10), a5 LONGTEXT, a6 MEDIUMTEXT, a7 TEXT, a8 TINYTEXT, b1 TINYBLOB, b2 BLOB, "
-                + "b3 MEDIUMBLOB, b4 LONGBLOB, c JSON, d1 BOOL, d2 BIT, d3 TINYINT, d4 SMALLINT, "
-                + "d5 MEDIUMINT, d6 INT, d7 BIGINT, e1 FLOAT, e2 DOUBLE(8, 3), e3 DECIMAL(10, 2), "
-                + "f1 DATE, f2 TIME, f3 TIME(6), f4 DATETIME, f5 DATETIME(6), f6 TIMESTAMP, "
-                + "f7 TIMESTAMP(6), f8 YEAR%s)",
-            minVersion(8, 7, 1) ? ", " + extendedTypes : ""));
+        "CREATE TABLE IF NOT EXISTS test_rsmd_types (a1 CHAR(7), a2 BINARY(8), a3 VARCHAR(9), "
+            + "a4 VARBINARY(10), a5 LONGTEXT, a6 MEDIUMTEXT, a7 TEXT, a8 TINYTEXT, b1 TINYBLOB, b2 BLOB, "
+            + "b3 MEDIUMBLOB, b4 LONGBLOB, c JSON, d1 BOOL, d2 BIT, d3 TINYINT, d4 SMALLINT, "
+            + "d5 MEDIUMINT, d6 INT, d7 BIGINT, e1 FLOAT, e2 DOUBLE(8, 3), e3 DECIMAL(10, 2), "
+            + "f1 DATE, f2 TIME, f3 TIME(6), f4 DATETIME, f5 DATETIME(6), f6 TIMESTAMP, "
+            + "f7 TIMESTAMP(6), f8 YEAR)");
     stmt.execute(
-        String.format(
-            "insert into test_rsmd_types values (null, null, null, null, null, null, "
-                + "null, null, null, null, null, null, null, null, null, null, null, "
-                + "null, null, null, null, null, null, null, null, null, null, null, "
-                + "null, null, null%s)",
-            minVersion(8, 7, 1) ? ", null, null, null" : ""));
+        "insert into test_rsmd_types values (null, null, null, null, null, null, "
+            + "null, null, null, null, null, null, null, null, null, null, null, "
+            + "null, null, null, null, null, null, null, null, null, null, null, "
+            + "null, null, null)");
     stmt.execute(
         "CREATE TABLE IF NOT EXISTS test_rsmd_unsigned (s1 TINYINT, s2 SMALLINT, "
             + "s3 MEDIUMINT, s4 INT, s5 BIGINT, s6 REAL, s7 DOUBLE, s8 DECIMAL, s9 NUMERIC, "
@@ -148,25 +143,7 @@ public class ResultSetMetadataTest extends Common {
 
   @Test
   public void metaTypesVsColumnTypes() throws SQLException {
-    if (minVersion(8, 7, 1)) {
-      metaTypesVsColumnTypesWithExtendedTypes(false, false);
-      metaTypesVsColumnTypesWithExtendedTypes(false, true);
-      metaTypesVsColumnTypesWithExtendedTypes(true, false);
-      metaTypesVsColumnTypesWithExtendedTypes(true, true);
-    } else {
-      metaTypesVsColumnTypes(sharedConn);
-    }
-  }
-
-  public void metaTypesVsColumnTypesWithExtendedTypes(
-      boolean isExtTypeEnabled, boolean isVectorBinary) throws SQLException {
-    try (Connection connection =
-        createCon(
-            String.format(
-                "enableExtendedDataTypes=%s&vectorTypeOutputFormat=%s",
-                isExtTypeEnabled, isVectorBinary ? "BINARY" : "JSON"))) {
-      metaTypesVsColumnTypes(connection);
-    }
+    metaTypesVsColumnTypes(sharedConn);
   }
 
   public void metaTypesVsColumnTypes(Connection connection) throws SQLException {
@@ -182,19 +159,74 @@ public class ResultSetMetadataTest extends Common {
       String colName = cols.getString("TYPE_NAME");
       assertEquals(rsmd.getColumnTypeName(i), colName);
       assertEquals(rsmd.getColumnType(i), cols.getInt("DATA_TYPE"));
-      // Skip column length comparison for VECTOR type.
-      // ColumnDefinitionPacket returns VARCHAR or VARBINARY
-      // if extendedTypes = false, vectorOutputFormat=JSON: returns Types.VARCHAR -> precision =
-      // Integer.MAX_VALUE / charset
-      // if extendedTypes = false, vectorOutputFormat=BINARY: returns Types.VARBINARY -> precision =
-      // Integer.MAX_VALUE
-      if (i == 32 || i == 33) {
-        continue;
-      }
       if ("DOUBLE".equals(colName)) {
         continue;
       }
       assertEquals(rsmd.getPrecision(i), cols.getInt("COLUMN_SIZE"));
+    }
+  }
+
+  @Test
+  public void metaTypesVsColumnTypesWithExtendedTypes() throws SQLException {
+    Assumptions.assumeTrue(minVersion(8, 7, 1));
+    final String tableName = "test_rsmd_extended_types";
+    Statement statement = sharedConn.createStatement();
+    statement.execute(
+        String.format(
+            "CREATE TABLE %s(v1 VECTOR(4, F32), v2 VECTOR(2, I64), bs1 BSON)", tableName));
+    statement.execute(String.format("insert into %s values (null, null, null)", tableName));
+    try {
+      metaTypesVsColumnTypesWithExtendedTypes(tableName, false, false, false);
+      metaTypesVsColumnTypesWithExtendedTypes(tableName, false, true, false);
+      metaTypesVsColumnTypesWithExtendedTypes(tableName, true, false, false);
+      metaTypesVsColumnTypesWithExtendedTypes(tableName, true, true, true);
+    } finally {
+      statement.execute(String.format("DROP TABLE IF EXISTS %s", tableName));
+    }
+  }
+
+  public void metaTypesVsColumnTypesWithExtendedTypes(
+      String tableName,
+      boolean isExtTypeEnabled,
+      boolean isVectorBinary,
+      boolean vectorExtendedMetadata)
+      throws SQLException {
+    try (Connection connection =
+        createCon(
+            String.format(
+                "enableExtendedDataTypes=%s&vectorTypeOutputFormat=%s&vectorExtendedMetadata=%s",
+                isExtTypeEnabled, isVectorBinary ? "BINARY" : "JSON", vectorExtendedMetadata))) {
+      Statement stmt = (Statement) connection.createStatement();
+      ResultSet rs = stmt.executeQuery(String.format("select * from %s", tableName));
+      assertTrue(rs.next());
+      ResultSetMetaData rsmd = rs.getMetaData();
+
+      DatabaseMetaData md = connection.getMetaData();
+      ResultSet cols = md.getColumns(null, null, "test\\_rsmd\\_extended\\_types", null);
+      for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
+        cols.next();
+        String colName = cols.getString("TYPE_NAME");
+        assertEquals(rsmd.getColumnTypeName(i), colName);
+        assertEquals(rsmd.getColumnType(i), cols.getInt("DATA_TYPE"));
+        if (vectorExtendedMetadata) {
+          if (i == 1) {
+            assertEquals("VECTOR(4, F32)", colName);
+          } else if (i == 2) {
+            assertEquals("VECTOR(2, I64)", colName);
+          }
+        }
+        // Skip column length comparison for VECTOR type.
+        // ColumnDefinitionPacket returns VARCHAR or VARBINARY
+        // if extendedTypes = false, vectorOutputFormat=JSON: returns Types.VARCHAR -> precision =
+        // Integer.MAX_VALUE / charset
+        // if extendedTypes = false, vectorOutputFormat=BINARY: returns Types.VARBINARY -> precision
+        // =
+        // Integer.MAX_VALUE
+        if (i == 1 || i == 2) {
+          continue;
+        }
+        assertEquals(rsmd.getPrecision(i), cols.getInt("COLUMN_SIZE"));
+      }
     }
   }
 

@@ -51,7 +51,7 @@ public interface ColumnDecoder extends Column {
         VectorType typeOfVectorElements = VectorType.fromCode(buf.readByte());
         dataType = typeOfVectorElements.getType();
         extTypeName = dataType.name() + (charset == 63 ? "_BINARY" : "");
-        extTypeFormat = dimensionsOfVector + "," + dataType.name();
+        extTypeFormat = dimensionsOfVector + ", " + typeOfVectorElements.name();
       } else if (typeCode == ProtocolExtendedTypeCodes.BSON) {
         dataType = DataType.BSON;
       }
