@@ -201,7 +201,7 @@ public final class Driver implements java.sql.Driver {
     int len = identifier.length();
 
     if (isSimpleIdentifier(identifier)) {
-      if (len < 1 || len > 64) {
+      if (len < 1 || len > 256) {
         throw new SQLException("Invalid identifier length");
       }
       if (alwaysQuote) return "`" + identifier + "`";
@@ -222,7 +222,7 @@ public final class Driver implements java.sql.Driver {
       if (identifier.matches("^`.+`$")) {
         identifier = identifier.substring(1, identifier.length() - 1);
       }
-      if (len < 1 || len > 64) {
+      if (len < 1 || len > 256) {
         throw new SQLException("Invalid identifier length");
       }
       return "`" + identifier.replace("`", "``") + "`";
