@@ -23,7 +23,7 @@ set -eu
 # this script must be run from the top-level of the repo
 cd "$(git rev-parse --show-toplevel)"
 
-DEFAULT_IMAGE_NAME="singlestore/cluster-in-a-box:alma-8.0.19-f48780d261-4.0.11-1.16.0"
+DEFAULT_IMAGE_NAME="singlestore/cluster-in-a-box:alma-8.7.12-483e5f8acb-4.1.0-1.17.15"
 IMAGE_NAME="${SINGLESTORE_IMAGE:-$DEFAULT_IMAGE_NAME}"
 CONTAINER_NAME="singlestore-integration"
 
