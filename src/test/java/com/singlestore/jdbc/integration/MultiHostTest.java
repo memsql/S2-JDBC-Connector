@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.singlestore.jdbc.Configuration;
 import com.singlestore.jdbc.Connection;
@@ -16,11 +14,7 @@ import com.singlestore.jdbc.Statement;
 import com.singlestore.jdbc.export.SslMode;
 import com.singlestore.jdbc.integration.tools.TcpProxy;
 import java.io.IOException;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLNonTransientConnectionException;
+import java.sql.*;
 import org.junit.jupiter.api.Test;
 
 public class MultiHostTest extends Common {
@@ -94,6 +88,126 @@ public class MultiHostTest extends Common {
         () -> con.getClient().readStreamingResults(null, 0, 0, 0, 0, true),
         "Connection is closed");
     con.getClient().reset();
+  }
+
+  @Test
+  public void masterFailover() throws Exception {
+    Configuration conf = Configuration.parse(mDefUrl);
+    HostAddress hostAddress = conf.addresses().get(0);
+    try {
+      proxy = new TcpProxy(hostAddress.host, hostAddress.port);
+    } catch (IOException i) {
+      throw new SQLException("proxy error", i);
+    }
+
+    String url =
+        mDefUrl.replaceAll(
+            "//(" + hostname + "|" + hostname + ":" + port + ")/" + database,
+            String.format(
+                "//address=(host=localhost)(port=9999)(type=master),address=(host=localhost)(port=%s)(type=master),address=(host=%s)(port=%s)(type=master)/"
+                    + database,
+                proxy.getLocalPort(),
+                hostAddress.host,
+                hostAddress.port));
+    url = url.replaceAll("jdbc:singlestore:", "jdbc:singlestore:sequential:");
+    if (conf.sslMode() == SslMode.VERIFY_FULL) {
+      url = url.replaceAll("sslMode=verify-full", "sslMode=verify-ca");
+    }
+
+    try (Connection con =
+        (Connection)
+            DriverManager.getConnection(
+                url
+                    + "&deniedListTimeout=300&retriesAllDown=4&connectTimeout=50&deniedListTimeout=50")) {
+      Statement stmt = con.createStatement();
+      stmt.execute("SET @con=1");
+      proxy.restart(100);
+      con.isValid(1000);
+    }
+
+    Thread.sleep(1000);
+    // same in transaction
+    try (Connection con =
+        (Connection)
+            DriverManager.getConnection(
+                url
+                    + "&waitReconnectTimeout=300&retriesAllDown=10&connectTimeout=50&deniedListTimeout=50&socketTimeout=100")) {
+      Statement stmt = con.createStatement();
+      stmt.execute("START TRANSACTION");
+      stmt.execute("SET @con=1");
+
+      proxy.restart(100, true);
+      try {
+        ResultSet rs = stmt.executeQuery("SELECT @con");
+        if (rs.next()) {
+          System.out.println("Resultset res:" + rs.getString(1));
+        } else fail("must have thrown exception");
+      } catch (SQLTransientConnectionException e) {
+        assertTrue(e.getMessage().contains("In progress transaction was lost"));
+      }
+    }
+
+    Thread.sleep(50);
+    // testing blacklisted
+    try (Connection con =
+        (Connection)
+            DriverManager.getConnection(
+                url + "&retriesAllDown=4&connectTimeout=50&deniedListTimeout=50")) {
+      Statement stmt = con.createStatement();
+      con.setAutoCommit(false);
+      stmt.execute("START TRANSACTION");
+      stmt.execute("SET @con=1");
+
+      proxy.restart(50);
+      try {
+        ResultSet rs = stmt.executeQuery("SELECT @con");
+        rs.next();
+        assertEquals(1, rs.getInt(1));
+      } catch (SQLException e) {
+        assertTrue(e.getMessage().contains("In progress transaction was lost"));
+      }
+    }
+    Thread.sleep(100);
+    // with transaction replay
+    try (Connection con =
+        (Connection)
+            DriverManager.getConnection(
+                url
+                    + "&transactionReplay=true&waitReconnectTimeout=300&deniedListTimeout=300&retriesAllDown=4&connectTimeout=50")) {
+      Statement stmt = con.createStatement();
+      stmt.execute("DROP TABLE IF EXISTS testReplay");
+      stmt.execute("CREATE TABLE testReplay(id INT)");
+      stmt.execute("INSERT INTO testReplay VALUE (1)");
+      con.setAutoCommit(false);
+      stmt.execute("START TRANSACTION");
+      stmt.execute("INSERT INTO testReplay VALUE (2)");
+      try (PreparedStatement prep = con.prepareStatement("INSERT INTO testReplay VALUE (?)")) {
+        prep.setInt(1, 3);
+        prep.execute();
+      }
+
+      try (PreparedStatement prep = con.prepareStatement("INSERT INTO testReplay VALUE (?)")) {
+        prep.setInt(1, 4);
+        prep.execute();
+        proxy.restart(50);
+        prep.setInt(1, 5);
+        prep.execute();
+      }
+
+      ResultSet rs = stmt.executeQuery("SELECT * from testReplay order by id");
+      rs.next();
+      assertEquals(1, rs.getInt(1));
+      rs.next();
+      assertEquals(2, rs.getInt(1));
+      rs.next();
+      assertEquals(3, rs.getInt(1));
+      rs.next();
+      assertEquals(4, rs.getInt(1));
+      rs.next();
+      assertEquals(5, rs.getInt(1));
+      assertFalse(rs.next());
+      stmt.execute("DROP TABLE IF EXISTS testReplay");
+    }
   }
 
   @Test

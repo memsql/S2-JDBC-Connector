@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.plugin.codec;
 
@@ -48,7 +48,7 @@ public class TimestampCodec implements Codec<Timestamp> {
   }
 
   public boolean canEncode(Object value) {
-    return value instanceof Timestamp;
+    return value instanceof Timestamp || java.util.Date.class.equals(value.getClass());
   }
 
   @Override
@@ -76,16 +76,20 @@ public class TimestampCodec implements Codec<Timestamp> {
   public void encodeText(
       Writer encoder, Context context, Object val, Calendar providedCal, Long maxLen)
       throws IOException {
-    Timestamp ts = (Timestamp) val;
     Calendar cal = providedCal == null ? Calendar.getInstance() : providedCal;
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     sdf.setTimeZone(cal.getTimeZone());
-    String dateString = sdf.format(ts);
+    String dateString = sdf.format(val);
 
     encoder.writeByte('\'');
     encoder.writeAscii(dateString);
+    int microseconds = 0;
+    if (val instanceof Timestamp) {
+      microseconds = ((Timestamp) val).getNanos() / 1000;
+    } else if (val instanceof java.util.Date) {
+      microseconds = (int) ((((java.util.Date) val).getTime() % 1000) * 1000);
+    }
 
-    int microseconds = ts.getNanos() / 1000;
     if (microseconds > 0) {
       if (microseconds % 1000 == 0) {
         encoder.writeAscii("." + Integer.toString(microseconds / 1000 + 1000).substring(1));
@@ -100,27 +104,63 @@ public class TimestampCodec implements Codec<Timestamp> {
   @Override
   public void encodeBinary(Writer encoder, Object value, Calendar providedCal, Long maxLength)
       throws IOException {
-    Timestamp ts = (Timestamp) value;
-    Calendar cal = providedCal == null ? Calendar.getInstance() : providedCal;
-    cal.setTimeInMillis(ts.getTime());
+    int microseconds = 0;
+    long timeInMillis = 0;
+    if (value instanceof Timestamp) {
+      Timestamp ts = (Timestamp) value;
+      microseconds = ts.getNanos() / 1000;
+      timeInMillis = ts.getTime();
+    } else if (value instanceof java.util.Date) {
+      java.util.Date dt = (java.util.Date) value;
+      timeInMillis = dt.getTime();
+      microseconds = (int) ((timeInMillis % 1000) * 1000);
+    }
 
-    if (ts.getNanos() == 0) {
-      encoder.writeByte(7); // length
-      encoder.writeShort((short) cal.get(Calendar.YEAR));
-      encoder.writeByte((cal.get(Calendar.MONTH) + 1));
-      encoder.writeByte(cal.get(Calendar.DAY_OF_MONTH));
-      encoder.writeByte(cal.get(Calendar.HOUR_OF_DAY));
-      encoder.writeByte(cal.get(Calendar.MINUTE));
-      encoder.writeByte(cal.get(Calendar.SECOND));
+    if (providedCal == null) {
+      Calendar cal = Calendar.getInstance();
+      cal.clear();
+      cal.setTimeInMillis(timeInMillis);
+      if (microseconds == 0) {
+        encoder.writeByte(7); // length
+        encoder.writeShort((short) cal.get(Calendar.YEAR));
+        encoder.writeByte((cal.get(Calendar.MONTH) + 1));
+        encoder.writeByte(cal.get(Calendar.DAY_OF_MONTH));
+        encoder.writeByte(cal.get(Calendar.HOUR_OF_DAY));
+        encoder.writeByte(cal.get(Calendar.MINUTE));
+        encoder.writeByte(cal.get(Calendar.SECOND));
+      } else {
+        encoder.writeByte(11); // length
+        encoder.writeShort((short) cal.get(Calendar.YEAR));
+        encoder.writeByte((cal.get(Calendar.MONTH) + 1));
+        encoder.writeByte(cal.get(Calendar.DAY_OF_MONTH));
+        encoder.writeByte(cal.get(Calendar.HOUR_OF_DAY));
+        encoder.writeByte(cal.get(Calendar.MINUTE));
+        encoder.writeByte(cal.get(Calendar.SECOND));
+        encoder.writeInt(microseconds);
+      }
     } else {
-      encoder.writeByte(11); // length
-      encoder.writeShort((short) cal.get(Calendar.YEAR));
-      encoder.writeByte((cal.get(Calendar.MONTH) + 1));
-      encoder.writeByte(cal.get(Calendar.DAY_OF_MONTH));
-      encoder.writeByte(cal.get(Calendar.HOUR_OF_DAY));
-      encoder.writeByte(cal.get(Calendar.MINUTE));
-      encoder.writeByte(cal.get(Calendar.SECOND));
-      encoder.writeInt(ts.getNanos() / 1000);
+      synchronized (providedCal) {
+        providedCal.clear();
+        providedCal.setTimeInMillis(timeInMillis);
+        if (microseconds == 0) {
+          encoder.writeByte(7); // length
+          encoder.writeShort((short) providedCal.get(Calendar.YEAR));
+          encoder.writeByte((providedCal.get(Calendar.MONTH) + 1));
+          encoder.writeByte(providedCal.get(Calendar.DAY_OF_MONTH));
+          encoder.writeByte(providedCal.get(Calendar.HOUR_OF_DAY));
+          encoder.writeByte(providedCal.get(Calendar.MINUTE));
+          encoder.writeByte(providedCal.get(Calendar.SECOND));
+        } else {
+          encoder.writeByte(11); // length
+          encoder.writeShort((short) providedCal.get(Calendar.YEAR));
+          encoder.writeByte((providedCal.get(Calendar.MONTH) + 1));
+          encoder.writeByte(providedCal.get(Calendar.DAY_OF_MONTH));
+          encoder.writeByte(providedCal.get(Calendar.HOUR_OF_DAY));
+          encoder.writeByte(providedCal.get(Calendar.MINUTE));
+          encoder.writeByte(providedCal.get(Calendar.SECOND));
+          encoder.writeInt(microseconds);
+        }
+      }
     }
   }
 

@@ -61,6 +61,7 @@ public class DatabaseMetadataTest extends Common {
     stmt.execute("drop table if exists getBestRowIdentifier2");
     stmt.execute("drop table if exists get_index_info");
     stmt.execute("drop table if exists text_types_text");
+    stmt.execute("DROP TABLE IF EXISTS dbpk_test");
   }
 
   @BeforeAll
@@ -198,6 +199,9 @@ public class DatabaseMetadataTest extends Common {
             + "  `tinytext`           tinytext,\n"
             + "  `mediumtext`         mediumtext,\n"
             + "  `longtext`           longtext)");
+    stmt.execute(
+        "CREATE TABLE IF NOT EXISTS dbpk_test(val varchar(20), id1 int not null, id2 int not"
+            + " null,primary key(id1, id2))");
   }
 
   private static void checkType(String name, int actualType, String colName, int expectedType) {
@@ -248,6 +252,63 @@ public class DatabaseMetadataTest extends Common {
       assertEquals(sharedConn.getCatalog(), rs.getString("table_cat"));
       assertNull(rs.getString("table_schem"));
       assertEquals("pk_test_rowstore_multi", rs.getString("table_name"));
+      assertEquals("id" + counter, rs.getString("column_name"));
+      assertEquals("PRIMARY", rs.getString("PK_NAME"));
+    }
+    assertEquals(2, counter);
+  }
+
+  @Test
+  public void primaryKeysTestNullCatalog() throws SQLException {
+    DatabaseMetaData meta = sharedConn.getMetaData();
+    ResultSet rs = meta.getPrimaryKeys(sharedConn.getCatalog(), null, "dbpk_test");
+    primaryKeysTest(rs);
+
+    rs = meta.getPrimaryKeys(null, null, "dbpk_test");
+    primaryKeysTest(rs);
+
+    try (Connection con = createCon("&nullDatabaseMeansCurrent=false")) {
+      meta = con.getMetaData();
+      rs = meta.getPrimaryKeys(null, null, "dbpk_test");
+      primaryKeysTest(rs);
+
+      con.setCatalog("information_schema");
+      rs = meta.getPrimaryKeys(null, null, "dbpk_test");
+      primaryKeysTest(rs);
+    }
+
+    try (Connection con = createCon("&nullDatabaseMeansCurrent=true")) {
+      meta = con.getMetaData();
+      rs = meta.getPrimaryKeys(null, null, "dbpk_test");
+      primaryKeysTest(rs);
+
+      con.setCatalog("information_schema");
+      rs = meta.getPrimaryKeys(null, null, "dbpk_test");
+      assertFalse(rs.next());
+    }
+
+    try (Connection con = createCon("&nullCatalogMeansCurrent=true")) {
+      meta = con.getMetaData();
+      rs = meta.getPrimaryKeys(null, null, "dbpk_test");
+      primaryKeysTest(rs);
+
+      con.setCatalog("information_schema");
+      rs = meta.getPrimaryKeys(null, null, "dbpk_test");
+      assertFalse(rs.next());
+    }
+  }
+
+  private void primaryKeysTest(ResultSet rs) throws SQLException {
+    Assertions.assertEquals(ResultSet.TYPE_SCROLL_INSENSITIVE, rs.getType());
+    Assertions.assertEquals(ResultSet.CONCUR_READ_ONLY, rs.getConcurrency());
+
+    int counter = 0;
+    while (rs.next()) {
+      counter++;
+      assertEquals(sharedConn.getCatalog(), rs.getString("table_cat"));
+      assertNull(rs.getString("table_schem"));
+      assertEquals("dbpk_test", rs.getString("table_name"));
+      assertEquals("id" + counter, rs.getString("column_name"));
       assertEquals("id" + counter, rs.getString("column_name"));
       assertEquals("PRIMARY", rs.getString("PK_NAME"));
     }
@@ -433,6 +494,41 @@ public class DatabaseMetadataTest extends Common {
     assertTrue(rs.next());
     tableType = rs.getString("TABLE_TYPE");
     assertEquals("VIEW", tableType);
+  }
+
+  @Test
+  public void getTableOrder() throws SQLException {
+    Statement stmt = sharedConn.createStatement();
+    stmt.execute("CREATE DATABASE IF NOT EXISTS dbTmpFct1");
+    stmt.execute("CREATE DATABASE IF NOT EXISTS dbTmpFct2");
+    DatabaseMetaData dmd = sharedConn.getMetaData();
+    try {
+      stmt.execute("CREATE TABLE dbTmpFct2.dbta2 (a int, b int)");
+      stmt.execute("CREATE TABLE dbTmpFct2.dbta1 (a int, b int)");
+      stmt.execute("CREATE TABLE dbTmpFct1.dbtb1 (a int, b int)");
+      ResultSet rs = dmd.getTables(null, null, "dbt%", null);
+      assertTrue(rs.next());
+      assertEquals("dbtb1", rs.getString(3));
+      assertTrue(rs.next());
+      assertEquals("dbta1", rs.getString(3));
+      assertTrue(rs.next());
+      assertEquals("dbta2", rs.getString(3));
+      assertFalse(rs.next());
+      try (Connection conn = createCon("useCatalogTerm=SCHEMA")) {
+        DatabaseMetaData dmd2 = conn.getMetaData();
+        rs = dmd2.getTables(null, "dbTmpFct%", "dbt%", null);
+        assertTrue(rs.next());
+        assertEquals("dbtb1", rs.getString(3));
+        assertTrue(rs.next());
+        assertEquals("dbta1", rs.getString(3));
+        assertTrue(rs.next());
+        assertEquals("dbta2", rs.getString(3));
+        assertFalse(rs.next());
+      }
+    } finally {
+      stmt.execute("DROP DATABASE dbTmpFct1");
+      stmt.execute("DROP DATABASE dbTmpFct2");
+    }
   }
 
   @Test

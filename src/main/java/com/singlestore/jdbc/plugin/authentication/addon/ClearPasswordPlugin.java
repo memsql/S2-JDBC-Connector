@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
-
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 package com.singlestore.jdbc.plugin.authentication.addon;
 
-import com.singlestore.jdbc.Configuration;
 import com.singlestore.jdbc.client.Context;
 import com.singlestore.jdbc.client.ReadableByteBuf;
 import com.singlestore.jdbc.client.socket.Reader;
@@ -16,16 +14,14 @@ import java.nio.charset.StandardCharsets;
 
 public class ClearPasswordPlugin implements AuthenticationPlugin {
 
-  public static final String TYPE = "mysql_clear_password";
-
   private String authenticationData;
 
-  @Override
-  public String type() {
-    return TYPE;
-  }
-
-  public void initialize(String authenticationData, byte[] authData, Configuration conf) {
+  /**
+   * Initialization.
+   *
+   * @param authenticationData authentication data (password/token)
+   */
+  public ClearPasswordPlugin(String authenticationData) {
     this.authenticationData = authenticationData;
   }
 

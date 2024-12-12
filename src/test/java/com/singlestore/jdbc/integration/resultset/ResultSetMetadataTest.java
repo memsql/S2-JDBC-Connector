@@ -338,7 +338,7 @@ public class ResultSetMetadataTest extends Common {
         assertEquals(1, rsmd.getColumnDisplaySize(15));
         assertEquals(4, rsmd.getColumnDisplaySize(16));
         assertEquals(6, rsmd.getColumnDisplaySize(17));
-        assertEquals(9, rsmd.getColumnDisplaySize(18));
+        assertEquals(8, rsmd.getColumnDisplaySize(18));
         assertEquals(11, rsmd.getColumnDisplaySize(19));
         assertEquals(20, rsmd.getColumnDisplaySize(20));
         assertEquals(12, rsmd.getColumnDisplaySize(21));

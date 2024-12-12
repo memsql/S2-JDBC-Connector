@@ -53,6 +53,11 @@ public class VectorColumn extends ColumnDefinitionPacket implements ColumnDecode
         false);
   }
 
+  /**
+   * Recreate new column using alias as name.
+   *
+   * @param prev current column
+   */
   protected VectorColumn(VectorColumn prev) {
     super(prev, true);
   }
