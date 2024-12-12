@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
-
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 package com.singlestore.jdbc.plugin.authentication.standard;
 
 import com.singlestore.jdbc.Configuration;
@@ -22,10 +21,23 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.Arrays;
 
+// not used in SingleStore
 public class Ed25519PasswordPlugin implements AuthenticationPlugin {
 
-  private String authenticationData;
-  private byte[] seed;
+  private final String authenticationData;
+  private final byte[] seed;
+
+  /**
+   * Initialization.
+   *
+   * @param authenticationData authentication data (password/token)
+   * @param seed server provided seed
+   * @param conf Connection string options
+   */
+  public Ed25519PasswordPlugin(String authenticationData, byte[] seed, Configuration conf) {
+    this.seed = seed;
+    this.authenticationData = authenticationData;
+  }
 
   /**
    * Sign password
@@ -81,23 +93,6 @@ public class Ed25519PasswordPlugin implements AuthenticationPlugin {
     } catch (NoSuchAlgorithmException e) {
       throw new SQLException("Could not use SHA-512, failing", e);
     }
-  }
-
-  @Override
-  public String type() {
-    return "client_ed25519";
-  }
-
-  /**
-   * Initialization.
-   *
-   * @param authenticationData authentication data (password/token)
-   * @param seed server provided seed
-   * @param conf Connection string options
-   */
-  public void initialize(String authenticationData, byte[] seed, Configuration conf) {
-    this.seed = seed;
-    this.authenticationData = authenticationData;
   }
 
   /**

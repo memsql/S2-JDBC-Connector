@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
-
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 package com.singlestore.jdbc;
 
 import com.singlestore.jdbc.client.Client;
 import com.singlestore.jdbc.client.impl.FailoverClient;
 import com.singlestore.jdbc.client.impl.ReplayClient;
 import com.singlestore.jdbc.client.impl.StandardClient;
+import com.singlestore.jdbc.client.util.ClosableLock;
 import com.singlestore.jdbc.pool.Pools;
 import com.singlestore.jdbc.util.VersionFactory;
 import java.io.IOException;
@@ -18,12 +18,18 @@ import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class Driver implements java.sql.Driver {
+
+  private static final Pattern identifierPattern =
+      Pattern.compile("[0-9a-zA-Z$_\\u0080-\\uFFFF]*", Pattern.UNICODE_CASE);
+
+  private static final Pattern escapePattern = Pattern.compile("[\u0000'\"\b\n\r\t\u001A\\\\]");
+
+  private static final Map<String, String> mapper = new HashMap<>();
 
   static {
     try {
@@ -31,6 +37,15 @@ public final class Driver implements java.sql.Driver {
     } catch (SQLException e) {
       // eat
     }
+    mapper.put("\u0000", "\\0");
+    mapper.put("'", "\\\\'");
+    mapper.put("\"", "\\\\\"");
+    mapper.put("\b", "\\\\b");
+    mapper.put("\n", "\\\\n");
+    mapper.put("\r", "\\\\r");
+    mapper.put("\t", "\\\\t");
+    mapper.put("\u001A", "\\\\Z");
+    mapper.put("\\", "\\\\");
   }
 
   /**
@@ -41,7 +56,7 @@ public final class Driver implements java.sql.Driver {
    * @throws SQLException if connect fails
    */
   public static Connection connect(Configuration configuration) throws SQLException {
-    ReentrantLock lock = new ReentrantLock();
+    ClosableLock lock = new ClosableLock();
     Client client;
     switch (configuration.haMode()) {
       case LOADBALANCE:
@@ -50,7 +65,7 @@ public final class Driver implements java.sql.Driver {
         break;
 
       default:
-        ClientInstance<Configuration, HostAddress, ReentrantLock, Boolean, Client> clientInstance =
+        ClientInstance<Configuration, HostAddress, ClosableLock, Boolean, Client> clientInstance =
             (configuration.transactionReplay()) ? ReplayClient::new : StandardClient::new;
 
         if (configuration.addresses().isEmpty()) {
@@ -179,5 +194,72 @@ public final class Driver implements java.sql.Driver {
 
   public java.util.logging.Logger getParentLogger() throws SQLFeatureNotSupportedException {
     throw new SQLFeatureNotSupportedException("Use logging parameters for enabling logging.");
+  }
+
+  public static String enquoteIdentifier(String identifier, boolean alwaysQuote)
+      throws SQLException {
+    int len = identifier.length();
+
+    if (isSimpleIdentifier(identifier)) {
+      if (len < 1 || len > 256) {
+        throw new SQLException("Invalid identifier length");
+      }
+      if (alwaysQuote) return "`" + identifier + "`";
+
+      // Identifier names may begin with a numeral, but can't only contain numerals unless quoted.
+      for (int i = 0; i < identifier.length(); i++) {
+        if (!Character.isDigit(identifier.charAt(i))) {
+          return identifier;
+        }
+      }
+      // identifier containing only numerals must be quoted
+      return "`" + identifier + "`";
+    } else {
+      if (identifier.contains("\u0000")) {
+        throw new SQLException("Invalid name - containing u0000 character", "42000");
+      }
+
+      if (identifier.matches("^`.+`$")) {
+        identifier = identifier.substring(1, identifier.length() - 1);
+      }
+      if (len < 1 || len > 256) {
+        throw new SQLException("Invalid identifier length");
+      }
+      return "`" + identifier.replace("`", "``") + "`";
+    }
+  }
+
+  /**
+   * Enquote String value.
+   *
+   * @param val string value to enquote
+   * @return enquoted string value
+   */
+  // @Override when not supporting java 8
+  public static String enquoteLiteral(String val) {
+    Matcher matcher = escapePattern.matcher(val);
+    StringBuffer escapedVal = new StringBuffer("'");
+
+    while (matcher.find()) {
+      matcher.appendReplacement(escapedVal, mapper.get(matcher.group()));
+    }
+    matcher.appendTail(escapedVal);
+    escapedVal.append("'");
+    return escapedVal.toString();
+  }
+
+  /**
+   * Retrieves whether identifier is a simple SQL identifier. The first character is an alphabetic
+   * character from a through z, or from A through Z The string only contains alphanumeric
+   * characters or the characters "_" and "$"
+   *
+   * @param identifier identifier
+   * @return true if identifier doesn't have to be quoted
+   * @see <a href="https://mariadb.com/kb/en/library/identifier-names/">mariadb identifier name</a>
+   */
+  public static boolean isSimpleIdentifier(String identifier) {
+    return identifier != null
+        && !identifier.isEmpty()
+        && identifierPattern.matcher(identifier).matches();
   }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.result;
 
@@ -11,10 +11,12 @@ import com.singlestore.jdbc.client.impl.StandardReadableByteBuf;
 import com.singlestore.jdbc.client.result.rowdecoder.BinaryRowDecoder;
 import com.singlestore.jdbc.client.result.rowdecoder.RowDecoder;
 import com.singlestore.jdbc.client.result.rowdecoder.TextRowDecoder;
+import com.singlestore.jdbc.client.util.ClosableLock;
 import com.singlestore.jdbc.client.util.MutableInt;
 import com.singlestore.jdbc.export.ExceptionFactory;
 import com.singlestore.jdbc.message.server.ErrorPacket;
 import com.singlestore.jdbc.plugin.Codec;
+import com.singlestore.jdbc.plugin.array.FloatArray;
 import com.singlestore.jdbc.plugin.codec.*;
 import com.singlestore.jdbc.util.constants.ServerStatus;
 import java.io.IOException;
@@ -28,7 +30,6 @@ import java.net.URL;
 import java.sql.*;
 import java.sql.Date;
 import java.util.*;
-import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class Result implements ResultSet, Completion {
 
@@ -351,13 +352,10 @@ public abstract class Result implements ResultSet, Completion {
    * @param lock thread locker object
    * @throws SQLException if any error occurs
    */
-  public void closeFromStmtClose(ReentrantLock lock) throws SQLException {
-    lock.lock();
-    try {
+  public void closeFromStmtClose(ClosableLock lock) throws SQLException {
+    try (ClosableLock ignore = lock.closeableLock()) {
       this.fetchRemaining();
       this.closed = true;
-    } finally {
-      lock.unlock();
     }
   }
 
@@ -1209,7 +1207,17 @@ public abstract class Result implements ResultSet, Completion {
 
   @Override
   public Array getArray(int columnIndex) throws SQLException {
-    throw exceptionFactory.notSupported("Method ResultSet.getArray not supported");
+    checkIndex(columnIndex);
+    fieldLength.set(
+        rowDecoder.setPosition(
+            columnIndex - 1, fieldIndex, maxIndex, rowBuf, nullBitmap, metadataList));
+    if (fieldLength.get() == NULL_LENGTH) {
+      return null;
+    }
+    float[] val =
+        rowDecoder.decode(
+            FloatArrayCodec.INSTANCE, null, rowBuf, fieldLength, metadataList, fieldIndex);
+    return new FloatArray(val, context);
   }
 
   @Override
@@ -1238,7 +1246,7 @@ public abstract class Result implements ResultSet, Completion {
 
   @Override
   public Array getArray(String columnLabel) throws SQLException {
-    throw exceptionFactory.notSupported("Method ResultSet.getArray not supported");
+    return getArray(findColumn(columnLabel));
   }
 
   @Override
@@ -1355,7 +1363,7 @@ public abstract class Result implements ResultSet, Completion {
 
   @Override
   public void updateArray(String columnLabel, Array x) throws SQLException {
-    throw exceptionFactory.notSupported("Array are not supported");
+    updateArray(findColumn(columnLabel), x);
   }
 
   @Override

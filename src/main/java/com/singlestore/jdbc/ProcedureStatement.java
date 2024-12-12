@@ -5,9 +5,9 @@
 
 package com.singlestore.jdbc;
 
+import com.singlestore.jdbc.client.util.ClosableLock;
 import java.sql.CallableStatement;
 import java.sql.SQLException;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class ProcedureStatement extends BaseCallableStatement implements CallableStatement {
 
@@ -29,7 +29,7 @@ public class ProcedureStatement extends BaseCallableStatement implements Callabl
       String sql,
       String databaseName,
       String procedureName,
-      ReentrantLock lock,
+      ClosableLock lock,
       boolean canCachePrepStmts,
       int resultSetType,
       int resultSetConcurrency)

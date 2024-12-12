@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
-
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 package com.singlestore.jdbc.plugin;
 
-import com.singlestore.jdbc.Configuration;
 import com.singlestore.jdbc.client.Context;
 import com.singlestore.jdbc.client.ReadableByteBuf;
 import com.singlestore.jdbc.client.socket.Reader;
@@ -14,22 +12,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 public interface AuthenticationPlugin {
-
-  /**
-   * Authentication plugin type.
-   *
-   * @return authentication plugin type. ex: mysql_native_password
-   */
-  String type();
-
-  /**
-   * Plugin initialization.
-   *
-   * @param authenticationData authentication data (password/token)
-   * @param seed server provided seed
-   * @param conf Connection options
-   */
-  void initialize(String authenticationData, byte[] seed, Configuration conf);
 
   /**
    * Process plugin authentication.
@@ -43,4 +25,13 @@ public interface AuthenticationPlugin {
    */
   ReadableByteBuf process(Writer encoder, Reader decoder, Context context)
       throws IOException, SQLException;
+
+  /**
+   * Authentication plugin required SSL to be used
+   *
+   * @return true if SSL is required
+   */
+  default boolean requireSsl() {
+    return false;
+  }
 }

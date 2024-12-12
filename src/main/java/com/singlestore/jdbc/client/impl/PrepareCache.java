@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.impl;
 
-import com.singlestore.jdbc.ServerPreparedStatement;
+import com.singlestore.jdbc.BasePreparedStatement;
 import com.singlestore.jdbc.export.Prepare;
 import com.singlestore.jdbc.message.server.CachedPrepareResultPacket;
 import com.singlestore.jdbc.message.server.PrepareResultPacket;
@@ -43,7 +43,8 @@ public final class PrepareCache extends LinkedHashMap<String, CachedPrepareResul
     return false;
   }
 
-  public synchronized Prepare get(String key, ServerPreparedStatement preparedStatement) {
+  @Override
+  public synchronized Prepare get(String key, BasePreparedStatement preparedStatement) {
     CachedPrepareResultPacket prepare = super.get(key);
     if (prepare != null && preparedStatement != null) {
       prepare.incrementUse(preparedStatement);
@@ -51,8 +52,9 @@ public final class PrepareCache extends LinkedHashMap<String, CachedPrepareResul
     return prepare;
   }
 
+  @Override
   public synchronized Prepare put(
-      String key, Prepare result, ServerPreparedStatement preparedStatement) {
+      String key, Prepare result, BasePreparedStatement preparedStatement) {
     CachedPrepareResultPacket cached = super.get(key);
 
     // if there is already some cached data, return existing cached data

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc;
 
@@ -72,6 +72,7 @@ public class Configuration {
 
   // various
   private Boolean autocommit = null;
+  private boolean nullDatabaseMeansCurrent = false;
   private boolean createDatabaseIfNotExist = false;
   private String initSql = null;
   private TransactionIsolation transactionIsolation = TransactionIsolation.READ_COMMITTED;
@@ -174,6 +175,7 @@ public class Configuration {
       HaMode haMode,
       Properties nonMappedOptions,
       Boolean autocommit,
+      boolean nullDatabaseMeansCurrent,
       boolean createDatabaseIfNotExist,
       String initSql,
       TransactionIsolation transactionIsolation,
@@ -251,6 +253,7 @@ public class Configuration {
     this.haMode = haMode;
     this.nonMappedOptions = nonMappedOptions;
     this.autocommit = autocommit;
+    this.nullDatabaseMeansCurrent = nullDatabaseMeansCurrent;
     this.createDatabaseIfNotExist = createDatabaseIfNotExist;
     this.initSql = initSql;
     this.transactionIsolation = transactionIsolation;
@@ -362,6 +365,7 @@ public class Configuration {
       Boolean useServerPrepStmts,
       String connectionAttributes,
       Boolean autocommit,
+      Boolean nullDatabaseMeansCurrent,
       Boolean createDatabaseIfNotExist,
       String initSql,
       Boolean includeThreadDumpInDeadlockExceptions,
@@ -464,6 +468,7 @@ public class Configuration {
     if (useServerPrepStmts != null) this.useServerPrepStmts = useServerPrepStmts;
     this.connectionAttributes = connectionAttributes;
     if (autocommit != null) this.autocommit = autocommit;
+    if (nullDatabaseMeansCurrent != null) this.nullDatabaseMeansCurrent = nullDatabaseMeansCurrent;
     if (createDatabaseIfNotExist != null) this.createDatabaseIfNotExist = createDatabaseIfNotExist;
     if (initSql != null) this.initSql = initSql;
     if (includeThreadDumpInDeadlockExceptions != null)
@@ -883,6 +888,7 @@ public class Configuration {
         this.haMode,
         this.nonMappedOptions,
         this.autocommit,
+        this.nullDatabaseMeansCurrent,
         this.createDatabaseIfNotExist,
         this.initSql,
         this.transactionIsolation,
@@ -1362,6 +1368,15 @@ public class Configuration {
     return autocommit;
   }
 
+  /**
+   * When enabled, in DatabaseMetadata, will handle null database as current
+   *
+   * @return must null value be considered as current catalog
+   */
+  public boolean nullDatabaseMeansCurrent() {
+    return nullDatabaseMeansCurrent;
+  }
+
   public boolean includeThreadDumpInDeadlockExceptions() {
     return includeThreadDumpInDeadlockExceptions;
   }
@@ -1686,6 +1701,7 @@ public class Configuration {
 
     // various
     private Boolean autocommit;
+    private Boolean nullDatabaseMeansCurrent;
     private Boolean createDatabaseIfNotExist;
     private String initSql;
     private Integer defaultFetchSize;
@@ -2157,6 +2173,18 @@ public class Configuration {
     }
 
     /**
+     * Permit indicating in DatabaseMetadata if null value must be considered current catalog
+     *
+     * @param nullDatabaseMeansCurrent indicating in DatabaseMetadata if null value must be
+     *     considered current catalog
+     * @return this {@link Builder}
+     */
+    public Builder nullDatabaseMeansCurrent(Boolean nullDatabaseMeansCurrent) {
+      this.nullDatabaseMeansCurrent = nullDatabaseMeansCurrent;
+      return this;
+    }
+
+    /**
      * Create database if not exist. This is mainly for test, since does require an additional query
      * after connection
      *
@@ -2413,6 +2441,7 @@ public class Configuration {
               this.useServerPrepStmts,
               this.connectionAttributes,
               this.autocommit,
+              this.nullDatabaseMeansCurrent,
               this.createDatabaseIfNotExist,
               this.initSql,
               this.includeThreadDumpInDeadlockExceptions,

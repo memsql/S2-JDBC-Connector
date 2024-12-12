@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2021 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2024 MariaDB Corporation Ab
+// Copyright (c) 2021-2024 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.socket;
 
@@ -213,4 +213,11 @@ public interface Writer {
    * @throws IOException if any error occurs
    */
   void close() throws IOException;
+
+  /**
+   * Get current sequence object
+   *
+   * @return current sequence
+   */
+  byte getSequence();
 }

@@ -1,4 +1,89 @@
-# Change Log
+# SingleStore Change Log
+
+## [1.2.7](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.7)
+
+* [PLAT-7267] MariDB commits 6585f4c3-eae949a9 
+  * [CONJ-1161] compatible Android RegExp
+  * [misc] ensure not loading static class of wrong socketFactory implementation
+  * [CONJ-1152] Improve message when reaching socket timeout during connection initial commands
+  * [CONJ-1164] permit multi queries with LOAD DATA INFILE
+  * [CONJ-1159] DatabaseMetaData#getClientInfoProperties not ordered correctly
+  * [misc] wrap ReentrantLock into AutoCloseable to ensure proper closing
+  * [CONJ-1125] follow JDBC spec PreparedStatement/PreparedStatement.executeQuery must throw exception when no returning result-set. This is the exact difference of when not using .execute();
+  * [CONJ-1103] support for nullDatabaseMeansCurrent (alias for nullCatalogMeansCurrent)
+  * [CONJ-1174] wrong value for ResultSetMetaData.getPrecision() signed numeric
+  * [misc] plugin can now require ssl to be used
+  * [misc] bump dependencies
+  * [CONJ-1181] ensure prepare statement cache reliability when using multiple database
+  * [misc] test for failover improvement for reliability
+  * [CONJ-1187] throw an explicit type SQLTimeoutException in place of SQLNonTransientConnectionException when connection fail because of timeout
+  * [misc] permit using setObject/getObject on float[]/Float[] values
+  * [CONJ-1205] permit use of Array parameter
+  * [CONJ-1205] permit setObject with ARRAY dataType
+  * [CONJ-1196] setObject on java.util.Date was considered was a java.sql.Date and truncate hour/minutes/seconds/ms while it must be considered like a java.sql.Timestamp
+  * [misc] permits JDBC enquoteIdentifier and enquoteLiteral use at static level
+  * [misc] ensure not having race condition on authentication plugin states
+  * [misc] bump waffle-jna version
+
+* [PLAT-7270] Fix DatabaseMetaData catalog condition.
+* [PLAT-7262] Add log for cause exception on failure in JDBC failover mode
+
+## [1.2.6](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.6)
+
+* [PLAT-7237] Accept Integer.MIN_VALUE fetch size for MySQL compatibility.
+* [PLAT-7246] fix JDBC StringCodec to return byte array by default for VARBINARY column type
+* [PLAT-7223] Remove replication failover mode.
+* [PLAT-7210] Fix Year type metadata
+* [PLAT-7218] Set enableExtendedDataTypes as true by default
+* [PLAT-7218] Add decode Vector as InputStream.
+* [PLAT-7218] Update database metadata for Vector type.
+* [PLAT-7218] Add Vector binary parser
+* [PLAT-7211] Add BSON extended type support to JDBC driver
+* [PLAT-7207] Add config parameters description.
+* [PLAT-7207] Add Vector type support.
+
+## [1.2.5](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.5)
+
+* [PLAT-7195] Fix DatabaseMetaData text COLUMN_SIZE
+* [PLAT-7195] Fix test.
+* [PLAT-7195] Fix column display size. Add charset metadata test.
+* [PLAT-7202] Restoring leading zeros for the BIT type in the byte array.
+* [PLAT-7202] Fix read BIT type values as byte array
+* [PLAT-7187] Add connection set sql select limit engine variable.
+
+## [1.2.4](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.4)
+
+* [PLAT-7176] Update server capabilities
+* [PLAT-7181] Remove not supported XADataSource implementation
+* [PLAT-7175] Add parameter limit for rewrite batch statements
+* [ECS-1250] Fix zero byte issue
+* [PLAT-7172] Remove unused server status flags.
+* [PLAT-7059] Fix getCatalogs to list databases only in current workspace
+* [PLAT-5859] Add more types for convert function in native sql.
+
+## [1.2.3](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.3)
+
+* [PLAT-7078] Remove empty return type from getProcedureColumns metadata
+* [PLAT-7065] Add Kerberos TGT caching
+* [PLAT-7065] JDBC driver kerberos ticket implementation issue GS
+
+## [1.2.2](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.2)
+
+* [PLAT-7018] Fix multi values rewrite batch command for not parametrized statements. Allow replace and duplicate statement. 
+* [PLAT-6993] Improve queryTimeout config functionality
+* [PLAT-6990] Fix blob to varchar conversion
+* [PLAT-6994] Update SslTest and CredentialPluginTest to be able to execute for different JDK versions, fix flaky tests
+* [PLAT-6922] test JDBC driver with different JDK versions 
+* [PLAT-6974] Remove returnMultiValuesGeneratedIds option
+* [PLAT-5874] Add result type to getProcedureColumns 
+* [PLAT-2542] Update database metadata getImportedKeys to return empty result. Enable rewrite option with return generated keys statements
+* [PLAT-6942] Fix all TODOs in JDBC driver
+
+...
+
+# MariaDB Change Log
+
+...
 
 ## [3.0.0](https://github.com/mariadb-corporation/mariadb-connector-j/tree/3.0.0) (3 May 2021)
 [Full Changelog](https://github.com/mariadb-corporation/mariadb-connector-j/compare/2.7.2...3.0.0)
