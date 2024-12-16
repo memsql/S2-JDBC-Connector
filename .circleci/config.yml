@@ -46,7 +46,7 @@ commands:
 jobs:
   test:
     parameters:
-      singlestore_image:
+      singlestore_version:
         type: string
       singlestore_password:
         type: string
@@ -57,7 +57,7 @@ jobs:
       image: ubuntu-2204:2024.01.1
     resource_class: << parameters.machine_class >>
     environment:
-      SINGLESTORE_IMAGE: << parameters.singlestore_image >>
+      SINGLESTORE_VERSION: << parameters.singlestore_version >>
       SINGLESTORE_PASSWORD: << parameters.singlestore_password >>
       JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
       RUN_LONG_TEST: true
@@ -91,7 +91,7 @@ jobs:
     parameters:
       java_version:
         type: string
-      singlestore_image:
+      singlestore_version:
         type: string
       singlestore_password:
         type: string
@@ -102,7 +102,7 @@ jobs:
       image: ubuntu-2204:2024.01.1
     resource_class: << parameters.machine_class >>
     environment:
-      SINGLESTORE_IMAGE: << parameters.singlestore_image >>
+      SINGLESTORE_VERSION: << parameters.singlestore_version >>
       SINGLESTORE_PASSWORD: << parameters.singlestore_password >>
       TEST_ENVIRON: CIRCLE_CI
       RUN_LONG_TEST: false
@@ -178,11 +178,11 @@ workflows:
                 - large
               singlestore_password:
                 - password
-              singlestore_image:
-                - singlestore/cluster-in-a-box:alma-8.0.19-f48780d261-4.0.11-1.16.0
-                - singlestore/cluster-in-a-box:alma-8.1.32-e3d3cde6da-4.0.16-1.17.6
-                - singlestore/cluster-in-a-box:alma-8.5.22-fe61f40cd1-4.1.0-1.17.11
-                - singlestore/cluster-in-a-box:alma-8.7.12-483e5f8acb-4.1.0-1.17.15
+              singlestore_version:
+                - '8.1'
+                - '8.5'
+                - '8.7'
+                - '8.9'
   publish:
     jobs:
       - test_jdk:
@@ -197,8 +197,8 @@ workflows:
                 - large
               singlestore_password:
                 - password
-              singlestore_image:
-                - singlestore/cluster-in-a-box:alma-8.7.12-483e5f8acb-4.1.0-1.17.15
+              singlestore_version:
+                - ''
               java_version:
                 - '8'
                 - '11'
