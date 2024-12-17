@@ -27,6 +27,7 @@
 
 * [PLAT-7270] Fix DatabaseMetaData catalog condition.
 * [PLAT-7262] Add log for cause exception on failure in JDBC failover mode
+* [PLAT-7284] Add tests for SingleStore 8.9. Set SingleStoreDB test image to singlestoredb-dev.
 
 ## [1.2.6](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.6)
 

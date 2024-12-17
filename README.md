@@ -1,6 +1,6 @@
 # SingleStore JDBC Driver
 
-## Version: 1.2.6
+## Version: 1.2.7-beta0
 
 SingleStore JDBC Driver is a JDBC 4.2 compatible driver, used to connect applications developed in Java to SingleStore and MySQL databases. SingleStore JDBC Driver is LGPL licensed.
 
