@@ -83,6 +83,9 @@ docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_
 docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_key --value /test-ssl/test-singlestore-key.pem
 echo "Setting up JWT"
 docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key jwt_auth_config_file --value /test-jwt/jwt_auth_config.json
+echo "Restarting cluster"
+docker restart ${CONTAINER_NAME}
+singlestore-wait-start
 echo "Setting up root-ssl user"
 mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" -e 'create user "root-ssl"@"%" require ssl'
 mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
