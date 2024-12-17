@@ -23,8 +23,10 @@ set -eu
 # this script must be run from the top-level of the repo
 cd "$(git rev-parse --show-toplevel)"
 
-DEFAULT_IMAGE_NAME="singlestore/cluster-in-a-box:alma-8.7.12-483e5f8acb-4.1.0-1.17.15"
-IMAGE_NAME="${SINGLESTORE_IMAGE:-$DEFAULT_IMAGE_NAME}"
+
+DEFAULT_SINGLESTORE_VERSION=""
+VERSION="${SINGLESTORE_VERSION:-$DEFAULT_SINGLESTORE_VERSION}"
+IMAGE_NAME="ghcr.io/singlestore-labs/singlestoredb-dev:latest"
 CONTAINER_NAME="singlestore-integration"
 
 EXISTS=$(docker inspect ${CONTAINER_NAME} >/dev/null 2>&1 && echo 1 || echo 0)
@@ -39,17 +41,16 @@ if [[ "${EXISTS}" -eq 1 ]]; then
 fi
 
 if [[ "${EXISTS}" -eq 0 ]]; then
-    docker run -i --init \
+    docker run -d \
         --name ${CONTAINER_NAME} \
         -v ${PWD}/scripts/ssl:/test-ssl \
         -v ${PWD}/scripts/jwt:/test-jwt \
-        -e LICENSE_KEY=${LICENSE_KEY} \
+        -e SINGLESTORE_LICENSE=${LICENSE_KEY} \
         -e ROOT_PASSWORD=${SINGLESTORE_PASSWORD} \
+        -e SINGLESTORE_VERSION=${VERSION} \
         -p 5506:3306 -p 5507:3307 -p 5508:3308 \
         ${IMAGE_NAME}
 fi
-
-docker start ${CONTAINER_NAME}
 
 singlestore-wait-start() {
   echo -n "Waiting for SingleStore to start..."
@@ -83,7 +84,7 @@ docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_
 echo "Setting up JWT"
 docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key jwt_auth_config_file --value /test-jwt/jwt_auth_config.json
 echo "Restarting cluster"
-docker exec -it ${CONTAINER_NAME} memsqlctl restart-node --yes --all
+docker restart ${CONTAINER_NAME}
 singlestore-wait-start
 echo "Setting up root-ssl user"
 mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" -e 'create user "root-ssl"@"%" require ssl'
@@ -103,7 +104,7 @@ if [[ ${CONTAINER_IP} != "${CURRENT_LEAF_IP}" ]]; then
     # add leaf with correct ip
     mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" --batch -N -e "add leaf root:'${SINGLESTORE_PASSWORD}'@'${CONTAINER_IP}':3307"
 fi
-CURRENT_AGG_IP=$(mysql -u root -h 127.0.0.1 -P 5506 -ppassword --batch -N -e 'select host from information_schema.aggregators where master_aggregator=0')
+CURRENT_AGG_IP=$(mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" --batch -N -e 'select host from information_schema.aggregators where master_aggregator=0')
 if [[ ${CONTAINER_IP} != "${CURRENT_AGG_IP}" ]]; then
     # remove aggregator with current ip
     mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" --batch -N -e "remove aggregator '${CURRENT_AGG_IP}':3308"
