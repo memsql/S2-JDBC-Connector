@@ -289,7 +289,6 @@ public class BatchTest extends Common {
       throws SQLException {
     Statement stmt = con.createStatement();
     stmt.execute("TRUNCATE BatchTest");
-    stmt.execute("START TRANSACTION"); // if MAXSCALE ensure using WRITER
     try (PreparedStatement prep =
         con.prepareStatement("INSERT INTO BatchTest(t1, t2) VALUES (?,?)")) {
       prep.setInt(1, 1);
@@ -303,11 +302,12 @@ public class BatchTest extends Common {
       prep.setNull(2, Types.INTEGER);
       prep.addBatch();
       int[] res = prep.executeBatch();
+      assertEquals(3, res.length);
       if (rewriteBatchedStatements) {
-        assertEquals(1, res.length);
-        assertEquals(3, res[0]);
+        assertEquals(Statement.SUCCESS_NO_INFO, res[0]);
+        assertEquals(Statement.SUCCESS_NO_INFO, res[1]);
+        assertEquals(Statement.SUCCESS_NO_INFO, res[2]);
       } else {
-        assertEquals(3, res.length);
         assertEquals(1, res[0]);
         assertEquals(1, res[1]);
         assertEquals(1, res[2]);
@@ -359,10 +359,13 @@ public class BatchTest extends Common {
       prep.setString(2, "two");
       prep.addBatch();
       long[] res = prep.executeLargeBatch();
+      assertEquals(2, res.length);
       if (rewriteBatchedStatements && !useServerPrepStmts) {
-        assertEquals(1, res.length);
+        assertEquals(Statement.SUCCESS_NO_INFO, res[0]);
+        assertEquals(Statement.SUCCESS_NO_INFO, res[1]);
       } else {
-        assertEquals(2, res.length);
+        assertEquals(1, res[0]);
+        assertEquals(1, res[1]);
       }
     }
 
