@@ -2,6 +2,9 @@
 
 ## [1.2.7](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.7)
 
+* [PLAT-7290] Fix the executeBatch return value when rewriteBatchedStatements are enabled
+* [PLAT-7284] Add tests for SingleStore 8.9. Set SingleStoreDB test image to singlestoredb-dev.
+* [PLAT-7271] Add Vector metadata details in DatabaseMetaData.getColumns
 * [PLAT-7267] MariDB commits 6585f4c3-eae949a9 
   * [CONJ-1161] compatible Android RegExp
   * [misc] ensure not loading static class of wrong socketFactory implementation
