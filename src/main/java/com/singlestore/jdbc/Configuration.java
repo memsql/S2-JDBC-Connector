@@ -2408,7 +2408,7 @@ public class Configuration {
     }
 
     /**
-     * Enable extended metadata for VECTOR(<N> [ , <elementType> ]) data type.
+     * Enable extended metadata for {@code VECTOR(<N> [, <elementType>])} data type.
      *
      * @param vectorExtendedMetadata to enable extended metadata for VECTOR
      * @return this {@link Builder}
