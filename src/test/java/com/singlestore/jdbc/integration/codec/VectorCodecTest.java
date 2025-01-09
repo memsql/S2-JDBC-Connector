@@ -56,7 +56,7 @@ public class VectorCodecTest extends CommonCodecTest {
         arr = new Long[length];
         break;
       case F32:
-        supplier = () -> (float) random.nextFloat();
+        supplier = random::nextFloat;
         arr = new Float[length];
         break;
       case F64:

@@ -22,6 +22,7 @@ public interface AuthenticationPluginFactory {
    * @param authenticationData authentication data (password/token)
    * @param seed server provided seed
    * @param conf Connection options
+   * @return authentication plugin instance
    */
   AuthenticationPlugin initialize(String authenticationData, byte[] seed, Configuration conf);
 

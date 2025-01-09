@@ -49,7 +49,11 @@ public interface Writer {
    */
   void writeShort(short value) throws IOException;
 
-  /** Set max allowed packet size. */
+  /**
+   * Set max allowed packet size.
+   *
+   * @param maxAllowedPacket max allowed packet size value
+   */
   void setMaxAllowedPacket(int maxAllowedPacket);
 
   /**

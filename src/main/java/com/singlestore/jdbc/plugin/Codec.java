@@ -52,6 +52,7 @@ public interface Codec<T> {
    *
    * @param value to calculate
    * @return value length in bytes
+   * @throws SQLException if there is an error accessing the length
    */
   int getApproximateTextProtocolLength(Object value) throws SQLException;
 

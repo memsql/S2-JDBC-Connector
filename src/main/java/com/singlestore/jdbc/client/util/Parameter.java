@@ -67,6 +67,8 @@ public interface Parameter {
   /**
    * Approximate length in bytes.
    *
+   * @throws IOException if socket error occurs
+   * @throws SQLException if other kind of error occurs
    * @return value length in bytes
    */
   int getApproximateTextProtocolLength() throws IOException, SQLException;

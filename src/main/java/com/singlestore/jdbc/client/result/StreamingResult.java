@@ -91,6 +91,7 @@ public class StreamingResult extends Result {
     addStreamingValue();
   }
 
+  @SuppressWarnings("try")
   private void addStreamingValue() throws SQLException {
     try (ClosableLock ignore = lock.closeableLock()) {
       // read only fetchSize values
@@ -129,6 +130,7 @@ public class StreamingResult extends Result {
   }
 
   @Override
+  @SuppressWarnings("try")
   public boolean next() throws SQLException {
     checkClose();
     if (rowPointer < dataSize - 1) {

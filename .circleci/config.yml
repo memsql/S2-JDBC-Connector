@@ -171,7 +171,7 @@ workflows:
       - test:
           filters:
             tags:
-              only: /^v.*/
+              ignore: /.*/
           matrix:
             parameters:
               machine_class:

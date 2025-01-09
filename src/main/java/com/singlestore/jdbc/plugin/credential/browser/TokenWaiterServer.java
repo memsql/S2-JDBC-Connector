@@ -192,6 +192,7 @@ public class TokenWaiterServer {
     @Override
     public void verify(DecodedJWT decodedJWT) throws SignatureVerificationException {}
 
+    @Deprecated
     @Override
     public byte[] sign(byte[] bytes) throws SignatureGenerationException {
       return null;

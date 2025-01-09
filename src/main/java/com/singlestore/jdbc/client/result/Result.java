@@ -352,6 +352,7 @@ public abstract class Result implements ResultSet, Completion {
    * @param lock thread locker object
    * @throws SQLException if any error occurs
    */
+  @SuppressWarnings("try")
   public void closeFromStmtClose(ClosableLock lock) throws SQLException {
     try (ClosableLock ignore = lock.closeableLock()) {
       this.fetchRemaining();

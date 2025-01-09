@@ -67,6 +67,7 @@ public class ClientPreparedStatement extends BasePreparedStatement {
     parameters = new ParameterList(parser.getParamCount());
   }
 
+  @SuppressWarnings("try")
   private void executeInternal() throws SQLException {
     checkNotClosed();
     validParameters();
@@ -456,6 +457,7 @@ public class ClientPreparedStatement extends BasePreparedStatement {
   }
 
   @Override
+  @SuppressWarnings("try")
   public int[] executeBatch() throws SQLException {
     checkNotClosed();
     if (batchParameters == null || batchParameters.isEmpty()) return new int[0];
@@ -500,6 +502,7 @@ public class ClientPreparedStatement extends BasePreparedStatement {
   }
 
   @Override
+  @SuppressWarnings("try")
   public long[] executeLargeBatch() throws SQLException {
     checkNotClosed();
     if (batchParameters == null || batchParameters.isEmpty()) return new long[0];
@@ -545,6 +548,7 @@ public class ClientPreparedStatement extends BasePreparedStatement {
   }
 
   @Override
+  @SuppressWarnings("try")
   public void close() throws SQLException {
     if (prepareResult != null) {
       try (ClosableLock ignore = lock.closeableLock()) {
