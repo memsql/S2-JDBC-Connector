@@ -182,8 +182,7 @@ workflows:
                 - '8.1.52-21a41f6e49'
                 - '8.5.30-4f46ab16a5'
                 - '8.7.21-f0b8de04d5'
-                # empty as latest 8.9
-                - ''
+                - '8.9.3-bfa36a984a'
   publish:
     jobs:
       - test_jdk:
