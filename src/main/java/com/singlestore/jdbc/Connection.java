@@ -116,6 +116,7 @@ public class Connection implements java.sql.Connection {
   /**
    * Set sql select limit session engine variable.
    *
+   * @throws SQLException if a connection error occur
    * @param maxRows limit of rows
    */
   public void setSqlSelectLimit(long maxRows) throws SQLException {
