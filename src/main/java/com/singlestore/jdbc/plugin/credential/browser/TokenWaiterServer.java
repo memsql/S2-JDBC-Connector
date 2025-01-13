@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
-// Copyright (c) 2021-2022 SingleStore, Inc.
+// Copyright (c) 2021-2025 SingleStore, Inc.
 
 package com.singlestore.jdbc.plugin.credential.browser;
 
@@ -192,6 +192,7 @@ public class TokenWaiterServer {
     @Override
     public void verify(DecodedJWT decodedJWT) throws SignatureVerificationException {}
 
+    @SuppressWarnings("deprecation")
     @Override
     public byte[] sign(byte[] bytes) throws SignatureGenerationException {
       return null;

@@ -1,4 +1,4 @@
-// Copyright (c) 2022 SingleStore, Inc.
+// Copyright (c) 2021-2025 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.tls;
 

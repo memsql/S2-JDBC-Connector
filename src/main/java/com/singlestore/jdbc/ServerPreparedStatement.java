@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2024 MariaDB Corporation Ab
-// Copyright (c) 2021-2024 SingleStore, Inc.
+// Copyright (c) 2015-2025 MariaDB Corporation Ab
+// Copyright (c) 2021-2025 SingleStore, Inc.
 
 package com.singlestore.jdbc;
 
@@ -80,6 +80,7 @@ public class ServerPreparedStatement extends BasePreparedStatement {
    *
    * @throws SQLException if any error occurs
    */
+  @SuppressWarnings("try")
   protected void executeInternal() throws SQLException {
     checkNotClosed();
     validParameters();
@@ -487,6 +488,7 @@ public class ServerPreparedStatement extends BasePreparedStatement {
   }
 
   @Override
+  @SuppressWarnings("try")
   public int[] executeBatch() throws SQLException {
     checkNotClosed();
     if (batchParameters == null || batchParameters.isEmpty()) return new int[0];
@@ -524,6 +526,7 @@ public class ServerPreparedStatement extends BasePreparedStatement {
   }
 
   @Override
+  @SuppressWarnings("try")
   public long[] executeLargeBatch() throws SQLException {
     checkNotClosed();
     if (batchParameters == null || batchParameters.isEmpty()) return new long[0];

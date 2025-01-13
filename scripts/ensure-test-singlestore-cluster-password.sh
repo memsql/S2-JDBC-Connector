@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ************************************************************************************
-#   Copyright (c) 2021 SingleStore, Inc.
+#   Copyright (c) 2021-2025 SingleStore, Inc.
 #
 #   This library is free software; you can redistribute it and/or
 #   modify it under the terms of the GNU Library General Public
@@ -94,6 +94,7 @@ mysql -u root -h 127.0.0.1 -P 5507 -p"${SINGLESTORE_PASSWORD}" -e 'grant all pri
 mysql -u root -h 127.0.0.1 -P 5508 -p"${SINGLESTORE_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
 echo "Done!"
 
+sleep 0.5
 echo
 echo "Ensuring child nodes are connected using container IP"
 CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})

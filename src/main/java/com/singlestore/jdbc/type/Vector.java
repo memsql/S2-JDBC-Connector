@@ -78,7 +78,11 @@ public class Vector {
         data.getBytes(StandardCharsets.UTF_8), values.length, DataType.INT64_VECTOR, false);
   }
 
-  /** Get byte array of Vector value. */
+  /**
+   * Get byte array of Vector value.
+   *
+   * @return values as byte array
+   */
   public byte[] getValues() {
     return Arrays.copyOf(values, values.length);
   }
@@ -87,7 +91,11 @@ public class Vector {
     return isBinary;
   }
 
-  /** Get Vector type. */
+  /**
+   * Get Vector type.
+   *
+   * @return vector type
+   */
   public DataType getType() {
     return type;
   }

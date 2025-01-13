@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2023 MariaDB Corporation Ab
-// Copyright (c) 2021-2023 SingleStore, Inc.
+// Copyright (c) 2015-2025 MariaDB Corporation Ab
+// Copyright (c) 2021-2025 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.util;
 
@@ -67,6 +67,8 @@ public interface Parameter {
   /**
    * Approximate length in bytes.
    *
+   * @throws IOException if socket error occurs
+   * @throws SQLException if other kind of error occurs
    * @return value length in bytes
    */
   int getApproximateTextProtocolLength() throws IOException, SQLException;

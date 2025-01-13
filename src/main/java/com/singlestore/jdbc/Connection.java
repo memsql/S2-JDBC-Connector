@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2024 MariaDB Corporation Ab
-// Copyright (c) 2021-2024 SingleStore, Inc.
+// Copyright (c) 2015-2025 MariaDB Corporation Ab
+// Copyright (c) 2021-2025 SingleStore, Inc.
 
 package com.singlestore.jdbc;
 
@@ -116,6 +116,7 @@ public class Connection implements java.sql.Connection {
   /**
    * Set sql select limit session engine variable.
    *
+   * @throws SQLException if a connection error occur
    * @param maxRows limit of rows
    */
   public void setSqlSelectLimit(long maxRows) throws SQLException {
@@ -218,6 +219,7 @@ public class Connection implements java.sql.Connection {
   }
 
   @Override
+  @SuppressWarnings("try")
   public void setAutoCommit(boolean autoCommit) throws SQLException {
     if (autoCommit == getAutoCommit()) {
       return;
@@ -229,6 +231,7 @@ public class Connection implements java.sql.Connection {
   }
 
   @Override
+  @SuppressWarnings("try")
   public void commit() throws SQLException {
     try (ClosableLock ignore = lock.closeableLock()) {
       if ((client.getContext().getServerStatus() & ServerStatus.IN_TRANSACTION) > 0) {
@@ -238,6 +241,7 @@ public class Connection implements java.sql.Connection {
   }
 
   @Override
+  @SuppressWarnings("try")
   public void rollback() throws SQLException {
     try (ClosableLock ignore = lock.closeableLock()) {
       if (forceTransactionEnd
@@ -303,6 +307,7 @@ public class Connection implements java.sql.Connection {
   }
 
   @Override
+  @SuppressWarnings("try")
   public void setReadOnly(boolean readOnly) throws SQLException {
     try (ClosableLock ignore = lock.closeableLock()) {
       if (this.readOnly != readOnly) {
@@ -328,6 +333,7 @@ public class Connection implements java.sql.Connection {
   }
 
   @Override
+  @SuppressWarnings("try")
   public void setCatalog(String catalog) throws SQLException {
     // null catalog means keep current.
     // there is no possibility to set no database when one is selected
@@ -349,6 +355,7 @@ public class Connection implements java.sql.Connection {
   }
 
   @Override
+  @SuppressWarnings("try")
   public void setTransactionIsolation(int level) throws SQLException {
     String query = "SET SESSION TRANSACTION ISOLATION LEVEL";
     if (level == java.sql.Connection.TRANSACTION_READ_COMMITTED) {
@@ -581,6 +588,7 @@ public class Connection implements java.sql.Connection {
   }
 
   @Override
+  @SuppressWarnings("try")
   public boolean isValid(int timeout) throws SQLException {
     if (timeout < 0) {
       throw exceptionFactory.create("the value supplied for timeout is negative");
@@ -678,6 +686,7 @@ public class Connection implements java.sql.Connection {
   }
 
   @Override
+  @SuppressWarnings("try")
   public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
     if (this.isClosed()) {
       throw exceptionFactory.create(

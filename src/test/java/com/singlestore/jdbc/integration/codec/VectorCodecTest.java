@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2021-2024 SingleStore, Inc.
+// Copyright (c) 2021-2025 SingleStore, Inc.
 
 package com.singlestore.jdbc.integration.codec;
 
@@ -56,7 +56,7 @@ public class VectorCodecTest extends CommonCodecTest {
         arr = new Long[length];
         break;
       case F32:
-        supplier = () -> (float) random.nextFloat();
+        supplier = random::nextFloat;
         arr = new Float[length];
         break;
       case F64:

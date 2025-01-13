@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // Copyright (c) 2012-2014 Monty Program Ab
-// Copyright (c) 2015-2024 MariaDB Corporation Ab
-// Copyright (c) 2021-2024 SingleStore, Inc.
+// Copyright (c) 2015-2025 MariaDB Corporation Ab
+// Copyright (c) 2021-2025 SingleStore, Inc.
 
 package com.singlestore.jdbc.client.result;
 
@@ -352,6 +352,7 @@ public abstract class Result implements ResultSet, Completion {
    * @param lock thread locker object
    * @throws SQLException if any error occurs
    */
+  @SuppressWarnings("try")
   public void closeFromStmtClose(ClosableLock lock) throws SQLException {
     try (ClosableLock ignore = lock.closeableLock()) {
       this.fetchRemaining();
