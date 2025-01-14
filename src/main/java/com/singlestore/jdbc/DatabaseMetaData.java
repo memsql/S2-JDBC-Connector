@@ -11,6 +11,10 @@ import com.singlestore.jdbc.util.Version;
 import com.singlestore.jdbc.util.VersionFactory;
 import java.sql.*;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 
 public class DatabaseMetaData implements java.sql.DatabaseMetaData {
 
@@ -2394,7 +2398,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
       DataType.INT
     };
 
-    String[][] data = {
+    String[][] baseData = {
       {"BIT", "-7", "1", "", "", "", "1", "1", "3", "0", "0", "0", "BIT", "0", "0", "0", "0", "10"},
       {
         "BOOL", "-7", "1", "", "", "", "1", "1", "3", "0", "0", "0", "BOOL", "0", "0", "0", "0",
@@ -2406,7 +2410,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "3",
         "",
         "",
-        "[(M)] [UNSIGNED] [ZEROFILL]",
+        "[(M)] [UNSIGNED]",
         "1",
         "0",
         "3",
@@ -2426,7 +2430,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "3",
         "",
         "",
-        "[(M)] [UNSIGNED] [ZEROFILL]",
+        "[(M)]",
         "1",
         "0",
         "3",
@@ -2446,7 +2450,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "19",
         "",
         "",
-        "[(M)] [UNSIGNED] [ZEROFILL]",
+        "[(M)] [UNSIGNED]",
         "1",
         "0",
         "3",
@@ -2466,7 +2470,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "20",
         "",
         "",
-        "[(M)] [ZEROFILL]",
+        "[(M)]",
         "1",
         "0",
         "3",
@@ -2677,12 +2681,32 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "0", "10"
       },
       {
+        "JSON",
+        "-1",
+        "2147483647",
+        "'",
+        "'",
+        "",
+        "1",
+        "1",
+        "3",
+        "0",
+        "0",
+        "0",
+        "JSON",
+        "0",
+        "0",
+        "0",
+        "0",
+        "10"
+      },
+      {
         "NUMERIC",
         "2",
         "65",
         "",
         "",
-        "[(M,D])] [ZEROFILL]",
+        "[(M,D])]",
         "1",
         "0",
         "3",
@@ -2702,7 +2726,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "65",
         "",
         "",
-        "[(M,D])] [ZEROFILL]",
+        "[(M,D])]",
         "1",
         "0",
         "3",
@@ -2722,7 +2746,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "10",
         "",
         "",
-        "[(M)] [UNSIGNED] [ZEROFILL]",
+        "[(M)] [UNSIGNED]",
         "1",
         "0",
         "3",
@@ -2742,7 +2766,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "10",
         "",
         "",
-        "[(M)] [ZEROFILL]",
+        "[(M)]",
         "1",
         "0",
         "3",
@@ -2762,7 +2786,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "10",
         "",
         "",
-        "[(M)] [UNSIGNED] [ZEROFILL]",
+        "[(M)] [UNSIGNED]",
         "1",
         "0",
         "3",
@@ -2782,7 +2806,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "10",
         "",
         "",
-        "[(M)] [ZEROFILL]",
+        "[(M)]",
         "1",
         "0",
         "3",
@@ -2802,7 +2826,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "7",
         "",
         "",
-        "[(M)] [UNSIGNED] [ZEROFILL]",
+        "[(M)] [UNSIGNED]",
         "1",
         "0",
         "3",
@@ -2822,7 +2846,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "8",
         "",
         "",
-        "[(M)] [ZEROFILL]",
+        "[(M)]",
         "1",
         "0",
         "3",
@@ -2842,7 +2866,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "5",
         "",
         "",
-        "[(M)] [UNSIGNED] [ZEROFILL]",
+        "[(M)] [UNSIGNED]",
         "1",
         "0",
         "3",
@@ -2862,7 +2886,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "5",
         "",
         "",
-        "[(M)] [ZEROFILL]",
+        "[(M)]",
         "1",
         "0",
         "3",
@@ -2877,44 +2901,12 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "10"
       },
       {
-        "FLOAT",
-        "7",
-        "10",
-        "",
-        "",
-        "[(M|D)] [ZEROFILL]",
-        "1",
-        "0",
-        "3",
-        "0",
-        "0",
-        "1",
-        "FLOAT",
-        "-38",
-        "38",
-        "0",
-        "0",
-        "10"
+        "FLOAT", "7", "10", "", "", "[(M|D)]", "1", "0", "3", "0", "0", "1", "FLOAT", "-38", "38",
+        "0", "0", "10"
       },
       {
-        "DOUBLE",
-        "8",
-        "17",
-        "",
-        "",
-        "[(M|D)] [ZEROFILL]",
-        "1",
-        "0",
-        "3",
-        "0",
-        "0",
-        "1",
-        "DOUBLE",
-        "-308",
-        "308",
-        "0",
-        "0",
-        "10"
+        "DOUBLE", "8", "17", "", "", "[(M,D)]", "1", "0", "3", "0", "0", "1", "DOUBLE", "-308",
+        "308", "0", "0", "10"
       },
       {
         "DOUBLE PRECISION",
@@ -2922,7 +2914,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "17",
         "",
         "",
-        "[(M,D)] [ZEROFILL]",
+        "[(M,D)]",
         "1",
         "0",
         "3",
@@ -2937,24 +2929,8 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "10"
       },
       {
-        "REAL",
-        "8",
-        "17",
-        "",
-        "",
-        "[(M,D)] [ZEROFILL]",
-        "1",
-        "0",
-        "3",
-        "0",
-        "0",
-        "1",
-        "REAL",
-        "-308",
-        "308",
-        "0",
-        "0",
-        "10"
+        "REAL", "8", "17", "", "", "[(M,D)]", "1", "0", "3", "0", "0", "1", "REAL", "-308", "308",
+        "0", "0", "10"
       },
       {
         "VARCHAR", "12", "255", "'", "'", "(M)", "1", "0", "3", "0", "0", "0", "VARCHAR", "0", "0",
@@ -2966,6 +2942,10 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
       },
       {
         "SET", "12", "64", "'", "'", "", "1", "0", "3", "0", "0", "0", "SET", "0", "0", "0", "0",
+        "10"
+      },
+      {
+        "YEAR", "5", "4", "'", "'", "", "1", "0", "3", "0", "0", "0", "YEAR", "0", "0", "0", "0",
         "10"
       },
       {
@@ -3015,8 +2995,53 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
         "0",
         "0",
         "10"
+      },
+      {
+        "VECTOR",
+        "1111",
+        "65532",
+        "'",
+        "'",
+        "[(M,<elementType>])]",
+        "1",
+        "1",
+        "3",
+        "\0",
+        "0",
+        "0",
+        "VECTOR",
+        "0",
+        "0",
+        "0",
+        "0",
+        "10"
+      },
+      {
+        "BSON",
+        "-4",
+        "2147483647",
+        "'",
+        "'",
+        "",
+        "1",
+        "1",
+        "3",
+        "0",
+        "0",
+        "0",
+        "BSON",
+        "0",
+        "0",
+        "0",
+        "0",
+        "10"
       }
     };
+
+    List<String[]> datalist = new ArrayList<>(Arrays.asList(baseData));
+    String[][] data = new String[datalist.size()][];
+    datalist.sort(Comparator.comparingInt((String[] m) -> Integer.parseInt(m[1])));
+    datalist.toArray(data);
 
     return CompleteResult.createResultSet(
         columnNames,
