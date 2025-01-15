@@ -67,7 +67,7 @@ public class PooledConnectionTest extends Common {
         () ->
             new SingleStorePoolDataSource(
                 mDefUrl + "&sessionVariables=wait_timeout=1&maxIdleTime=1&testMaxRemovalDelay=2"),
-        "Wrong argument value '1' for maxIdleTime, must be >= 2");
+        "error parsing url: Wrong argument value '1' for maxIdleTime, must be >= 2");
   }
 
   @Test

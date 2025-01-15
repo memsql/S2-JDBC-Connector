@@ -1074,7 +1074,7 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
    * @return server type
    */
   public String getDatabaseProductName() {
-    return "SingleStore";
+    return conf.useMysqlMetadata() ? "MySQL" : "SingleStore";
   }
 
   public String getDatabaseProductVersion() throws SQLException {

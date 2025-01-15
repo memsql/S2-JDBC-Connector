@@ -2,7 +2,6 @@
 // Copyright (c) 2012-2014 Monty Program Ab
 // Copyright (c) 2015-2025 MariaDB Corporation Ab
 // Copyright (c) 2021-2025 SingleStore, Inc.
-
 package com.singlestore.jdbc;
 
 import com.singlestore.jdbc.export.HaMode;
@@ -10,21 +9,15 @@ import com.singlestore.jdbc.export.SslMode;
 import com.singlestore.jdbc.plugin.Codec;
 import com.singlestore.jdbc.plugin.CredentialPlugin;
 import com.singlestore.jdbc.plugin.credential.CredentialPluginLoader;
-import com.singlestore.jdbc.util.log.Logger;
 import com.singlestore.jdbc.util.log.Loggers;
 import com.singlestore.jdbc.util.options.OptionAliases;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
-import java.util.ServiceLoader;
+import java.util.*;
 
 /**
  * parse and verification of URL.
@@ -58,500 +51,485 @@ import java.util.ServiceLoader;
  */
 public class Configuration {
 
-  private final Logger logger;
+  private static final Set<String> EXCLUDED_FIELDS;
+  private static final Set<String> SECURE_FIELDS;
+  private static final Set<String> PROPERTIES_TO_SKIP;
+  private static final Set<String> SENSITIVE_FIELDS;
+
+  static {
+    EXCLUDED_FIELDS = new HashSet<>();
+    EXCLUDED_FIELDS.add("database");
+    EXCLUDED_FIELDS.add("haMode");
+    EXCLUDED_FIELDS.add("$jacocoData");
+    EXCLUDED_FIELDS.add("addresses");
+    EXCLUDED_FIELDS.add("transactionIsolation");
+
+    SECURE_FIELDS = new HashSet<>();
+    SECURE_FIELDS.add("password");
+    SECURE_FIELDS.add("keyStorePassword");
+    SECURE_FIELDS.add("trustStorePassword");
+
+    PROPERTIES_TO_SKIP = new HashSet<>();
+    PROPERTIES_TO_SKIP.add("initialUrl");
+    PROPERTIES_TO_SKIP.add("logger");
+    PROPERTIES_TO_SKIP.add("codecs");
+    PROPERTIES_TO_SKIP.add("$jacocoData");
+
+    SENSITIVE_FIELDS = new HashSet<>();
+    SENSITIVE_FIELDS.add("password");
+    SENSITIVE_FIELDS.add("keyStorePassword");
+    SENSITIVE_FIELDS.add("trustStorePassword");
+  }
 
   // standard options
-  private String user = null;
-  private String password = null;
-  private String database = null;
-  private List<HostAddress> addresses = null;
-  private HaMode haMode = HaMode.NONE;
-
-  private String initialUrl = null;
-  private Properties nonMappedOptions = null;
+  private String user;
+  private String password;
+  private String database;
+  private List<HostAddress> addresses;
+  private HaMode haMode;
+  private String initialUrl;
+  private Properties nonMappedOptions;
 
   // various
-  private Boolean autocommit = null;
-  private boolean nullDatabaseMeansCurrent = false;
-  private boolean createDatabaseIfNotExist = false;
-  private String initSql = null;
-  private TransactionIsolation transactionIsolation = TransactionIsolation.READ_COMMITTED;
-  private int defaultFetchSize = 0;
-  private int maxQuerySizeToLog = 1024;
-  private Integer maxAllowedPacket = null;
-  private String geometryDefaultType = null;
-  private String restrictedAuth = null;
+  private Boolean autocommit;
+  private boolean useMysqlMetadata;
+  private boolean useMysqlVersion;
+  private boolean nullDatabaseMeansCurrent;
+  private boolean createDatabaseIfNotExist;
+  private String initSql;
+  private TransactionIsolation transactionIsolation;
+  private int defaultFetchSize;
+  private Integer maxAllowedPacket;
+  private String geometryDefaultType;
+  private String restrictedAuth;
+
   // socket
-  private String socketFactory = null;
-  private int connectTimeout =
-      DriverManager.getLoginTimeout() > 0 ? DriverManager.getLoginTimeout() * 1000 : 30_000;
-  private String pipe = null;
-  private String localSocket = null;
-  private boolean tcpKeepAlive = true;
-  private int tcpKeepIdle = 0;
-  private int tcpKeepCount = 0;
-  private int tcpKeepInterval = 0;
-  private boolean tcpAbortiveClose = false;
-  private String localSocketAddress = null;
-  private int socketTimeout = 0;
-  private boolean useReadAheadInput = false;
-  private String tlsSocketType = null;
+  private String socketFactory;
+  private int connectTimeout;
+  private String pipe;
+  private String localSocket;
+  private boolean tcpKeepAlive;
+  private int tcpKeepIdle;
+  private int tcpKeepCount;
+  private int tcpKeepInterval;
+  private boolean tcpAbortiveClose;
+  private String localSocketAddress;
+  private int socketTimeout;
+  private boolean useReadAheadInput;
+  private String tlsSocketType;
 
   // SSL
-  private SslMode sslMode = SslMode.DISABLE;
-  private String serverSslCert = null;
-  private String trustStore = null;
-  private String trustStorePassword = null;
-  private String trustStoreType = null;
-  private String keyStore = null;
-  private String keyStorePassword = null;
-  private String keyPassword = null;
-  private String keyStoreType = null;
-  private String enabledSslCipherSuites = null;
-  private String enabledSslProtocolSuites = null;
+  private SslMode sslMode;
+  private String serverSslCert;
+  private String trustStore;
+  private String trustStorePassword;
+  private String trustStoreType;
+  private String keyStore;
+  private String keyStorePassword;
+  private String keyPassword;
+  private String keyStoreType;
+  private String enabledSslCipherSuites;
+  private String enabledSslProtocolSuites;
 
   // protocol
-  private boolean allowMultiQueries = false;
-  private boolean allowLocalInfile = false;
-  private boolean useCompression = false;
-  private boolean useAffectedRows = false;
-  private boolean disablePipeline = false;
+  private boolean allowMultiQueries;
+  private boolean allowLocalInfile;
+  private boolean useCompression;
+  private boolean useAffectedRows;
+  private boolean disablePipeline;
 
   // prepare
-  private boolean cachePrepStmts = true;
-  private int prepStmtCacheSize = 250;
-  private boolean useServerPrepStmts = false;
+  private boolean cachePrepStmts;
+  private int prepStmtCacheSize;
+  private boolean useServerPrepStmts;
+  private boolean rewriteBatchedStatements;
 
   // authentication
-  private CredentialPlugin credentialType = null;
-  private String sessionVariables = null;
-  private String connectionAttributes = null;
-  private String servicePrincipalName = null;
-  private String jaasApplicationName = null;
+  private CredentialPlugin credentialType;
+  private String sessionVariables;
+  private String connectionAttributes;
+  private String servicePrincipalName;
+  private String jaasApplicationName;
 
   // meta
-  private boolean blankTableNameMeta = false;
-  private boolean tinyInt1isBit = true;
-  private boolean transformedBitIsBoolean = false;
-  private boolean yearIsDateType = true;
-  private boolean dumpQueriesOnException = false;
-  private boolean includeThreadDumpInDeadlockExceptions = false;
+  private boolean blankTableNameMeta;
+  private boolean tinyInt1isBit;
+  private boolean transformedBitIsBoolean;
+  private boolean yearIsDateType;
+  private boolean dumpQueriesOnException;
+  private boolean includeThreadDumpInDeadlockExceptions;
 
   // HA options
-  private int retriesAllDown = 120;
-  private boolean transactionReplay = false;
-  private int transactionReplaySize = 64;
+  private int retriesAllDown;
+  private boolean transactionReplay;
+  private int transactionReplaySize;
 
   // Pool options
-  private boolean pool = false;
-  private String poolName = null;
-  private int maxPoolSize = 8;
-  private int minPoolSize = 8;
-  private int maxIdleTime = 600_000;
-  private boolean registerJmxPool = true;
-  private int poolValidMinDelay = 1000;
-  private boolean useResetConnection = false;
+  private boolean pool;
+  private String poolName;
+  private int maxPoolSize;
+  private int minPoolSize;
+  private int maxIdleTime;
+  private boolean registerJmxPool;
+  private int poolValidMinDelay;
+  private boolean useResetConnection;
 
-  private Codec<?>[] codecs = null;
+  // Logging
+  private int maxQuerySizeToLog;
+  private String consoleLogLevel;
+  private String consoleLogFilepath;
+  private boolean printStackTrace;
+  private Integer maxPrintStackSizeToLog;
 
-  private boolean useMysqlVersion = false;
-  private boolean rewriteBatchedStatements = false;
-  private String consoleLogLevel = null;
-  private String consoleLogFilepath = null;
-  private boolean printStackTrace = false;
-  private Integer maxPrintStackSizeToLog = 10;
-  private boolean enableExtendedDataTypes = false;
-  private String vectorTypeOutputFormat = null;
-  private boolean vectorExtendedMetadata = false;
+  // Extended data types e.g. VECTOR, BSON
+  private boolean enableExtendedDataTypes;
+  private String vectorTypeOutputFormat;
+  private boolean vectorExtendedMetadata;
 
-  private Configuration() {
-    this.logger = Loggers.getLogger(Configuration.class);
+  private Codec<?>[] codecs;
+
+  private Configuration(Builder builder) {
+    // Set basic configuration
+    try {
+      initializeBasicConfig(builder);
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
+    }
+
+    // Set SSL/TLS configuration
+    initializeSslConfig(builder);
+
+    // Set socket configuration
+    initializeSocketConfig(builder);
+
+    // Set transaction and protocol settings
+    initializeTransactionConfig(builder);
+
+    // Set data type handling
+    initializeDataTypeConfig(builder);
+
+    // Set query and statement handling
+    initializeQueryConfig(builder);
+
+    // Set pipeline and transaction settings
+    initializePipelineConfig(builder);
+
+    // Set database and schema settings
+    initializeDatabaseConfig(builder);
+
+    // Set exception handling
+    initializeExceptionConfig(builder);
+
+    // Set pool configuration
+    initializePoolConfig(builder);
+
+    // Set logging configuration
+    initializeLoggingConfig(builder);
+
+    // Set extended type configuration
+    initializeExtendedTypesConfig(builder);
+
+    // Set additional properties
+    initializeAdditionalConfig(builder);
+
+    // Validate configuration
+    validateConfiguration();
   }
 
-  private Configuration(
-      String user,
-      String password,
-      String database,
-      List<HostAddress> addresses,
-      HaMode haMode,
-      Properties nonMappedOptions,
-      Boolean autocommit,
-      boolean nullDatabaseMeansCurrent,
-      boolean createDatabaseIfNotExist,
-      String initSql,
-      TransactionIsolation transactionIsolation,
-      int defaultFetchSize,
-      int maxQuerySizeToLog,
-      Integer maxAllowedPacket,
-      String geometryDefaultType,
-      String restrictedAuth,
-      String socketFactory,
-      int connectTimeout,
-      String pipe,
-      String localSocket,
-      boolean tcpKeepAlive,
-      int tcpKeepIdle,
-      int tcpKeepCount,
-      int tcpKeepInterval,
-      boolean tcpAbortiveClose,
-      String localSocketAddress,
-      int socketTimeout,
-      boolean useReadAheadInput,
-      String tlsSocketType,
-      SslMode sslMode,
-      String serverSslCert,
-      String trustStore,
-      String trustStorePassword,
-      String trustStoreType,
-      String keyStore,
-      String keyStorePassword,
-      String keyPassword,
-      String keyStoreType,
-      String enabledSslCipherSuites,
-      String enabledSslProtocolSuites,
-      boolean allowMultiQueries,
-      boolean allowLocalInfile,
-      boolean useCompression,
-      boolean useAffectedRows,
-      boolean disablePipeline,
-      boolean cachePrepStmts,
-      int prepStmtCacheSize,
-      boolean useServerPrepStmts,
-      CredentialPlugin credentialType,
-      String sessionVariables,
-      String connectionAttributes,
-      String servicePrincipalName,
-      String jaasApplicationName,
-      boolean blankTableNameMeta,
-      boolean tinyInt1isBit,
-      boolean transformedBitIsBoolean,
-      boolean yearIsDateType,
-      boolean dumpQueriesOnException,
-      boolean includeThreadDumpInDeadlockExceptions,
-      int retriesAllDown,
-      boolean transactionReplay,
-      int transactionReplaySize,
-      boolean pool,
-      String poolName,
-      int maxPoolSize,
-      int minPoolSize,
-      int maxIdleTime,
-      boolean registerJmxPool,
-      int poolValidMinDelay,
-      boolean useResetConnection,
-      boolean useMysqlVersion,
-      boolean rewriteBatchedStatements,
-      String consoleLogLevel,
-      String consoleLogFilepath,
-      boolean printStackTrace,
-      int maxPrintStackSizeToLog,
-      boolean enableExtendedDataTypes,
-      String vectorTypeOutputFormat,
-      boolean vectorExtendedMetadata) {
-    this.user = user;
-    this.password = password;
-    this.database = database;
-    this.addresses = addresses;
-    this.haMode = haMode;
-    this.nonMappedOptions = nonMappedOptions;
-    this.autocommit = autocommit;
-    this.nullDatabaseMeansCurrent = nullDatabaseMeansCurrent;
-    this.createDatabaseIfNotExist = createDatabaseIfNotExist;
-    this.initSql = initSql;
-    this.transactionIsolation = transactionIsolation;
-    this.defaultFetchSize = defaultFetchSize;
-    this.maxQuerySizeToLog = maxQuerySizeToLog;
-    this.maxAllowedPacket = maxAllowedPacket;
-    this.geometryDefaultType = geometryDefaultType;
-    this.restrictedAuth = restrictedAuth;
-    this.socketFactory = socketFactory;
-    this.connectTimeout = connectTimeout;
-    this.pipe = pipe;
-    this.localSocket = localSocket;
-    this.tcpKeepAlive = tcpKeepAlive;
-    this.tcpKeepIdle = tcpKeepIdle;
-    this.tcpKeepCount = tcpKeepCount;
-    this.tcpKeepInterval = tcpKeepInterval;
-    this.tcpAbortiveClose = tcpAbortiveClose;
-    this.localSocketAddress = localSocketAddress;
-    this.socketTimeout = socketTimeout;
-    this.useReadAheadInput = useReadAheadInput;
-    this.tlsSocketType = tlsSocketType;
-    this.sslMode = sslMode;
-    this.serverSslCert = serverSslCert;
-    this.trustStore = trustStore;
-    this.trustStorePassword = trustStorePassword;
-    this.trustStoreType = trustStoreType;
-    this.keyStore = keyStore;
-    this.keyStorePassword = keyStorePassword;
-    this.keyPassword = keyPassword;
-    this.keyStoreType = keyStoreType;
-    this.enabledSslCipherSuites = enabledSslCipherSuites;
-    this.enabledSslProtocolSuites = enabledSslProtocolSuites;
-    this.allowMultiQueries = allowMultiQueries;
-    this.allowLocalInfile = allowLocalInfile;
-    this.useCompression = useCompression;
-    this.useAffectedRows = useAffectedRows;
-    this.disablePipeline = disablePipeline;
-    this.cachePrepStmts = cachePrepStmts;
-    this.prepStmtCacheSize = prepStmtCacheSize;
-    this.useServerPrepStmts = useServerPrepStmts;
-    this.credentialType = credentialType;
-    this.sessionVariables = sessionVariables;
-    this.connectionAttributes = connectionAttributes;
-    this.servicePrincipalName = servicePrincipalName;
-    this.jaasApplicationName = jaasApplicationName;
-    this.blankTableNameMeta = blankTableNameMeta;
-    this.tinyInt1isBit = tinyInt1isBit;
-    this.transformedBitIsBoolean = transformedBitIsBoolean;
-    this.yearIsDateType = yearIsDateType;
-    this.dumpQueriesOnException = dumpQueriesOnException;
-    this.includeThreadDumpInDeadlockExceptions = includeThreadDumpInDeadlockExceptions;
-    this.retriesAllDown = retriesAllDown;
-    this.transactionReplay = transactionReplay;
-    this.transactionReplaySize = transactionReplaySize;
-    this.pool = pool;
-    this.poolName = poolName;
-    this.maxPoolSize = maxPoolSize;
-    this.minPoolSize = minPoolSize;
-    this.maxIdleTime = maxIdleTime;
-    this.registerJmxPool = registerJmxPool;
-    this.poolValidMinDelay = poolValidMinDelay;
-    this.useResetConnection = useResetConnection;
-    this.useMysqlVersion = useMysqlVersion;
-    this.rewriteBatchedStatements = rewriteBatchedStatements;
-    this.consoleLogLevel = consoleLogLevel;
-    this.consoleLogFilepath = consoleLogFilepath;
-    this.printStackTrace = printStackTrace;
-    this.maxPrintStackSizeToLog = maxPrintStackSizeToLog;
-    this.enableExtendedDataTypes = enableExtendedDataTypes;
-    this.vectorTypeOutputFormat = vectorTypeOutputFormat;
-    this.vectorExtendedMetadata = vectorExtendedMetadata;
-    this.initialUrl = buildUrl(this);
-    this.logger = Loggers.getLogger(Configuration.class);
+  private void initializeBasicConfig(Builder builder) throws SQLException {
+    this.database = builder.database;
+    this.addresses = builder._addresses;
+    this.nonMappedOptions = builder._nonMappedOptions;
+    this.haMode = builder._haMode != null ? builder._haMode : HaMode.NONE;
+    this.credentialType = CredentialPluginLoader.get(builder.credentialType);
+    this.user = builder.user;
+    this.password = builder.password;
   }
 
-  private Configuration(
-      String database,
-      List<HostAddress> addresses,
-      HaMode haMode,
-      String user,
-      String password,
-      String enabledSslProtocolSuites,
-      String socketFactory,
-      Integer connectTimeout,
-      String pipe,
-      String localSocket,
-      Boolean tcpKeepAlive,
-      Integer tcpKeepIdle,
-      Integer tcpKeepCount,
-      Integer tcpKeepInterval,
-      Boolean tcpAbortiveClose,
-      String localSocketAddress,
-      Integer socketTimeout,
-      Boolean allowMultiQueries,
-      Boolean allowLocalInfile,
-      Boolean useCompression,
-      Boolean blankTableNameMeta,
-      String credentialType,
-      String sslMode,
-      String transactionIsolation,
-      String enabledSslCipherSuites,
-      String sessionVariables,
-      Boolean tinyInt1isBit,
-      Boolean transformedBitIsBoolean,
-      Boolean yearIsDateType,
-      Boolean dumpQueriesOnException,
-      Integer prepStmtCacheSize,
-      Boolean useAffectedRows,
-      Boolean disablePipeline,
-      Boolean useServerPrepStmts,
-      String connectionAttributes,
-      Boolean autocommit,
-      Boolean nullDatabaseMeansCurrent,
-      Boolean createDatabaseIfNotExist,
-      String initSql,
-      Boolean includeThreadDumpInDeadlockExceptions,
-      String servicePrincipalName,
-      String jaasApplicationName,
-      Integer defaultFetchSize,
-      String tlsSocketType,
-      Integer maxQuerySizeToLog,
-      Integer maxAllowedPacket,
-      Integer retriesAllDown,
-      Boolean pool,
-      String poolName,
-      Integer maxPoolSize,
-      Integer minPoolSize,
-      Integer maxIdleTime,
-      Boolean registerJmxPool,
-      Integer poolValidMinDelay,
-      Boolean useResetConnection,
-      String serverSslCert,
-      String trustStore,
-      String trustStorePassword,
-      String trustStoreType,
-      String keyStore,
-      String keyStorePassword,
-      String keyPassword,
-      String keyStoreType,
-      Boolean useReadAheadInput,
-      Boolean cachePrepStmts,
-      Boolean transactionReplay,
-      Integer transactionReplaySize,
-      String geometryDefaultType,
-      String restrictedAuth,
-      Properties nonMappedOptions,
-      Boolean useMysqlVersion,
-      Boolean rewriteBatchedStatements,
-      String consoleLogLevel,
-      String consoleLogFilepath,
-      Boolean printStackTrace,
-      Integer maxPrintStackSizeToLog,
-      Boolean enableExtendedDataTypes,
-      String vectorTypeOutputFormat,
-      Boolean vectorExtendedMetadata)
-      throws SQLException {
-    this.consoleLogLevel = consoleLogLevel;
-    this.consoleLogFilepath = consoleLogFilepath;
-    if (printStackTrace != null) this.printStackTrace = printStackTrace;
-    if (maxPrintStackSizeToLog != null && maxPrintStackSizeToLog > 0)
-      this.maxPrintStackSizeToLog = maxPrintStackSizeToLog;
+  private void initializeSslConfig(Builder builder) {
+    this.enabledSslProtocolSuites = builder.enabledSslProtocolSuites;
+    this.serverSslCert = builder.serverSslCert;
+    this.keyStore = builder.keyStore;
+    this.trustStore = builder.trustStore;
+    this.keyStorePassword = builder.keyStorePassword;
+    this.trustStorePassword = builder.trustStorePassword;
+    this.keyPassword = builder.keyPassword;
+    this.keyStoreType = builder.keyStoreType;
+    this.trustStoreType = builder.trustStoreType;
+    // SSL Mode configuration
+    if (this.credentialType != null
+        && this.credentialType.mustUseSsl()
+        && (builder.sslMode == null || SslMode.from(builder.sslMode) == SslMode.DISABLE)) {
+      Loggers.getLogger(Configuration.class)
+          .warn(
+              "Credential type '"
+                  + this.credentialType.type()
+                  + "' is required to be used with SSL. "
+                  + "Enabling SSL.");
+      this.sslMode = SslMode.VERIFY_FULL;
+    } else {
+      this.sslMode = builder.sslMode != null ? SslMode.from(builder.sslMode) : SslMode.DISABLE;
+    }
+  }
+
+  private void initializeSocketConfig(Builder builder) {
+    this.socketFactory = builder.socketFactory;
+    this.connectTimeout =
+        builder.connectTimeout != null
+            ? builder.connectTimeout
+            : (DriverManager.getLoginTimeout() > 0
+                ? DriverManager.getLoginTimeout() * 1000
+                : 30_000);
+    this.pipe = builder.pipe;
+    this.localSocket = builder.localSocket;
+    this.tcpKeepAlive = builder.tcpKeepAlive == null || builder.tcpKeepAlive;
+    this.tcpKeepIdle = builder.tcpKeepIdle != null ? builder.tcpKeepIdle : 0;
+    this.tcpKeepCount = builder.tcpKeepCount != null ? builder.tcpKeepCount : 0;
+    this.tcpKeepInterval = builder.tcpKeepInterval != null ? builder.tcpKeepInterval : 0;
+    this.tcpAbortiveClose = builder.tcpAbortiveClose != null && builder.tcpAbortiveClose;
+    this.localSocketAddress = builder.localSocketAddress;
+    this.socketTimeout = builder.socketTimeout != null ? builder.socketTimeout : 0;
+    this.useReadAheadInput = builder.useReadAheadInput != null && builder.useReadAheadInput;
+    this.tlsSocketType = builder.tlsSocketType;
+    this.useCompression = builder.useCompression != null && builder.useCompression;
+  }
+
+  private void initializeTransactionConfig(Builder builder) {
+    if (builder.transactionIsolation != null) {
+      if (TransactionIsolation.from(builder.transactionIsolation)
+          != TransactionIsolation.READ_COMMITTED) {
+        throw new IllegalArgumentException(
+            "Currently, the 'Read Committed' is the only isolation level that is supported in SingleStore.");
+      }
+    }
+    this.transactionIsolation = TransactionIsolation.READ_COMMITTED;
+    this.enabledSslCipherSuites = builder.enabledSslCipherSuites;
+    this.sessionVariables = builder.sessionVariables;
+  }
+
+  private void initializeDataTypeConfig(Builder builder) {
+    this.tinyInt1isBit = builder.tinyInt1isBit == null || builder.tinyInt1isBit;
+    this.transformedBitIsBoolean =
+        builder.transformedBitIsBoolean != null && builder.transformedBitIsBoolean;
+    this.yearIsDateType = builder.yearIsDateType == null || builder.yearIsDateType;
+  }
+
+  private void initializeQueryConfig(Builder builder) {
+    this.dumpQueriesOnException =
+        builder.dumpQueriesOnException != null && builder.dumpQueriesOnException;
+    this.prepStmtCacheSize = builder.prepStmtCacheSize != null ? builder.prepStmtCacheSize : 250;
+    this.useAffectedRows = builder.useAffectedRows != null && builder.useAffectedRows;
+    this.useServerPrepStmts = builder.useServerPrepStmts != null && builder.useServerPrepStmts;
+    this.rewriteBatchedStatements =
+        builder.rewriteBatchedStatements != null && builder.rewriteBatchedStatements;
+    this.connectionAttributes = builder.connectionAttributes;
+    this.allowLocalInfile = builder.allowLocalInfile == null || builder.allowLocalInfile;
+    this.allowMultiQueries = builder.allowMultiQueries != null && builder.allowMultiQueries;
+  }
+
+  private void initializePipelineConfig(Builder builder) {
+    this.disablePipeline = builder.disablePipeline != null && builder.disablePipeline;
+    this.autocommit = builder.autocommit;
+    this.useMysqlMetadata = builder.useMysqlMetadata != null && builder.useMysqlMetadata;
+    this.useMysqlVersion = builder.useMysqlVersion != null && builder.useMysqlVersion;
+    this.nullDatabaseMeansCurrent =
+        builder.nullDatabaseMeansCurrent != null && builder.nullDatabaseMeansCurrent;
+  }
+
+  private void initializeDatabaseConfig(Builder builder) {
+    this.createDatabaseIfNotExist =
+        builder.createDatabaseIfNotExist != null && builder.createDatabaseIfNotExist;
+    this.blankTableNameMeta = builder.blankTableNameMeta != null && builder.blankTableNameMeta;
+  }
+
+  private void initializeExceptionConfig(Builder builder) {
+    this.includeThreadDumpInDeadlockExceptions =
+        builder.includeThreadDumpInDeadlockExceptions != null
+            && builder.includeThreadDumpInDeadlockExceptions;
+  }
+
+  private void initializePoolConfig(Builder builder) {
+    this.pool = builder.pool != null && builder.pool;
+    this.poolName = builder.poolName;
+    this.maxPoolSize = builder.maxPoolSize != null ? builder.maxPoolSize : 8;
+    this.minPoolSize = builder.minPoolSize != null ? builder.minPoolSize : this.maxPoolSize;
+    if (builder.maxIdleTime != null) {
+      if (builder.maxIdleTime < 2) {
+        throw new IllegalArgumentException(
+            String.format(
+                "Wrong argument value '%d' for maxIdleTime, must be >= 2", builder.maxIdleTime));
+      }
+      this.maxIdleTime = builder.maxIdleTime;
+    } else {
+      this.maxIdleTime = 600_000;
+    }
+    this.registerJmxPool = builder.registerJmxPool == null || builder.registerJmxPool;
+    this.poolValidMinDelay = builder.poolValidMinDelay != null ? builder.poolValidMinDelay : 1000;
+    this.useResetConnection = builder.useResetConnection != null && builder.useResetConnection;
+  }
+
+  private void initializeLoggingConfig(Builder builder) {
+    this.maxQuerySizeToLog = builder.maxQuerySizeToLog != null ? builder.maxQuerySizeToLog : 1024;
+    this.consoleLogLevel = builder.consoleLogLevel;
+    this.consoleLogFilepath = builder.consoleLogFilepath;
+    this.printStackTrace = builder.printStackTrace != null && builder.printStackTrace;
+    this.maxPrintStackSizeToLog =
+        builder.maxPrintStackSizeToLog != null ? builder.maxPrintStackSizeToLog : 10;
     Loggers.resetLoggerFactoryProperties(
         this.consoleLogLevel,
         this.consoleLogFilepath,
         this.printStackTrace,
         this.maxPrintStackSizeToLog);
-    this.logger = Loggers.getLogger(Configuration.class);
-    this.database = database;
-    this.addresses = addresses;
-    this.nonMappedOptions = nonMappedOptions;
-    if (haMode != null) this.haMode = haMode;
-    this.credentialType = CredentialPluginLoader.get(credentialType);
-    this.user = user;
-    this.password = password;
-    this.enabledSslProtocolSuites = enabledSslProtocolSuites;
-    this.socketFactory = socketFactory;
-    if (connectTimeout != null) this.connectTimeout = connectTimeout;
-    this.pipe = pipe;
-    this.localSocket = localSocket;
-    if (tcpKeepAlive != null) this.tcpKeepAlive = tcpKeepAlive;
-    if (tcpKeepIdle != null) this.tcpKeepIdle = tcpKeepIdle;
-    if (tcpKeepCount != null) this.tcpKeepCount = tcpKeepCount;
-    if (tcpKeepInterval != null) this.tcpKeepInterval = tcpKeepInterval;
-    if (tcpAbortiveClose != null) this.tcpAbortiveClose = tcpAbortiveClose;
-    this.localSocketAddress = localSocketAddress;
-    if (socketTimeout != null) this.socketTimeout = socketTimeout;
-    if (allowMultiQueries != null) this.allowMultiQueries = allowMultiQueries;
-    if (allowLocalInfile != null) this.allowLocalInfile = allowLocalInfile;
-    if (useCompression != null) this.useCompression = useCompression;
-    if (blankTableNameMeta != null) this.blankTableNameMeta = blankTableNameMeta;
-    if (this.credentialType != null
-        && this.credentialType.mustUseSsl()
-        && (sslMode == null || SslMode.from(sslMode) == SslMode.DISABLE)) {
-      logger.warn(
-          "Credential type '"
-              + this.credentialType.type()
-              + "' is required to be used with SSL. "
-              + "Enabling SSL.");
-      this.sslMode = SslMode.VERIFY_FULL;
-    } else {
-      this.sslMode = sslMode != null ? SslMode.from(sslMode) : SslMode.DISABLE;
-    }
-    if (transactionIsolation != null)
-      this.transactionIsolation = TransactionIsolation.from(transactionIsolation);
-    this.enabledSslCipherSuites = enabledSslCipherSuites;
-    this.sessionVariables = sessionVariables;
-    if (tinyInt1isBit != null) this.tinyInt1isBit = tinyInt1isBit;
-    if (transformedBitIsBoolean != null) this.transformedBitIsBoolean = transformedBitIsBoolean;
-    if (yearIsDateType != null) this.yearIsDateType = yearIsDateType;
-    if (dumpQueriesOnException != null) this.dumpQueriesOnException = dumpQueriesOnException;
-    if (prepStmtCacheSize != null) this.prepStmtCacheSize = prepStmtCacheSize;
-    if (useAffectedRows != null) this.useAffectedRows = useAffectedRows;
-    if (disablePipeline != null) this.disablePipeline = disablePipeline;
-    if (useServerPrepStmts != null) this.useServerPrepStmts = useServerPrepStmts;
-    this.connectionAttributes = connectionAttributes;
-    if (autocommit != null) this.autocommit = autocommit;
-    if (nullDatabaseMeansCurrent != null) this.nullDatabaseMeansCurrent = nullDatabaseMeansCurrent;
-    if (createDatabaseIfNotExist != null) this.createDatabaseIfNotExist = createDatabaseIfNotExist;
-    if (initSql != null) this.initSql = initSql;
-    if (includeThreadDumpInDeadlockExceptions != null)
-      this.includeThreadDumpInDeadlockExceptions = includeThreadDumpInDeadlockExceptions;
-    if (servicePrincipalName != null) this.servicePrincipalName = servicePrincipalName;
-    if (jaasApplicationName != null) this.jaasApplicationName = jaasApplicationName;
-    if (defaultFetchSize != null) this.defaultFetchSize = defaultFetchSize;
-    if (tlsSocketType != null) this.tlsSocketType = tlsSocketType;
-    if (maxQuerySizeToLog != null) this.maxQuerySizeToLog = maxQuerySizeToLog;
-    if (maxAllowedPacket != null) this.maxAllowedPacket = maxAllowedPacket;
-    if (retriesAllDown != null) this.retriesAllDown = retriesAllDown;
-    if (pool != null) this.pool = pool;
-    if (poolName != null) this.poolName = poolName;
-    if (maxPoolSize != null) this.maxPoolSize = maxPoolSize;
-    // if min pool size default to maximum pool size if not set
-    if (minPoolSize != null) {
-      this.minPoolSize = minPoolSize;
-    } else {
-      this.minPoolSize = this.maxPoolSize;
-    }
+  }
 
-    if (maxIdleTime != null) {
-      if (maxIdleTime < 2) {
-        throw new IllegalArgumentException(
-            String.format("Wrong argument value '%d' for maxIdleTime, must be >= 2", maxIdleTime));
-      }
-      this.maxIdleTime = maxIdleTime;
-    }
-    if (registerJmxPool != null) this.registerJmxPool = registerJmxPool;
-    if (poolValidMinDelay != null) this.poolValidMinDelay = poolValidMinDelay;
-    if (useResetConnection != null) this.useResetConnection = useResetConnection;
-    if (useReadAheadInput != null) this.useReadAheadInput = useReadAheadInput;
-    if (cachePrepStmts != null) this.cachePrepStmts = cachePrepStmts;
-    if (transactionReplay != null) this.transactionReplay = transactionReplay;
-    if (transactionReplaySize != null) this.transactionReplaySize = transactionReplaySize;
-    if (geometryDefaultType != null) this.geometryDefaultType = geometryDefaultType;
-    if (restrictedAuth != null) this.restrictedAuth = restrictedAuth;
-    if (serverSslCert != null) this.serverSslCert = serverSslCert;
-    if (trustStore != null) this.trustStore = trustStore;
-    if (trustStorePassword != null) this.trustStorePassword = trustStorePassword;
-    if (trustStoreType != null) this.trustStoreType = trustStoreType;
-    if (keyStore != null) this.keyStore = keyStore;
-    if (keyStorePassword != null) this.keyStorePassword = keyStorePassword;
-    if (keyPassword != null) this.keyPassword = keyPassword;
-    if (keyStoreType != null) this.keyStoreType = keyStoreType;
-    if (useMysqlVersion != null) this.useMysqlVersion = useMysqlVersion;
-    if (rewriteBatchedStatements != null) this.rewriteBatchedStatements = rewriteBatchedStatements;
-    if (enableExtendedDataTypes != null) this.enableExtendedDataTypes = enableExtendedDataTypes;
-    if (vectorTypeOutputFormat != null) {
-      vectorTypeOutputFormat = vectorTypeOutputFormat.toUpperCase().trim();
-      if (!"JSON".equals(vectorTypeOutputFormat) && !"BINARY".equals(vectorTypeOutputFormat)) {
+  private void initializeExtendedTypesConfig(Builder builder) {
+    this.enableExtendedDataTypes =
+        builder.enableExtendedDataTypes != null && builder.enableExtendedDataTypes;
+    if (builder.vectorTypeOutputFormat != null) {
+      String format = builder.vectorTypeOutputFormat.toUpperCase().trim();
+      if (!"JSON".equals(format) && !"BINARY".equals(format)) {
         throw new IllegalArgumentException(
             "Invalid 'vectorTypeOutputFormat' parameter: '"
-                + vectorTypeOutputFormat
+                + format
                 + "'. Expected values are 'JSON' or 'BINARY'.");
       }
-      this.vectorTypeOutputFormat = vectorTypeOutputFormat;
+      this.vectorTypeOutputFormat = format;
     }
-    if (vectorExtendedMetadata != null) this.vectorExtendedMetadata = vectorExtendedMetadata;
+    this.vectorExtendedMetadata =
+        builder.vectorExtendedMetadata != null && builder.vectorExtendedMetadata;
+  }
 
-    // *************************************************************
-    // option value verification
-    // *************************************************************
+  private void initializeAdditionalConfig(Builder builder) {
+    this.servicePrincipalName = builder.servicePrincipalName;
+    this.jaasApplicationName = builder.jaasApplicationName;
+    this.defaultFetchSize = builder.defaultFetchSize != null ? builder.defaultFetchSize : 0;
+    this.tlsSocketType = builder.tlsSocketType;
+    this.maxAllowedPacket = builder.maxAllowedPacket;
+    this.retriesAllDown = builder.retriesAllDown != null ? builder.retriesAllDown : 120;
+    this.cachePrepStmts = builder.cachePrepStmts == null || builder.cachePrepStmts;
+    this.transactionReplay = builder.transactionReplay != null && builder.transactionReplay;
+    this.transactionReplaySize =
+        builder.transactionReplaySize != null ? builder.transactionReplaySize : 64;
+    this.geometryDefaultType = builder.geometryDefaultType;
+    this.restrictedAuth = builder.restrictedAuth;
+    this.initSql = builder.initSql;
+    this.codecs = null;
+  }
 
-    // int fields must all be positive
+  private void validateConfiguration() {
+    // Validate integer fields
+    validateIntegerFields();
+  }
+
+  private void validateIntegerFields() {
     Field[] fields = Configuration.class.getDeclaredFields();
     try {
       for (Field field : fields) {
         if (field.getType().equals(int.class)) {
           int val = field.getInt(this);
           if (val < 0) {
-            throw new SQLException(
+            throw new IllegalArgumentException(
                 String.format("Value for %s must be >= 1 (value is %s)", field.getName(), val));
           }
         }
       }
-    } catch (IllegalArgumentException | IllegalAccessException ie) {
-      // eat
+    } catch (IllegalAccessException ie) {
+      // Ignore reflection errors
     }
+  }
+
+  /**
+   * Create a Builder from current configuration. Since configuration data are final, this permit to
+   * change configuration, creating another object.
+   *
+   * @return builder
+   */
+  public Builder toBuilder() {
+    Builder builder =
+        new Builder()
+            .user(this.user)
+            .password(this.password)
+            .database(this.database)
+            .addresses(this.addresses == null ? null : this.addresses.toArray(new HostAddress[0]))
+            .haMode(this.haMode)
+            .autocommit(this.autocommit)
+            .useMysqlMetadata(this.useMysqlMetadata)
+            .useMysqlVersion(this.useMysqlVersion)
+            .nullDatabaseMeansCurrent(this.nullDatabaseMeansCurrent)
+            .createDatabaseIfNotExist(this.createDatabaseIfNotExist)
+            .transactionIsolation(
+                transactionIsolation == null ? null : this.transactionIsolation.getValue())
+            .defaultFetchSize(this.defaultFetchSize)
+            .maxQuerySizeToLog(this.maxQuerySizeToLog)
+            .maxAllowedPacket(this.maxAllowedPacket)
+            .geometryDefaultType(this.geometryDefaultType)
+            .geometryDefaultType(this.geometryDefaultType)
+            .restrictedAuth(this.restrictedAuth)
+            .initSql(this.initSql)
+            .socketFactory(this.socketFactory)
+            .connectTimeout(this.connectTimeout)
+            .pipe(this.pipe)
+            .localSocket(this.localSocket)
+            .tcpKeepAlive(this.tcpKeepAlive)
+            .tcpKeepIdle(this.tcpKeepIdle)
+            .tcpKeepCount(this.tcpKeepCount)
+            .tcpKeepInterval(this.tcpKeepInterval)
+            .tcpAbortiveClose(this.tcpAbortiveClose)
+            .localSocketAddress(this.localSocketAddress)
+            .socketTimeout(this.socketTimeout)
+            .useReadAheadInput(this.useReadAheadInput)
+            .tlsSocketType(this.tlsSocketType)
+            .sslMode(this.sslMode.name())
+            .serverSslCert(this.serverSslCert)
+            .keyStore(this.keyStore)
+            .trustStore(this.trustStore)
+            .keyStoreType(this.keyStoreType)
+            .keyStorePassword(this.keyStorePassword)
+            .trustStorePassword(this.trustStorePassword)
+            .keyPassword(this.keyPassword)
+            .trustStoreType(this.trustStoreType)
+            .enabledSslCipherSuites(this.enabledSslCipherSuites)
+            .enabledSslProtocolSuites(this.enabledSslProtocolSuites)
+            .allowMultiQueries(this.allowMultiQueries)
+            .allowLocalInfile(this.allowLocalInfile)
+            .useCompression(this.useCompression)
+            .useAffectedRows(this.useAffectedRows)
+            .rewriteBatchedStatements(this.rewriteBatchedStatements)
+            .disablePipeline(this.disablePipeline)
+            .cachePrepStmts(this.cachePrepStmts)
+            .prepStmtCacheSize(this.prepStmtCacheSize)
+            .useServerPrepStmts(this.useServerPrepStmts)
+            .credentialType(this.credentialType == null ? null : this.credentialType.type())
+            .sessionVariables(this.sessionVariables)
+            .connectionAttributes(this.connectionAttributes)
+            .servicePrincipalName(this.servicePrincipalName)
+            .jaasApplicationName(this.jaasApplicationName)
+            .blankTableNameMeta(this.blankTableNameMeta)
+            .tinyInt1isBit(this.tinyInt1isBit)
+            .transformedBitIsBoolean(this.transformedBitIsBoolean)
+            .yearIsDateType(this.yearIsDateType)
+            .dumpQueriesOnException(this.dumpQueriesOnException)
+            .includeThreadDumpInDeadlockExceptions(this.includeThreadDumpInDeadlockExceptions)
+            .retriesAllDown(this.retriesAllDown)
+            .transactionReplay(this.transactionReplay)
+            .transactionReplaySize(this.transactionReplaySize)
+            .pool(this.pool)
+            .poolName(this.poolName)
+            .maxPoolSize(this.maxPoolSize)
+            .minPoolSize(this.minPoolSize)
+            .maxIdleTime(this.maxIdleTime)
+            .registerJmxPool(this.registerJmxPool)
+            .poolValidMinDelay(this.poolValidMinDelay)
+            .useResetConnection(this.useResetConnection)
+            .consoleLogLevel(this.consoleLogLevel)
+            .consoleLogFilepath(this.consoleLogFilepath)
+            .printStackTrace(this.printStackTrace)
+            .maxPrintStackSizeToLog(this.maxPrintStackSizeToLog)
+            .enableExtendedDataTypes(this.enableExtendedDataTypes)
+            .vectorTypeOutputFormat(this.vectorTypeOutputFormat)
+            .vectorExtendedMetadata(this.vectorExtendedMetadata);
+    builder._nonMappedOptions = this.nonMappedOptions;
+    return builder;
   }
 
   /**
@@ -596,17 +574,21 @@ public class Configuration {
       throws SQLException {
     try {
       Builder builder = new Builder();
+
+      // Validate and parse basic URL structure
+      validateUrlFormat(url);
       int separator = url.indexOf("//");
-      if (separator == -1) {
-        throw new IllegalArgumentException(
-            "url parsing error : '//' is not present in the url " + url);
-      }
       builder.haMode(parseHaMode(url, separator));
 
+      // Extract host and parameters sections
       String urlSecondPart = url.substring(separator + 2);
-      int dbIndex = urlSecondPart.indexOf("/");
+
+      // Skip complex address definitions
+      int posToSkip = skipComplexAddresses(urlSecondPart);
+      int dbIndex = urlSecondPart.indexOf("/", posToSkip);
       int paramIndex = urlSecondPart.indexOf("?");
 
+      // parse address and additional parameter parts
       String hostAddressesString;
       String additionalParameters;
       if ((dbIndex < paramIndex && dbIndex < 0) || (dbIndex > paramIndex && paramIndex > -1)) {
@@ -620,42 +602,84 @@ public class Configuration {
         additionalParameters = null;
       }
 
+      // Process database and parameters if present
       if (additionalParameters != null) {
-        int optIndex = additionalParameters.indexOf("?");
-        String database;
-        if (optIndex < 0) {
-          database = (additionalParameters.length() > 1) ? additionalParameters.substring(1) : null;
-        } else {
-          if (optIndex == 0) {
-            database = null;
-          } else {
-            database = additionalParameters.substring(1, optIndex);
-            if (database.isEmpty()) database = null;
-          }
-          String urlParameters = additionalParameters.substring(optIndex + 1);
-          if (urlParameters != null && !urlParameters.isEmpty()) {
-            String[] parameters = urlParameters.split("&");
-            for (String parameter : parameters) {
-              int pos = parameter.indexOf('=');
-              if (pos == -1) {
-                properties.setProperty(parameter, "");
-              } else {
-                properties.setProperty(parameter.substring(0, pos), parameter.substring(pos + 1));
-              }
-            }
-          }
-        }
-        builder.database(database);
+        processDatabaseAndParameters(additionalParameters, builder, properties);
       } else {
         builder.database(null);
       }
 
+      // Map properties to configuration options
       mapPropertiesToOption(builder, properties);
+
+      // Parse host addresses
       builder._addresses = HostAddress.parse(hostAddressesString, builder._haMode);
+
       return builder.build();
 
     } catch (IllegalArgumentException i) {
-      throw new SQLException("error parsing url : " + i.getMessage(), i);
+      throw new SQLException("error parsing url: " + i.getMessage(), i);
+    }
+  }
+
+  private static void validateUrlFormat(String url) {
+    int separator = url.indexOf("//");
+    if (separator == -1) {
+      throw new IllegalArgumentException(
+          "url parsing error : '//' is not present in the url " + url);
+    }
+  }
+
+  private static int skipComplexAddresses(String urlSecondPart) {
+    int posToSkip = 0;
+    int skipPos;
+    while ((skipPos = urlSecondPart.indexOf("address=(", posToSkip)) > -1) {
+      posToSkip = urlSecondPart.indexOf(")", skipPos) + 1;
+      while (urlSecondPart.startsWith("(", posToSkip)) {
+        int endingBraceIndex = urlSecondPart.indexOf(")", posToSkip);
+        if (endingBraceIndex == -1) break;
+        posToSkip = endingBraceIndex + 1;
+      }
+    }
+    return posToSkip;
+  }
+
+  private static void processDatabaseAndParameters(
+      String additionalParameters, Builder builder, Properties properties) {
+
+    int optIndex = additionalParameters.indexOf("?");
+
+    // Extract database name
+    String database;
+    if (optIndex < 0) {
+      database = (additionalParameters.length() > 1) ? additionalParameters.substring(1) : null;
+    } else {
+      database = extractDatabase(additionalParameters, optIndex);
+      processUrlParameters(additionalParameters.substring(optIndex + 1), properties);
+    }
+
+    builder.database(database);
+  }
+
+  private static String extractDatabase(String additionalParameters, int optIndex) {
+    if (optIndex == 0) {
+      return null;
+    }
+    String database = additionalParameters.substring(1, optIndex);
+    return database.isEmpty() ? null : database;
+  }
+
+  private static void processUrlParameters(String urlParameters, Properties properties) {
+    if (!urlParameters.isEmpty()) {
+      String[] parameters = urlParameters.split("&");
+      for (String parameter : parameters) {
+        int pos = parameter.indexOf('=');
+        if (pos == -1) {
+          properties.setProperty(parameter, "");
+        } else {
+          properties.setProperty(parameter.substring(0, pos), parameter.substring(pos + 1));
+        }
+      }
     }
   }
 
@@ -663,75 +687,137 @@ public class Configuration {
     Properties nonMappedOptions = new Properties();
 
     try {
-      // Option object is already initialized to default values.
-      // loop on properties,
-      // - check DefaultOption to check that property value correspond to type (and range)
-      // - set values
-      for (final Object keyObj : properties.keySet()) {
-        String realKey =
-            OptionAliases.OPTIONS_ALIASES.get(keyObj.toString().toLowerCase(Locale.ROOT));
-        if (realKey == null) realKey = keyObj.toString();
-        final Object propertyValue = properties.get(keyObj);
-        if (propertyValue != null && realKey != null) {
-          boolean used = false;
-          for (Field field : Builder.class.getDeclaredFields()) {
-            if (realKey.toLowerCase(Locale.ROOT).equals(field.getName().toLowerCase(Locale.ROOT))) {
-              field.setAccessible(true);
-              used = true;
+      processProperties(builder, properties, nonMappedOptions);
+      handleLegacySslSettings(builder, nonMappedOptions);
+      builder._nonMappedOptions = nonMappedOptions;
+    } catch (ReflectiveOperationException e) {
+      throw new IllegalArgumentException("Unexpected error while mapping properties", e);
+    }
+  }
 
-              if (field.getGenericType().equals(String.class)
-                  && !propertyValue.toString().isEmpty()) {
-                field.set(builder, propertyValue);
-              } else if (field.getGenericType().equals(Boolean.class)) {
-                switch (propertyValue.toString().toLowerCase()) {
-                  case "":
-                  case "1":
-                  case "true":
-                    field.set(builder, Boolean.TRUE);
-                    break;
+  private static void processProperties(
+      Builder builder, Properties properties, Properties nonMappedOptions)
+      throws ReflectiveOperationException {
 
-                  case "0":
-                  case "false":
-                    field.set(builder, Boolean.FALSE);
-                    break;
+    for (final Map.Entry<Object, Object> entry : properties.entrySet()) {
+      String realKey = getRealKey(entry.getKey().toString());
+      final Object propertyValue = entry.getValue();
 
-                  default:
-                    throw new IllegalArgumentException(
-                        String.format(
-                            "Optional parameter %s must be boolean (true/false or 0/1) was '%s'",
-                            keyObj, propertyValue));
-                }
-              } else if (field.getGenericType().equals(Integer.class)) {
-                try {
-                  final Integer value = Integer.parseInt(propertyValue.toString());
-                  field.set(builder, value);
-                } catch (NumberFormatException n) {
-                  throw new IllegalArgumentException(
-                      String.format(
-                          "Optional parameter %s must be Integer, was '%s'",
-                          keyObj, propertyValue));
-                }
-              }
-            }
-          }
-          if (!used) nonMappedOptions.put(realKey, propertyValue);
-        }
+      if (propertyValue != null) {
+        processProperty(builder, realKey, propertyValue, entry.getKey(), nonMappedOptions);
       }
+    }
+  }
 
-      // for compatibility with 2.x
-      if (isSet("useSsl", nonMappedOptions) || isSet("useSSL", nonMappedOptions)) {
+  private static String getRealKey(String key) {
+    String lowercaseKey = key.toLowerCase(Locale.ROOT);
+    String realKey = OptionAliases.OPTIONS_ALIASES.get(lowercaseKey);
+    return realKey != null ? realKey : key;
+  }
+
+  private static void processProperty(
+      Builder builder,
+      String realKey,
+      Object propertyValue,
+      Object originalKey,
+      Properties nonMappedOptions)
+      throws ReflectiveOperationException {
+
+    boolean used = false;
+    for (Field field : Builder.class.getDeclaredFields()) {
+      if (realKey.toLowerCase(Locale.ROOT).equals(field.getName().toLowerCase(Locale.ROOT))) {
+        used = true;
+        setFieldValue(builder, field, propertyValue, originalKey);
+      }
+    }
+    if (!used) {
+      nonMappedOptions.put(realKey, propertyValue);
+    }
+  }
+
+  private static void setFieldValue(
+      Builder builder, Field field, Object propertyValue, Object originalKey)
+      throws ReflectiveOperationException {
+
+    if (field.getGenericType().equals(String.class)) {
+      handleStringField(builder, field, propertyValue);
+    } else if (field.getGenericType().equals(Boolean.class)) {
+      handleBooleanField(builder, field, propertyValue, originalKey);
+    } else if (field.getGenericType().equals(Integer.class)) {
+      handleIntegerField(builder, field, propertyValue, originalKey);
+    }
+  }
+
+  private static void handleStringField(Builder builder, Field field, Object value)
+      throws ReflectiveOperationException {
+    String stringValue = value.toString();
+    if (!stringValue.isEmpty()) {
+      Method method = Builder.class.getDeclaredMethod(field.getName(), String.class);
+      method.invoke(builder, stringValue);
+    }
+  }
+
+  private static void handleBooleanField(
+      Builder builder, Field field, Object value, Object originalKey)
+      throws ReflectiveOperationException {
+
+    Method method = Builder.class.getDeclaredMethod(field.getName(), Boolean.class);
+    switch (value.toString().toLowerCase()) {
+      case "":
+      case "1":
+      case "true":
+        method.invoke(builder, Boolean.TRUE);
+        break;
+      case "0":
+      case "false":
+        method.invoke(builder, Boolean.FALSE);
+        break;
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "Optional parameter %s must be boolean (true/false or 0/1) was '%s'",
+                originalKey, value));
+    }
+  }
+
+  private static void handleIntegerField(
+      Builder builder, Field field, Object value, Object originalKey)
+      throws ReflectiveOperationException {
+
+    try {
+      Method method = Builder.class.getDeclaredMethod(field.getName(), Integer.class);
+      final Integer intValue = Integer.parseInt(value.toString());
+      method.invoke(builder, intValue);
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException(
+          String.format("Optional parameter %s must be Integer, was '%s'", originalKey, value));
+    }
+  }
+
+  private static void handleLegacySslSettings(Builder builder, Properties nonMappedOptions) {
+    if (isSet("useSsl", nonMappedOptions) || isSet("useSSL", nonMappedOptions)) {
+      Properties deprecatedDesc = new Properties();
+      try (InputStream inputStream =
+          Driver.class.getClassLoader().getResourceAsStream("deprecated.properties")) {
+        deprecatedDesc.load(inputStream);
+        Loggers.getLogger(Configuration.class).warn(deprecatedDesc.getProperty("useSsl"));
+
         if (isSet("trustServerCertificate", nonMappedOptions)) {
           builder.sslMode("trust");
+          Loggers.getLogger(Configuration.class)
+              .warn(deprecatedDesc.getProperty("trustServerCertificate"));
         } else if (isSet("disableSslHostnameVerification", nonMappedOptions)) {
+          Loggers.getLogger(Configuration.class)
+              .warn(deprecatedDesc.getProperty("disableSslHostnameVerification"));
           builder.sslMode("verify-ca");
         } else {
           builder.sslMode("verify-full");
         }
+
+      } catch (IOException e) {
+        // Ignore IO exceptions when loading deprecation messages
       }
-    } catch (IllegalAccessException | SecurityException s) {
-      throw new IllegalArgumentException("Unexpected error", s);
     }
-    builder._nonMappedOptions = nonMappedOptions;
   }
 
   private static boolean isSet(String key, Properties nonMappedOptions) {
@@ -786,185 +872,180 @@ public class Configuration {
    */
   public static String toConf(String url) throws SQLException {
     Configuration conf = Configuration.parseInternal(url, new Properties());
-    StringBuilder sb = new StringBuilder();
-    StringBuilder sbUnknownOpts = new StringBuilder();
-
-    if (conf.nonMappedOptions.isEmpty()) {
-      sbUnknownOpts.append("None");
-    } else {
-      for (Map.Entry<Object, Object> entry : conf.nonMappedOptions.entrySet()) {
-        sbUnknownOpts.append("\n * ").append(entry.getKey()).append(" : ").append(entry.getValue());
-      }
-    }
-    sb.append("Configuration:")
-        .append("\n * resulting Url : ")
-        .append(conf.initialUrl)
-        .append("\nUnknown options : ")
-        .append(sbUnknownOpts)
-        .append("\n")
-        .append("\nNon default options : ");
-
     Configuration defaultConf = Configuration.parse("jdbc:singlestore://localhost/");
-    StringBuilder sbDefaultOpts = new StringBuilder();
-    StringBuilder sbDifferentOpts = new StringBuilder();
+
+    StringBuilder result = new StringBuilder();
+    appendBasicConfiguration(result, conf);
+    appendUnknownOptions(result, conf);
+    appendNonDefaultOptions(result, conf, defaultConf);
+    appendDefaultOptions(result, conf, defaultConf);
+
+    return result.toString();
+  }
+
+  private static void appendBasicConfiguration(StringBuilder sb, Configuration conf) {
+    sb.append("Configuration:\n * resulting Url : ").append(conf.initialUrl);
+  }
+
+  private static void appendUnknownOptions(StringBuilder sb, Configuration conf) {
+    sb.append("\nUnknown options : ");
+    if (conf.nonMappedOptions.isEmpty()) {
+      sb.append("None\n");
+      return;
+    }
+
+    conf.nonMappedOptions.entrySet().stream()
+        .map(
+            entry ->
+                new AbstractMap.SimpleEntry<>(
+                    entry.getKey().toString(),
+                    entry.getValue() != null ? entry.getValue().toString() : ""))
+        .sorted(Map.Entry.comparingByKey())
+        .forEach(
+            entry ->
+                sb.append("\n * ").append(entry.getKey()).append(" : ").append(entry.getValue()));
+    sb.append("\n");
+  }
+
+  private static void appendNonDefaultOptions(
+      StringBuilder sb, Configuration conf, Configuration defaultConf) {
     try {
-      List<String> propertyToSkip = Arrays.asList("initialUrl", "logger", "codecs", "$jacocoData");
-      Field[] fields = Configuration.class.getDeclaredFields();
-      Arrays.sort(fields, Comparator.comparing(Field::getName));
+      StringBuilder diffOpts = new StringBuilder();
+      processFields(conf, defaultConf, new StringBuilder(), diffOpts);
 
-      for (Field field : fields) {
-        if (!propertyToSkip.contains(field.getName())) {
-          Object fieldValue = field.get(conf);
-          if (fieldValue == null) {
-            (Objects.equals(fieldValue, field.get(defaultConf)) ? sbDefaultOpts : sbDifferentOpts)
-                .append("\n * ")
-                .append(field.getName())
-                .append(" : ")
-                .append(fieldValue);
-          } else {
-            if (field.getName().equals("haMode")) {
-              (Objects.equals(fieldValue, field.get(defaultConf)) ? sbDefaultOpts : sbDifferentOpts)
-                  .append("\n * ")
-                  .append(field.getName())
-                  .append(" : ")
-                  .append(fieldValue);
-              continue;
-            }
-            switch (fieldValue.getClass().getSimpleName()) {
-              case "String":
-              case "Boolean":
-              case "HaMode":
-              case "Integer":
-              case "SslMode":
-                (Objects.equals(fieldValue, field.get(defaultConf))
-                        ? sbDefaultOpts
-                        : sbDifferentOpts)
-                    .append("\n * ")
-                    .append(field.getName())
-                    .append(" : ")
-                    .append(fieldValue);
-                break;
-              case "ArrayList":
-                (Objects.equals(fieldValue.toString(), field.get(defaultConf).toString())
-                        ? sbDefaultOpts
-                        : sbDifferentOpts)
-                    .append("\n * ")
-                    .append(field.getName())
-                    .append(" : ")
-                    .append(fieldValue);
-                break;
-              case "Properties":
-                break;
-              default:
-                throw new IllegalArgumentException(
-                    "field type not expected for fields " + field.getName());
-            }
-          }
-        }
-      }
-
-      String diff = sbDifferentOpts.toString();
-      if (diff.isEmpty()) {
+      sb.append("\nNon default options : ");
+      if (diffOpts.length() == 0) {
         sb.append("None\n");
       } else {
-        sb.append(diff);
+        sb.append(diffOpts);
       }
+    } catch (IllegalAccessException e) {
+      throw new IllegalArgumentException("Error processing non-default options", e);
+    }
+  }
+
+  private static void appendDefaultOptions(
+      StringBuilder sb, Configuration conf, Configuration defaultConf) {
+    try {
+      StringBuilder defaultOpts = new StringBuilder();
+      processFields(conf, defaultConf, defaultOpts, new StringBuilder());
 
       sb.append("\n\ndefault options :");
-      String same = sbDefaultOpts.toString();
-      if (same.isEmpty()) {
+      if (defaultOpts.length() == 0) {
         sb.append("None\n");
       } else {
-        sb.append(same);
+        sb.append(defaultOpts);
+      }
+    } catch (IllegalAccessException e) {
+      throw new IllegalArgumentException("Error processing default options", e);
+    }
+  }
+
+  private static void processFields(
+      Configuration conf,
+      Configuration defaultConf,
+      StringBuilder defaultOpts,
+      StringBuilder diffOpts)
+      throws IllegalAccessException {
+    Field[] fields = Configuration.class.getDeclaredFields();
+    Arrays.sort(fields, Comparator.comparing(Field::getName));
+
+    for (Field field : fields) {
+      if (PROPERTIES_TO_SKIP.contains(field.getName())) {
+        continue;
       }
 
-    } catch (IllegalArgumentException | IllegalAccessException e) {
-      throw new IllegalArgumentException("Wrong parsing", e);
+      Object fieldValue = field.get(conf);
+      Object defaultValue = field.get(defaultConf);
+      processField(field, fieldValue, defaultValue, defaultOpts, diffOpts);
     }
-    return sb.toString();
+  }
+
+  private static void processField(
+      Field field,
+      Object fieldValue,
+      Object defaultValue,
+      StringBuilder defaultOpts,
+      StringBuilder diffOpts) {
+    if (fieldValue == null) {
+      appendNullField(field, defaultValue, defaultOpts, diffOpts);
+      return;
+    }
+
+    if (field.getName().equals("haMode")) {
+      appendHaModeField(field, fieldValue, defaultValue, defaultOpts, diffOpts);
+      return;
+    }
+
+    String typeName = fieldValue.getClass().getSimpleName();
+    switch (typeName) {
+      case "String":
+      case "Boolean":
+      case "HaMode":
+      case "TransactionIsolation":
+      case "Integer":
+      case "SslMode":
+        appendSimpleField(field, fieldValue, defaultValue, defaultOpts, diffOpts);
+        break;
+      case "ArrayList":
+        appendListField(field, fieldValue, defaultValue, defaultOpts, diffOpts);
+        break;
+      case "Properties":
+      case "HashSet":
+        break;
+      default:
+        throw new IllegalArgumentException("Unexpected field type for: " + field.getName());
+    }
+  }
+
+  private static void appendNullField(
+      Field field, Object defaultValue, StringBuilder defaultOpts, StringBuilder diffOpts) {
+    StringBuilder target = defaultValue == null ? defaultOpts : diffOpts;
+    target.append("\n * ").append(field.getName()).append(" : null");
+  }
+
+  private static void appendHaModeField(
+      Field field,
+      Object fieldValue,
+      Object defaultValue,
+      StringBuilder defaultOpts,
+      StringBuilder diffOpts) {
+    StringBuilder target = Objects.equals(fieldValue, defaultValue) ? defaultOpts : diffOpts;
+    target.append("\n * ").append(field.getName()).append(" : ").append(fieldValue);
+  }
+
+  private static void appendSimpleField(
+      Field field,
+      Object fieldValue,
+      Object defaultValue,
+      StringBuilder defaultOpts,
+      StringBuilder diffOpts) {
+    StringBuilder target = Objects.equals(fieldValue, defaultValue) ? defaultOpts : diffOpts;
+    target.append("\n * ").append(field.getName()).append(" : ");
+
+    if (SENSITIVE_FIELDS.contains(field.getName())) {
+      target.append("***");
+    } else {
+      target.append(fieldValue);
+    }
+  }
+
+  private static void appendListField(
+      Field field,
+      Object fieldValue,
+      Object defaultValue,
+      StringBuilder defaultOpts,
+      StringBuilder diffOpts) {
+    StringBuilder target =
+        Objects.equals(fieldValue.toString(), defaultValue.toString()) ? defaultOpts : diffOpts;
+    target.append("\n * ").append(field.getName()).append(" : ").append(fieldValue);
   }
 
   public Configuration clone(String username, String password) {
-    return new Configuration(
-        username != null && username.isEmpty() ? null : username,
-        password != null && password.isEmpty() ? null : password,
-        this.database,
-        this.addresses,
-        this.haMode,
-        this.nonMappedOptions,
-        this.autocommit,
-        this.nullDatabaseMeansCurrent,
-        this.createDatabaseIfNotExist,
-        this.initSql,
-        this.transactionIsolation,
-        this.defaultFetchSize,
-        this.maxQuerySizeToLog,
-        this.maxAllowedPacket,
-        this.geometryDefaultType,
-        this.restrictedAuth,
-        this.socketFactory,
-        this.connectTimeout,
-        this.pipe,
-        this.localSocket,
-        this.tcpKeepAlive,
-        this.tcpKeepIdle,
-        this.tcpKeepCount,
-        this.tcpKeepInterval,
-        this.tcpAbortiveClose,
-        this.localSocketAddress,
-        this.socketTimeout,
-        this.useReadAheadInput,
-        this.tlsSocketType,
-        this.sslMode,
-        this.serverSslCert,
-        this.trustStore,
-        this.trustStorePassword,
-        this.trustStoreType,
-        this.keyStore,
-        this.keyStorePassword,
-        this.keyPassword,
-        this.keyStoreType,
-        this.enabledSslCipherSuites,
-        this.enabledSslProtocolSuites,
-        this.allowMultiQueries,
-        this.allowLocalInfile,
-        this.useCompression,
-        this.useAffectedRows,
-        this.disablePipeline,
-        this.cachePrepStmts,
-        this.prepStmtCacheSize,
-        this.useServerPrepStmts,
-        this.credentialType,
-        this.sessionVariables,
-        this.connectionAttributes,
-        this.servicePrincipalName,
-        this.jaasApplicationName,
-        this.blankTableNameMeta,
-        this.tinyInt1isBit,
-        this.transformedBitIsBoolean,
-        this.yearIsDateType,
-        this.dumpQueriesOnException,
-        this.includeThreadDumpInDeadlockExceptions,
-        this.retriesAllDown,
-        this.transactionReplay,
-        this.transactionReplaySize,
-        this.pool,
-        this.poolName,
-        this.maxPoolSize,
-        this.minPoolSize,
-        this.maxIdleTime,
-        this.registerJmxPool,
-        this.poolValidMinDelay,
-        this.useResetConnection,
-        this.useMysqlVersion,
-        this.rewriteBatchedStatements,
-        this.consoleLogLevel,
-        this.consoleLogFilepath,
-        this.printStackTrace,
-        this.maxPrintStackSizeToLog,
-        this.enableExtendedDataTypes,
-        this.vectorTypeOutputFormat,
-        this.vectorExtendedMetadata);
+    return this.toBuilder()
+        .user(username != null && username.isEmpty() ? null : username)
+        .password(password != null && password.isEmpty() ? null : password)
+        .build();
   }
 
   /**
@@ -1512,6 +1593,15 @@ public class Configuration {
     return useMysqlVersion;
   }
 
+  /**
+   * Force returning MySQL metadata information
+   *
+   * @return force returning MySQL in metadata
+   */
+  public boolean useMysqlMetadata() {
+    return useMysqlMetadata;
+  }
+
   public boolean rewriteBatchedStatements() {
     return rewriteBatchedStatements;
   }
@@ -1563,124 +1653,173 @@ public class Configuration {
     return initialUrl.equals(that.initialUrl);
   }
 
+  /**
+   * Builds a JDBC URL from the provided configuration.
+   *
+   * @param conf Current configuration
+   * @return Complete JDBC URL string
+   */
   protected static String buildUrl(Configuration conf) {
-    Configuration defaultConf = new Configuration();
-    StringBuilder sb = new StringBuilder();
-    sb.append("jdbc:singlestore:");
-    if (conf.haMode != HaMode.NONE) {
-      sb.append(conf.haMode.toString().toLowerCase(Locale.ROOT)).append(":");
+    try {
+      StringBuilder urlBuilder = new StringBuilder("jdbc:singlestore:");
+      appendHaModeIfPresent(urlBuilder, conf);
+      appendHostAddresses(urlBuilder, conf);
+      appendDatabase(urlBuilder, conf);
+      appendConfigurationParameters(urlBuilder, conf);
+
+      conf.loadCodecs();
+      return urlBuilder.toString();
+    } catch (SecurityException s) {
+      throw new IllegalArgumentException("Security too restrictive: " + s.getMessage());
     }
+  }
+
+  private static void appendHostAddresses(StringBuilder sb, Configuration conf) {
     sb.append("//");
-
     for (int i = 0; i < conf.addresses.size(); i++) {
-      HostAddress hostAddress = conf.addresses.get(i);
-      if (i > 0) {
-        sb.append(",");
-      }
-      sb.append("address=(host=")
-          .append(hostAddress.host)
-          .append(")")
-          .append("(port=")
-          .append(hostAddress.port)
-          .append(")");
+      if (i > 0) sb.append(",");
+      appendHostAddress(sb, conf.addresses.get(i), i);
     }
-
     sb.append("/");
+  }
+
+  private static void appendHostAddress(StringBuilder sb, HostAddress hostAddress, int index) {
+
+    if (index < 1) {
+      sb.append(hostAddress.host);
+      if (hostAddress.port != 3306) {
+        sb.append(":").append(hostAddress.port);
+      }
+    } else {
+      sb.append(hostAddress);
+    }
+  }
+
+  private static void appendDatabase(StringBuilder sb, Configuration conf) {
     if (conf.database != null) {
       sb.append(conf.database);
     }
+  }
 
+  private static void appendHaModeIfPresent(StringBuilder sb, Configuration conf) {
+    if (conf.haMode != HaMode.NONE) {
+      sb.append(conf.haMode.toString().toLowerCase(Locale.ROOT).replace("_", "-")).append(":");
+    }
+  }
+
+  private static void appendConfigurationParameters(StringBuilder sb, Configuration conf) {
     try {
-      // Option object is already initialized to default values.
-      // loop on properties,
-      // - check DefaultOption to check that property value correspond to type (and range)
-      // - set values
-      boolean first = true;
+      Configuration defaultConf = new Configuration(new Builder());
+      ParameterAppender paramAppender = new ParameterAppender(sb);
 
-      Field[] fields = Configuration.class.getDeclaredFields();
-      for (Field field : fields) {
-        if ("database".equals(field.getName())
-            || "haMode".equals(field.getName())
-            || "$jacocoData".equals(field.getName())
-            || "addresses".equals(field.getName())) {
+      for (Field field : Configuration.class.getDeclaredFields()) {
+        if (EXCLUDED_FIELDS.contains(field.getName())) {
           continue;
         }
-        Object obj = field.get(conf);
 
-        if (obj != null && (!(obj instanceof Properties) || ((Properties) obj).size() > 0)) {
-          if ("password".equals(field.getName())) {
-            sb.append(first ? '?' : '&');
-            first = false;
-            sb.append(field.getName()).append('=');
-            sb.append("***");
-            continue;
-          }
-          if (field.getType().equals(String.class)) {
-            sb.append(first ? '?' : '&');
-            first = false;
-            sb.append(field.getName()).append('=');
-            sb.append((String) obj);
-          } else if (field.getType().equals(boolean.class)) {
-            boolean defaultValue = field.getBoolean(defaultConf);
-            if (!obj.equals(defaultValue)) {
-              sb.append(first ? '?' : '&');
-              first = false;
-              sb.append(field.getName()).append('=');
-              sb.append(obj);
-            }
-          } else if (field.getType().equals(int.class)) {
-            try {
-              int defaultValue = field.getInt(defaultConf);
-              if (!obj.equals(defaultValue)) {
-                sb.append(first ? '?' : '&');
-                sb.append(field.getName()).append('=').append(obj);
-                first = false;
-              }
-            } catch (IllegalAccessException n) {
-              // eat
-            }
-          } else if (field.getType().equals(Properties.class)) {
-            sb.append(first ? '?' : '&');
-            first = false;
-            boolean firstProp = true;
-            Properties properties = (Properties) obj;
-            for (Object key : properties.keySet()) {
-              if (firstProp) {
-                firstProp = false;
-              } else {
-                sb.append('&');
-              }
-              sb.append(key).append('=');
-              sb.append(properties.get(key));
-            }
-          } else if (field.getType().equals(CredentialPlugin.class)) {
-            Object defaultValue = field.get(defaultConf);
-            if (!obj.equals(defaultValue)) {
-              sb.append(first ? '?' : '&');
-              first = false;
-              sb.append(field.getName()).append('=');
-              sb.append(((CredentialPlugin) obj).type());
-            }
-          } else {
-            Object defaultValue = field.get(defaultConf);
-            if (!obj.equals(defaultValue)) {
-              sb.append(first ? '?' : '&');
-              first = false;
-              sb.append(field.getName()).append('=');
-              sb.append(obj.toString());
-            }
-          }
+        Object value = field.get(conf);
+        if (value == null || (value instanceof Properties && ((Properties) value).isEmpty())) {
+          continue;
         }
-      }
 
-    } catch (IllegalAccessException n) {
-      n.printStackTrace();
-    } catch (SecurityException s) {
-      // only for jws, so never thrown
-      throw new IllegalArgumentException("Security too restrictive : " + s.getMessage());
+        appendFieldParameter(paramAppender, field, value, defaultConf);
+      }
+    } catch (IllegalAccessException e) {
+      throw new IllegalStateException(e);
     }
-    conf.loadCodecs();
-    return sb.toString();
+  }
+
+  private static void appendFieldParameter(
+      ParameterAppender appender, Field field, Object value, Configuration defaultConf)
+      throws IllegalAccessException {
+
+    if (SECURE_FIELDS.contains(field.getName())) {
+      appender.appendParameter(field.getName(), "***");
+      return;
+    }
+
+    Class<?> fieldType = field.getType();
+    if (fieldType.equals(String.class)) {
+      appendStringParameter(appender, field, value, defaultConf);
+    } else if (fieldType.equals(boolean.class)) {
+      appendBooleanParameter(appender, field, value, defaultConf);
+    } else if (fieldType.equals(int.class)) {
+      appendIntParameter(appender, field, value, defaultConf);
+    } else if (fieldType.equals(Properties.class)) {
+      appendPropertiesParameter(appender, (Properties) value);
+    } else if (fieldType.equals(CredentialPlugin.class)) {
+      appendCredentialPluginParameter(appender, field, value, defaultConf);
+    } else {
+      appendDefaultParameter(appender, field, value, defaultConf);
+    }
+  }
+
+  private static void appendStringParameter(
+      ParameterAppender appender, Field field, Object value, Configuration defaultConf)
+      throws IllegalAccessException {
+    String defaultValue = (String) field.get(defaultConf);
+    if (!value.equals(defaultValue)) {
+      appender.appendParameter(field.getName(), (String) value);
+    }
+  }
+
+  private static void appendBooleanParameter(
+      ParameterAppender appender, Field field, Object value, Configuration defaultConf)
+      throws IllegalAccessException {
+    boolean defaultValue = field.getBoolean(defaultConf);
+    if (!value.equals(defaultValue)) {
+      appender.appendParameter(field.getName(), value.toString());
+    }
+  }
+
+  private static void appendIntParameter(
+      ParameterAppender appender, Field field, Object value, Configuration defaultConf) {
+    try {
+      int defaultValue = field.getInt(defaultConf);
+      if (!value.equals(defaultValue)) {
+        appender.appendParameter(field.getName(), value.toString());
+      }
+    } catch (IllegalAccessException e) {
+      // Ignore access errors for int fields
+    }
+  }
+
+  private static void appendPropertiesParameter(ParameterAppender appender, Properties props) {
+    for (Object key : props.keySet()) {
+      appender.appendParameter(key.toString(), props.get(key).toString());
+    }
+  }
+
+  private static void appendCredentialPluginParameter(
+      ParameterAppender appender, Field field, Object value, Configuration defaultConf)
+      throws IllegalAccessException {
+    Object defaultValue = field.get(defaultConf);
+    if (!value.equals(defaultValue)) {
+      appender.appendParameter(field.getName(), ((CredentialPlugin) value).type());
+    }
+  }
+
+  private static void appendDefaultParameter(
+      ParameterAppender appender, Field field, Object value, Configuration defaultConf)
+      throws IllegalAccessException {
+    Object defaultValue = field.get(defaultConf);
+    if (!value.equals(defaultValue)) {
+      appender.appendParameter(field.getName(), value.toString());
+    }
+  }
+
+  private static class ParameterAppender {
+    private final StringBuilder sb;
+    private boolean first = true;
+
+    ParameterAppender(StringBuilder sb) {
+      this.sb = sb;
+    }
+
+    void appendParameter(String name, String value) {
+      sb.append(first ? '?' : '&').append(name).append('=').append(value);
+      first = false;
+    }
   }
 
   @SuppressWarnings("rawtypes")
@@ -1711,6 +1850,8 @@ public class Configuration {
 
     // various
     private Boolean autocommit;
+    private Boolean useMysqlMetadata;
+    private Boolean useMysqlVersion;
     private Boolean nullDatabaseMeansCurrent;
     private Boolean createDatabaseIfNotExist;
     private String initSql;
@@ -1791,8 +1932,6 @@ public class Configuration {
     private Boolean registerJmxPool;
     private Integer poolValidMinDelay;
     private Boolean useResetConnection;
-
-    private Boolean useMysqlVersion;
 
     private Boolean rewriteBatchedStatements;
     private String consoleLogLevel;
@@ -2184,6 +2323,18 @@ public class Configuration {
     }
 
     /**
+     * Permit indicating to force DatabaseMetadata.getDatabaseProductName() to return `MySQL` as
+     * database type, not real database type
+     *
+     * @param useMysqlMetadata force DatabaseMetadata.getDatabaseProductName() to return `MySQL`
+     * @return this {@link Builder}
+     */
+    public Builder useMysqlMetadata(Boolean useMysqlMetadata) {
+      this.useMysqlMetadata = useMysqlMetadata;
+      return this;
+    }
+
+    /**
      * Permit indicating in DatabaseMetadata if null value must be considered current catalog
      *
      * @param nullDatabaseMeansCurrent indicating in DatabaseMetadata if null value must be
@@ -2422,90 +2573,9 @@ public class Configuration {
      * Build a configuration
      *
      * @return a Configuration object
-     * @throws SQLException if option data type doesn't correspond
      */
-    public Configuration build() throws SQLException {
-      Configuration conf =
-          new Configuration(
-              this.database,
-              this._addresses,
-              this._haMode,
-              this.user,
-              this.password,
-              this.enabledSslProtocolSuites,
-              this.socketFactory,
-              this.connectTimeout,
-              this.pipe,
-              this.localSocket,
-              this.tcpKeepAlive,
-              this.tcpKeepIdle,
-              this.tcpKeepCount,
-              this.tcpKeepInterval,
-              this.tcpAbortiveClose,
-              this.localSocketAddress,
-              this.socketTimeout,
-              this.allowMultiQueries,
-              this.allowLocalInfile,
-              this.useCompression,
-              this.blankTableNameMeta,
-              this.credentialType,
-              this.sslMode,
-              this.transactionIsolation,
-              this.enabledSslCipherSuites,
-              this.sessionVariables,
-              this.tinyInt1isBit,
-              this.transformedBitIsBoolean,
-              this.yearIsDateType,
-              this.dumpQueriesOnException,
-              this.prepStmtCacheSize,
-              this.useAffectedRows,
-              this.disablePipeline,
-              this.useServerPrepStmts,
-              this.connectionAttributes,
-              this.autocommit,
-              this.nullDatabaseMeansCurrent,
-              this.createDatabaseIfNotExist,
-              this.initSql,
-              this.includeThreadDumpInDeadlockExceptions,
-              this.servicePrincipalName,
-              this.jaasApplicationName,
-              this.defaultFetchSize,
-              this.tlsSocketType,
-              this.maxQuerySizeToLog,
-              this.maxAllowedPacket,
-              this.retriesAllDown,
-              this.pool,
-              this.poolName,
-              this.maxPoolSize,
-              this.minPoolSize,
-              this.maxIdleTime,
-              this.registerJmxPool,
-              this.poolValidMinDelay,
-              this.useResetConnection,
-              this.serverSslCert,
-              this.trustStore,
-              this.trustStorePassword,
-              this.trustStoreType,
-              this.keyStore,
-              this.keyStorePassword,
-              this.keyPassword,
-              this.keyStoreType,
-              this.useReadAheadInput,
-              this.cachePrepStmts,
-              this.transactionReplay,
-              this.transactionReplaySize,
-              this.geometryDefaultType,
-              this.restrictedAuth,
-              this._nonMappedOptions,
-              this.useMysqlVersion,
-              this.rewriteBatchedStatements,
-              this.consoleLogLevel,
-              this.consoleLogFilepath,
-              this.printStackTrace,
-              this.maxPrintStackSizeToLog,
-              this.enableExtendedDataTypes,
-              this.vectorTypeOutputFormat,
-              this.vectorExtendedMetadata);
+    public Configuration build() {
+      Configuration conf = new Configuration(this);
       conf.initialUrl = buildUrl(conf);
       return conf;
     }
