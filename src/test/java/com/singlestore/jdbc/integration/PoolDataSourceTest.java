@@ -583,7 +583,7 @@ public class PoolDataSourceTest extends Common {
     int initialConnection = getCurrentConnections();
 
     try (SingleStorePoolDataSource pool =
-        new SingleStorePoolDataSource(mDefUrl + "&maxPoolSize=10&minPoolSize=1")) {
+        new SingleStorePoolDataSource(mDefUrl + "&maxPoolSize=10&minPoolSize=3")) {
 
       try (Connection connection = pool.getConnection()) {
         connection.isValid(10_000);

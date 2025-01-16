@@ -142,49 +142,9 @@ public class StandardClient implements Client, AutoCloseable {
               : new BufferedInputStream(socket.getInputStream(), 16384);
 
       assignStream(out, in, conf, null);
-
-      if (conf.connectTimeout() > 0) {
-        setSocketTimeout(conf.connectTimeout());
-      } else if (conf.socketTimeout() > 0) {
-        setSocketTimeout(conf.socketTimeout());
-      }
-
-      // read server handshake
-      ReadableByteBuf buf =
-          reader.readReusablePacket(Loggers.getLogger(StandardClient.class).isTraceEnabled());
-      if (buf.getByte() == -1) {
-        ErrorPacket errorPacket = new ErrorPacket(buf, null);
-        throw this.exceptionFactory.create(
-            errorPacket.getMessage(), errorPacket.getSqlState(), errorPacket.getErrorCode());
-      }
-      final InitialHandshakePacket handshake = InitialHandshakePacket.decode(buf);
-
-      this.exceptionFactory.setThreadId(handshake.getThreadId());
-      long clientCapabilities =
-          ConnectionHelper.initializeClientCapabilities(
-              conf, handshake.getCapabilities(), hostAddress);
-
-      this.context =
-          conf.transactionReplay()
-              ? new RedoContext(
-                  hostAddress,
-                  handshake,
-                  clientCapabilities,
-                  conf,
-                  this.exceptionFactory,
-                  new com.singlestore.jdbc.client.impl.PrepareCache(conf.prepStmtCacheSize(), this))
-              : new BaseContext(
-                  hostAddress,
-                  handshake,
-                  clientCapabilities,
-                  conf,
-                  this.exceptionFactory,
-                  new com.singlestore.jdbc.client.impl.PrepareCache(
-                      conf.prepStmtCacheSize(), this));
-
-      this.reader.setServerThreadId(handshake.getThreadId(), hostAddress);
-      this.writer.setServerThreadId(handshake.getThreadId(), hostAddress);
-
+      configureTimeout();
+      InitialHandshakePacket handshake = handleServerHandshake();
+      long clientCapabilities = setupClientCapabilities(handshake);
       // **********************************************************************
       // changing to SSL socket if needed
       // **********************************************************************
@@ -205,53 +165,8 @@ public class StandardClient implements Client, AutoCloseable {
                 : new BufferedInputStream(sslSocket.getInputStream(), 16384);
         assignStream(out, in, conf, handshake.getThreadId());
       }
-
-      // **********************************************************************
-      // handling authentication
-      // **********************************************************************
-      String authenticationPluginType = handshake.getAuthenticationPluginType();
-      CredentialPlugin credentialPlugin = conf.credentialPlugin();
-      if (credentialPlugin != null && credentialPlugin.defaultAuthenticationPluginType() != null) {
-        authenticationPluginType = credentialPlugin.defaultAuthenticationPluginType();
-      }
-
-      if (ClearPasswordPluginFactory.TYPE.equals(authenticationPluginType)
-          && !context.hasClientCapability(Capabilities.SSL)) {
-        throw context
-            .getExceptionFactory()
-            .create(
-                "Cannot use authentication plugin "
-                    + ClearPasswordPluginFactory.TYPE
-                    + " if SSL is not enabled.",
-                "08000");
-      }
-
-      Credential credential = ConnectionHelper.loadCredential(credentialPlugin, conf, hostAddress);
-
-      new HandshakeResponse(
-              credential,
-              authenticationPluginType,
-              context.getSeed(),
-              conf,
-              host,
-              clientCapabilities,
-              (byte) handshake.getDefaultCollation())
-          .encode(writer, context);
-      writer.flush();
-
-      ConnectionHelper.authenticationHandler(credential, writer, reader, context);
-
-      // **********************************************************************
-      // activate compression if required
-      // **********************************************************************
-      if ((clientCapabilities & Capabilities.COMPRESS) != 0) {
-        assignStream(
-            new CompressOutputStream(out, compressionSequence),
-            new CompressInputStream(in, compressionSequence),
-            conf,
-            handshake.getThreadId());
-      }
-
+      handleAuthentication(handshake, clientCapabilities);
+      setupCompression(in, out, clientCapabilities, handshake.getThreadId());
       // **********************************************************************
       // post queries
       // **********************************************************************
@@ -277,6 +192,20 @@ public class StandardClient implements Client, AutoCloseable {
     }
   }
 
+  private void setupCompression(
+      InputStream in, OutputStream out, long clientCapabilities, long threadId) {
+    // **********************************************************************
+    // activate compression if required
+    // **********************************************************************
+    if ((clientCapabilities & Capabilities.COMPRESS) != 0) {
+      assignStream(
+          new CompressOutputStream(out, compressionSequence),
+          new CompressInputStream(in, compressionSequence),
+          conf,
+          threadId);
+    }
+  }
+
   private void assignStream(OutputStream out, InputStream in, Configuration conf, Long threadId) {
     this.writer =
         new PacketWriter(
@@ -285,6 +214,102 @@ public class StandardClient implements Client, AutoCloseable {
 
     this.reader = new PacketReader(in, conf, sequence);
     this.reader.setServerThreadId(threadId, hostAddress);
+  }
+
+  private void configureTimeout() throws SQLException {
+    if (conf.connectTimeout() > 0) {
+      setSocketTimeout(conf.connectTimeout());
+    } else if (conf.socketTimeout() > 0) {
+      setSocketTimeout(conf.socketTimeout());
+    }
+  }
+
+  private InitialHandshakePacket handleServerHandshake() throws SQLException, IOException {
+    // read server handshake
+    ReadableByteBuf buf =
+        reader.readReusablePacket(Loggers.getLogger(StandardClient.class).isTraceEnabled());
+    if (buf.getByte() == -1) {
+      throwHandshakeError(buf);
+    }
+    return InitialHandshakePacket.decode(buf);
+  }
+
+  private void throwHandshakeError(ReadableByteBuf buf) throws SQLException {
+    ErrorPacket errorPacket = new ErrorPacket(buf, null);
+    throw this.exceptionFactory.create(
+        errorPacket.getMessage(), errorPacket.getSqlState(), errorPacket.getErrorCode());
+  }
+
+  private long setupClientCapabilities(InitialHandshakePacket handshake) {
+    this.exceptionFactory.setThreadId(handshake.getThreadId());
+    long capabilities =
+        ConnectionHelper.initializeClientCapabilities(conf, handshake.getCapabilities());
+
+    initializeContext(handshake, capabilities);
+    this.reader.setServerThreadId(handshake.getThreadId(), hostAddress);
+    this.writer.setServerThreadId(handshake.getThreadId(), hostAddress);
+    return capabilities;
+  }
+
+  private void initializeContext(InitialHandshakePacket handshake, long clientCapabilities) {
+    PrepareCache cache =
+        conf.cachePrepStmts() ? new PrepareCache(conf.prepStmtCacheSize(), this) : null;
+    this.context =
+        conf.transactionReplay()
+            ? new RedoContext(
+                hostAddress, handshake, clientCapabilities, conf, exceptionFactory, cache)
+            : new BaseContext(
+                hostAddress, handshake, clientCapabilities, conf, exceptionFactory, cache);
+  }
+
+  private void handleAuthentication(InitialHandshakePacket handshake, long clientCapabilities)
+      throws IOException, SQLException {
+    String authType = determineAuthType(handshake);
+    Credential credential =
+        ConnectionHelper.loadCredential(conf.credentialPlugin(), conf, hostAddress);
+
+    sendHandshakeResponse(handshake, clientCapabilities, credential, authType);
+    writer.flush();
+    ConnectionHelper.authenticationHandler(credential, writer, reader, context);
+  }
+
+  private String determineAuthType(InitialHandshakePacket handshake) throws SQLException {
+    // **********************************************************************
+    // handling authentication
+    // **********************************************************************
+    String authType = handshake.getAuthenticationPluginType();
+    CredentialPlugin credentialPlugin = conf.credentialPlugin();
+    if (credentialPlugin != null && credentialPlugin.defaultAuthenticationPluginType() != null) {
+      authType = credentialPlugin.defaultAuthenticationPluginType();
+    }
+    if (ClearPasswordPluginFactory.TYPE.equals(authType)
+        && !context.hasClientCapability(Capabilities.SSL)) {
+      throw context
+          .getExceptionFactory()
+          .create(
+              "Cannot use authentication plugin "
+                  + ClearPasswordPluginFactory.TYPE
+                  + " if SSL is not enabled.",
+              "08000");
+    }
+    return authType;
+  }
+
+  private void sendHandshakeResponse(
+      InitialHandshakePacket handshake,
+      long clientCapabilities,
+      Credential credential,
+      String authType)
+      throws IOException {
+    new HandshakeResponse(
+            credential,
+            authType,
+            context.getSeed(),
+            conf,
+            hostAddress.host,
+            clientCapabilities,
+            (byte) handshake.getDefaultCollation())
+        .encode(writer, context);
   }
 
   /** Closing socket in case of Connection error after socket creation. */
