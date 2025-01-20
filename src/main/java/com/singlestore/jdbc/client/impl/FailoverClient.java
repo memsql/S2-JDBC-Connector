@@ -24,10 +24,7 @@ import com.singlestore.jdbc.util.constants.ConnectionState;
 import com.singlestore.jdbc.util.constants.ServerStatus;
 import com.singlestore.jdbc.util.log.Loggers;
 import java.math.BigInteger;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLNonTransientConnectionException;
-import java.sql.SQLTransientConnectionException;
+import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -81,64 +78,107 @@ public class FailoverClient implements Client {
    * @throws SQLException if not succeed to create a connection.
    */
   protected Client connectHost() throws SQLException {
-
-    Optional<HostAddress> host;
-    SQLNonTransientConnectionException lastSqle = null;
     int maxRetries = conf.retriesAllDown();
 
-    while ((host = conf.haMode().getAvailableHost(conf.addresses(), denyList)).isPresent()
-        && maxRetries > 0) {
+    // First try to connect to available hosts
+    try {
+      Client client = tryConnectToAvailableHost(maxRetries);
+      if (client != null) {
+        return client;
+      }
+    } catch (SQLNonTransientConnectionException | SQLTimeoutException lastException) {
+      // Handle fail-fast scenario
+    }
+
+    // Verify valid host configuration exists
+    validateHostConfiguration();
+
+    // Try connecting to denied hosts as last resort
+    return tryConnectToDeniedHost(maxRetries);
+  }
+
+  private Client tryConnectToAvailableHost(int retriesLeft) throws SQLException {
+    SQLException lastException = null;
+    while (retriesLeft > 0) {
+      Optional<HostAddress> host = conf.haMode().getAvailableHost(conf.addresses(), denyList);
+      if (!host.isPresent()) {
+        break;
+      }
+
       try {
-        return conf.transactionReplay()
-            ? new ReplayClient(conf, host.get(), lock, false)
-            : new StandardClient(conf, host.get(), lock, false);
-      } catch (SQLNonTransientConnectionException sqle) {
-        lastSqle = sqle;
-        denyList.putIfAbsent(host.get(), System.currentTimeMillis() + deniedListTimeout);
-        maxRetries--;
+        return createClient(host.get());
+      } catch (SQLNonTransientConnectionException | SQLTimeoutException e) {
+        lastException = e;
+        addToDenyList(host.get());
+        retriesLeft--;
+      }
+    }
+    if (lastException != null) throw lastException;
+    return null;
+  }
+
+  private Client tryConnectToDeniedHost(int retriesLeft) throws SQLException {
+    SQLNonTransientConnectionException lastException = null;
+
+    while (retriesLeft > 0) {
+      Optional<HostAddress> host = findHostWithLowestDenyTimeout();
+      if (!host.isPresent()) {
+        retriesLeft--;
+        continue;
+      }
+
+      try {
+        Client client = createClient(host.get());
+        denyList.remove(host.get());
+        return client;
+      } catch (SQLNonTransientConnectionException e) {
+        lastException = e;
+        host.ifPresent(this::addToDenyList);
+        retriesLeft--;
+        if (retriesLeft > 0) {
+          sleepBeforeRetry();
+        }
       }
     }
 
-    // All server corresponding to type are in deny list
-    // return the one with lower denylist timeout
-    // (check that server is in conf, because denyList is shared for all instances)
-    if (denyList.entrySet().stream().noneMatch(e -> conf.addresses().contains(e.getKey())))
+    throw (lastException != null)
+        ? lastException
+        : new SQLNonTransientConnectionException("No host");
+  }
+
+  private Optional<HostAddress> findHostWithLowestDenyTimeout() {
+    return denyList.entrySet().stream()
+        .sorted(Map.Entry.comparingByValue())
+        .filter(e -> conf.addresses().contains(e.getKey()))
+        .findFirst()
+        .map(Map.Entry::getKey);
+  }
+
+  private void validateHostConfiguration() throws SQLNonTransientConnectionException {
+    boolean hasValidHost =
+        denyList.entrySet().stream().anyMatch(e -> conf.addresses().contains(e.getKey()));
+
+    if (!hasValidHost) {
       throw new SQLNonTransientConnectionException("No host defined");
-    while (maxRetries > 0) {
-      try {
-        host =
-            denyList.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue())
-                .filter(e -> conf.addresses().contains(e.getKey()))
-                .findFirst()
-                .map(Map.Entry::getKey);
-        if (host.isPresent()) {
-          Client client =
-              conf.transactionReplay()
-                  ? new ReplayClient(conf, host.get(), lock, false)
-                  : new StandardClient(conf, host.get(), lock, false);
-          denyList.remove(host.get());
-          return client;
-        }
-        maxRetries--;
-      } catch (SQLNonTransientConnectionException sqle) {
-        lastSqle = sqle;
-        host.ifPresent(
-            hostAddress ->
-                denyList.putIfAbsent(hostAddress, System.currentTimeMillis() + deniedListTimeout));
-        maxRetries--;
-        if (maxRetries > 0) {
-          try {
-            // wait 250ms before looping through
-            Thread.sleep(250);
-          } catch (InterruptedException interrupted) {
-            // interrupted, continue
-          }
-        }
-      }
     }
+  }
 
-    throw (lastSqle != null) ? lastSqle : new SQLNonTransientConnectionException("No host");
+  private Client createClient(HostAddress host) throws SQLException {
+    return conf.transactionReplay()
+        ? new ReplayClient(conf, host, lock, false)
+        : new StandardClient(conf, host, lock, false);
+  }
+
+  private void addToDenyList(HostAddress host) {
+    denyList.putIfAbsent(host, System.currentTimeMillis() + deniedListTimeout);
+  }
+
+  private void sleepBeforeRetry() {
+    try {
+      Thread.sleep(250);
+    } catch (InterruptedException interrupted) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   /**

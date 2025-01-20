@@ -153,27 +153,33 @@ public final class ConnectionHelper {
    *
    * @param configuration configuration
    * @param serverCapabilities server capabilities
-   * @param hostAddress host address server
    * @return client capabilities
    */
   public static long initializeClientCapabilities(
-      final Configuration configuration,
-      final long serverCapabilities,
-      final HostAddress hostAddress) {
-    long capabilities =
-        Capabilities.IGNORE_SPACE
-            | Capabilities.CLIENT_PROTOCOL_41
-            | Capabilities.TRANSACTIONS
-            | Capabilities.SECURE_CONNECTION
-            | Capabilities.MULTI_RESULTS
-            | Capabilities.PS_MULTI_RESULTS
-            | Capabilities.PLUGIN_AUTH
-            | Capabilities.CONNECT_ATTRS
-            | Capabilities.PLUGIN_AUTH_LENENC_CLIENT_DATA
-            | Capabilities.CLIENT_SESSION_TRACK;
-    if (configuration.useServerPrepStmts()
-        && Boolean.parseBoolean(
-            configuration.nonMappedOptions().getProperty("enableSkipMeta", "true"))) {
+      final Configuration configuration, final long serverCapabilities) {
+    long capabilities = initializeBaseCapabilities();
+    capabilities = applyOptionalCapabilities(capabilities, configuration);
+    capabilities = applyTechnicalCapabilities(capabilities, configuration);
+    capabilities = applyConnectionCapabilities(capabilities, configuration);
+
+    return capabilities & serverCapabilities;
+  }
+
+  private static long initializeBaseCapabilities() {
+    return Capabilities.IGNORE_SPACE
+        | Capabilities.CLIENT_PROTOCOL_41
+        | Capabilities.TRANSACTIONS
+        | Capabilities.SECURE_CONNECTION
+        | Capabilities.MULTI_RESULTS
+        | Capabilities.PS_MULTI_RESULTS
+        | Capabilities.PLUGIN_AUTH
+        | Capabilities.CONNECT_ATTRS
+        | Capabilities.PLUGIN_AUTH_LENENC_CLIENT_DATA
+        | Capabilities.CLIENT_SESSION_TRACK;
+  }
+
+  private static long applyOptionalCapabilities(long capabilities, Configuration configuration) {
+    if (shouldEnableMetadataCache(configuration)) {
       capabilities |= Capabilities.CACHE_METADATA;
     }
 
@@ -188,33 +194,52 @@ public final class ConnectionHelper {
     if (configuration.allowLocalInfile()) {
       capabilities |= Capabilities.LOCAL_FILES;
     }
+    return capabilities;
+  }
 
-    // extendedTypeInfo is a technical option
-    boolean extendedTypeInfo =
-        Boolean.parseBoolean(
-            configuration.nonMappedOptions().getProperty("extendedTypeInfo", "true"));
-    if (extendedTypeInfo) {
-      capabilities |= Capabilities.EXTENDED_TYPE_INFO;
-    }
-
-    // useEof is a technical option
-    boolean useEof =
-        Boolean.parseBoolean(configuration.nonMappedOptions().getProperty("useEof", "true"));
-    if ((serverCapabilities & Capabilities.CLIENT_DEPRECATE_EOF) != 0 && useEof) {
+  private static long applyTechnicalCapabilities(long capabilities, Configuration configuration) {
+    // not used, hardcoded to false in SingleStore
+    if (getBooleanProperty(configuration, "deprecateEof", true)) {
       capabilities |= Capabilities.CLIENT_DEPRECATE_EOF;
     }
 
-    if (configuration.useCompression() && ((serverCapabilities & Capabilities.COMPRESS) != 0)) {
+    if (configuration.useCompression()) {
       capabilities |= Capabilities.COMPRESS;
     }
-    // connect to database directly if not needed to be created
-    if (configuration.database() != null && !configuration.createDatabaseIfNotExist()) {
+
+    return capabilities;
+  }
+
+  private static long applyConnectionCapabilities(long capabilities, Configuration configuration) {
+
+    if (shouldConnectWithDb(configuration)) {
       capabilities |= Capabilities.CONNECT_WITH_DB;
     }
-    if (configuration.sslMode() != SslMode.DISABLE) {
+
+    if (shouldEnableSsl(configuration)) {
       capabilities |= Capabilities.SSL;
     }
+
     return capabilities;
+  }
+
+  private static boolean getBooleanProperty(
+      Configuration configuration, String propertyName, boolean defaultValue) {
+    return Boolean.parseBoolean(
+        configuration.nonMappedOptions().getProperty(propertyName, String.valueOf(defaultValue)));
+  }
+
+  private static boolean shouldEnableMetadataCache(Configuration configuration) {
+    return configuration.useServerPrepStmts()
+        && getBooleanProperty(configuration, "enableSkipMeta", true);
+  }
+
+  private static boolean shouldConnectWithDb(Configuration configuration) {
+    return configuration.database() != null && !configuration.createDatabaseIfNotExist();
+  }
+
+  private static boolean shouldEnableSsl(Configuration configuration) {
+    return configuration.sslMode() != SslMode.DISABLE;
   }
 
   /**

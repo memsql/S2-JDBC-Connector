@@ -2,7 +2,6 @@
 // Copyright (c) 2012-2014 Monty Program Ab
 // Copyright (c) 2015-2025 MariaDB Corporation Ab
 // Copyright (c) 2021-2025 SingleStore, Inc.
-
 package com.singlestore.jdbc.unit.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,16 +12,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.singlestore.jdbc.Configuration;
-import com.singlestore.jdbc.Driver;
-import com.singlestore.jdbc.HostAddress;
-import com.singlestore.jdbc.TransactionIsolation;
+import com.singlestore.jdbc.*;
 import com.singlestore.jdbc.export.HaMode;
 import com.singlestore.jdbc.export.SslMode;
 import com.singlestore.jdbc.integration.Common;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -91,6 +90,14 @@ public class ConfigurationTest extends Common {
   }
 
   @Test
+  void useMysqlMetadata() throws SQLException {
+    assertEquals("SingleStore", sharedConn.getMetaData().getDatabaseProductName());
+    try (Connection conn = createCon("&useMysqlMetadata=true")) {
+      assertEquals("MySQL", conn.getMetaData().getDatabaseProductName());
+    }
+  }
+
+  @Test
   public void testUrl() throws SQLException {
     Configuration conf =
         new Configuration.Builder()
@@ -98,13 +105,9 @@ public class ConfigurationTest extends Common {
             .addHost("local", 3306)
             .haMode(HaMode.SEQUENTIAL)
             .build();
-    assertEquals(
-        "jdbc:singlestore:sequential://address=(host=local)(port=3306)/DB", conf.initialUrl());
-    assertEquals(
-        "jdbc:singlestore:sequential://address=(host=local)(port=3306)/DB", conf.toString());
-    assertEquals(
-        Configuration.parse("jdbc:singlestore:sequential://address=(host=local)(port=3306)/DB"),
-        conf);
+    assertEquals("jdbc:singlestore:sequential://local/DB", conf.initialUrl());
+    assertEquals("jdbc:singlestore:sequential://local/DB", conf.toString());
+    assertEquals(Configuration.parse("jdbc:singlestore:sequential://local/DB"), conf);
 
     conf =
         new Configuration.Builder()
@@ -114,7 +117,7 @@ public class ConfigurationTest extends Common {
             .build();
 
     assertEquals(
-        "jdbc:singlestore:sequential://address=(host=local)(port=3306),address=(host=host2)(port=3307)/DB",
+        "jdbc:singlestore:sequential://local,address=(host=host2)(port=3307)/DB",
         conf.initialUrl());
 
     conf =
@@ -124,8 +127,19 @@ public class ConfigurationTest extends Common {
             .haMode(HaMode.SEQUENTIAL)
             .socketTimeout(50)
             .build();
+    assertEquals("jdbc:singlestore:sequential://local/DB?socketTimeout=50", conf.initialUrl());
+
+    conf =
+        new Configuration.Builder()
+            .database("DB")
+            .addHost("local", 3306)
+            .addHost("local", 3307)
+            .addHost("local", 3308)
+            .haMode(HaMode.LOADBALANCE)
+            .socketTimeout(50)
+            .build();
     assertEquals(
-        "jdbc:singlestore:sequential://address=(host=local)(port=3306)/DB?socketTimeout=50",
+        "jdbc:singlestore:loadbalance://local,address=(host=local)(port=3307),address=(host=local)(port=3308)/DB?socketTimeout=50",
         conf.initialUrl());
 
     conf =
@@ -138,20 +152,7 @@ public class ConfigurationTest extends Common {
             .socketTimeout(50)
             .build();
     assertEquals(
-        "jdbc:singlestore:loadbalance://address=(host=local)(port=3306),address=(host=local)(port=3307),address=(host=local)(port=3308)/DB?socketTimeout=50",
-        conf.initialUrl());
-
-    conf =
-        new Configuration.Builder()
-            .database("DB")
-            .addHost("local", 3306)
-            .addHost("local", 3307)
-            .addHost("local", 3308)
-            .haMode(HaMode.LOADBALANCE)
-            .socketTimeout(50)
-            .build();
-    assertEquals(
-        "jdbc:singlestore:loadbalance://address=(host=local)(port=3306),address=(host=local)(port=3307),address=(host=local)(port=3308)/DB?socketTimeout=50",
+        "jdbc:singlestore:loadbalance://local,address=(host=local)(port=3307),address=(host=local)(port=3308)/DB?socketTimeout=50",
         conf.initialUrl());
 
     conf =
@@ -161,9 +162,7 @@ public class ConfigurationTest extends Common {
             .autocommit(false)
             .haMode(HaMode.SEQUENTIAL)
             .build();
-    assertEquals(
-        "jdbc:singlestore:sequential://address=(host=local)(port=3306)/DB?autocommit=false",
-        conf.initialUrl());
+    assertEquals("jdbc:singlestore:sequential://local/DB?autocommit=false", conf.initialUrl());
   }
 
   @Test
@@ -353,24 +352,24 @@ public class ConfigurationTest extends Common {
     String url = "jdbc:singlestore://master:3306,child1:3307,child2:3308/database";
     Configuration conf = Configuration.parse(url);
     assertEquals(
-        "jdbc:singlestore://address=(host=master)(port=3306),address=(host=child1)(port=3307),address=(host=child2)(port=3308)/database",
+        "jdbc:singlestore://master,address=(host=child1)(port=3307),address=(host=child2)(port=3308)/database",
+        conf.initialUrl());
+    url =
+        "jdbc:singlestore://address=(host=master)(port=3305),address=(host=child1)(port=3307),address=(host=child2)(port=3308)/database";
+    conf = Configuration.parse(url);
+    assertEquals(
+        "jdbc:singlestore://master:3305,address=(host=child1)(port=3307),address=(host=child2)(port=3308)/database",
         conf.initialUrl());
     url =
         "jdbc:singlestore://address=(host=master)(port=3306),address=(host=child1)(port=3307),address=(host=child2)(port=3308)/database";
     conf = Configuration.parse(url);
     assertEquals(
-        "jdbc:singlestore://address=(host=master)(port=3306),address=(host=child1)(port=3307),address=(host=child2)(port=3308)/database",
+        "jdbc:singlestore://master,address=(host=child1)(port=3307),address=(host=child2)(port=3308)/database",
         conf.initialUrl());
-    url =
-        "jdbc:singlestore://address=(host=master)(port=3306),address=(host=child1)(port=3307),address=(host=child2)(port=3308)/database";
+    url = "jdbc:singlestore:loadbalance://master:3305,child1:3307,child2:3308/database";
     conf = Configuration.parse(url);
     assertEquals(
-        "jdbc:singlestore://address=(host=master)(port=3306),address=(host=child1)(port=3307),address=(host=child2)(port=3308)/database",
-        conf.initialUrl());
-    url = "jdbc:singlestore:loadbalance://master:3306,child1:3307,child2:3308/database";
-    conf = Configuration.parse(url);
-    assertEquals(
-        "jdbc:singlestore:loadbalance://address=(host=master)(port=3306),address=(host=child1)(port=3307),address=(host=child2)(port=3308)/database",
+        "jdbc:singlestore:loadbalance://master:3305,address=(host=child1)(port=3307),address=(host=child2)(port=3308)/database",
         conf.initialUrl());
   }
 
@@ -714,19 +713,16 @@ public class ConfigurationTest extends Common {
   }
 
   @Test
-  public void builder() throws SQLException {
+  public void builder() {
     Configuration conf =
         new Configuration.Builder()
-            .addresses(
-                new HostAddress[] {
-                  HostAddress.from("host1", 3305), HostAddress.from("host2", 3307)
-                })
+            .addresses(HostAddress.from("host1", 3305), HostAddress.from("host2", 3307))
             .user("me")
             .password("pwd")
             .database("db")
             .socketFactory("someSocketFactory")
             .connectTimeout(22)
-            .restrictedAuth("mysql_native_password,client_ed25519")
+            .restrictedAuth("mysql_native_password")
             .pipe("pipeName")
             .localSocket("localSocket")
             .tcpKeepAlive(false)
@@ -778,7 +774,7 @@ public class ConfigurationTest extends Common {
             .serverSslCert("mycertPath")
             .build();
     assertEquals(
-        "jdbc:singlestore://address=(host=host1)(port=3305),address=(host=host2)(port=3307)/db?user=me&password=***&autocommit=false&nullDatabaseMeansCurrent=true&defaultFetchSize=10&maxQuerySizeToLog=100&geometryDefaultType=default&restrictedAuth=mysql_native_password,client_ed25519&socketFactory=someSocketFactory&connectTimeout=22&pipe=pipeName&localSocket=localSocket&tcpKeepAlive=false&tcpKeepIdle=10&tcpKeepCount=50&tcpKeepInterval=50&tcpAbortiveClose=true&localSocketAddress=localSocketAddress&socketTimeout=1000&tlsSocketType=TLStype&sslMode=TRUST&serverSslCert=mycertPath&keyStore=/tmp&keyStorePassword=MyPWD&keyStoreType=JKS&enabledSslCipherSuites=myCipher,cipher2&enabledSslProtocolSuites=TLSv1.2&allowMultiQueries=true&allowLocalInfile=true&useCompression=true&useAffectedRows=true&cachePrepStmts=false&prepStmtCacheSize=2&useServerPrepStmts=true&credentialType=ENV&sessionVariables=blabla&connectionAttributes=bla=bla&servicePrincipalName=SPN&blankTableNameMeta=true&tinyInt1isBit=false&yearIsDateType=false&dumpQueriesOnException=true&includeThreadDumpInDeadlockExceptions=true&retriesAllDown=10&transactionReplay=true&pool=true&poolName=myPool&maxPoolSize=16&minPoolSize=12&maxIdleTime=25000&registerJmxPool=false&poolValidMinDelay=260&useResetConnection=true",
+        "jdbc:singlestore://host1:3305,address=(host=host2)(port=3307)/db?user=me&password=***&autocommit=false&nullDatabaseMeansCurrent=true&defaultFetchSize=10&geometryDefaultType=default&restrictedAuth=mysql_native_password&socketFactory=someSocketFactory&connectTimeout=22&pipe=pipeName&localSocket=localSocket&tcpKeepAlive=false&tcpKeepIdle=10&tcpKeepCount=50&tcpKeepInterval=50&tcpAbortiveClose=true&localSocketAddress=localSocketAddress&socketTimeout=1000&tlsSocketType=TLStype&sslMode=TRUST&serverSslCert=mycertPath&keyStore=/tmp&keyStorePassword=***&keyStoreType=JKS&enabledSslCipherSuites=myCipher,cipher2&enabledSslProtocolSuites=TLSv1.2&allowMultiQueries=true&useCompression=true&useAffectedRows=true&cachePrepStmts=false&prepStmtCacheSize=2&useServerPrepStmts=true&credentialType=ENV&sessionVariables=blabla&connectionAttributes=bla=bla&servicePrincipalName=SPN&blankTableNameMeta=true&tinyInt1isBit=false&yearIsDateType=false&dumpQueriesOnException=true&includeThreadDumpInDeadlockExceptions=true&retriesAllDown=10&transactionReplay=true&pool=true&poolName=myPool&maxPoolSize=16&minPoolSize=12&maxIdleTime=25000&registerJmxPool=false&poolValidMinDelay=260&useResetConnection=true&maxQuerySizeToLog=100",
         conf.toString());
   }
 
@@ -790,5 +786,102 @@ public class ConfigurationTest extends Common {
     assertNotEquals(null, conf);
     assertNotEquals("", conf);
     assertNotEquals(Configuration.parse("jdbc:singlestore://localhost/test2"), conf);
+  }
+
+  @Test
+  public void toConf() throws SQLException {
+    assertTrue(
+        Configuration.toConf("jdbc:singlestore://localhost/test")
+            .startsWith(
+                "Configuration:\n"
+                    + " * resulting Url : jdbc:singlestore://localhost/test\n"
+                    + "Unknown options : None\n"
+                    + "\n"
+                    + "Non default options : \n"
+                    + " * database : test\n"
+                    + "\n"
+                    + "default options :"));
+    assertTrue(
+        normalizeConfigurationString(
+                Configuration.toConf(
+                    "jdbc:singlestore:loadbalance://host1:3305,address=(host=host2)(port=3307)(type=replica)/db?nonExisting&nonExistingWithValue=tt&user=me&password=***&autocommit=false&createDatabaseIfNotExist=true&"))
+            .startsWith(
+                "Configuration:\n"
+                    + " * resulting Url :"
+                    + " "
+                    + normalizeConnectionString(
+                        "jdbc:singlestore:loadbalance://host1:3305,address=(host=host2)(port=3307)/db?user=me&password=***&nonExisting=&nonExistingWithValue=tt&autocommit=false&createDatabaseIfNotExist=true")
+                    + "\n"
+                    + "Unknown options : \n"
+                    + " * nonExisting : \n"
+                    + " * nonExistingWithValue : tt\n"
+                    + "\n"
+                    + "Non default options : \n"
+                    + " * addresses : [address=(host=host1)(port=3305), address=(host=host2)(port=3307)]\n"
+                    + " * autocommit : false\n"
+                    + " * createDatabaseIfNotExist : true\n"
+                    + " * database : db\n"
+                    + " * haMode : LOADBALANCE\n"
+                    + " * password : ***\n"
+                    + " * user : me\n"
+                    + "\n"
+                    + "default options :\n"
+                    + " * allowLocalInfile : true\n"
+                    + " * allowMultiQueries : false\n"
+                    + " * blankTableNameMeta : false"));
+
+    assertTrue(
+        normalizeConfigurationString(
+                Configuration.toConf(
+                    "jdbc:singlestore://localhost/test?user=root&sslMode=verify-ca&serverSslCert=/tmp/t.pem&trustStoreType=JKS&keyStore=/tmp/keystore&keyStorePassword=kspass"))
+            .startsWith(
+                "Configuration:\n"
+                    + " * resulting Url :"
+                    + " "
+                    + normalizeConnectionString(
+                        "jdbc:singlestore://localhost/test?user=root&sslMode=VERIFY_CA&serverSslCert=/tmp/t.pem&keyStore=/tmp/keystore&keyStorePassword=***&trustStoreType=JKS")
+                    + "\n"
+                    + "Unknown options : None\n"
+                    + "\n"
+                    + "Non default options : \n"
+                    + " * database : test\n"
+                    + " * keyStore : /tmp/keystore\n"
+                    + " * keyStorePassword : ***\n"
+                    + " * serverSslCert : /tmp/t.pem\n"
+                    + " * sslMode : VERIFY_CA\n"
+                    + " * trustStoreType : JKS\n"
+                    + " * user : root\n"
+                    + "\n"
+                    + "default options :\n"
+                    + " * addresses : [address=(host=localhost)(port=3306)]\n"
+                    + " * allowLocalInfile : true"));
+  }
+
+  private String normalizeConfigurationString(String configString) {
+    String[] lines = configString.split("\n");
+    StringBuilder newConfig = new StringBuilder();
+    for (String line : lines) {
+      if (line.startsWith(" * resulting Url :")) {
+        String url = line.substring(" * resulting Url :".length()).trim();
+        newConfig.append(" * resulting Url : ").append(normalizeConnectionString(url)).append("\n");
+      } else {
+        newConfig.append(line).append("\n");
+      }
+    }
+    return newConfig.toString();
+  }
+
+  private String normalizeConnectionString(String connectionString) {
+    String[] parts = connectionString.split("\\?", 2);
+    if (parts.length < 2) {
+      return connectionString;
+    }
+    List<String> paramList = Arrays.asList(parts[1].split("&"));
+    String sortedParams =
+        paramList.stream()
+            .map(param -> param.contains("=") ? param : param + "=")
+            .sorted()
+            .collect(Collectors.joining("&"));
+    return parts[0] + "?" + sortedParams;
   }
 }

@@ -123,7 +123,7 @@ public class LocalInfileTest extends Common {
 
   @Test
   public void defaultThrowExceptions() throws Exception {
-    try (Connection con = createCon()) {
+    try (Connection con = createCon("&allowLocalInfile=false")) {
       Statement stmt = con.createStatement();
       Common.assertThrowsContains(
           SQLException.class,

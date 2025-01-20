@@ -49,6 +49,7 @@ public class PoolDataSourceTest extends Common {
   public static void drop() throws SQLException {
     try (Statement stmt = sharedConn.createStatement()) {
       stmt.execute("DROP TABLE IF EXISTS testResetRollback");
+      stmt.execute("DROP USER IF EXISTS 'poolUser'");
     }
   }
 
@@ -130,7 +131,7 @@ public class PoolDataSourceTest extends Common {
 
     ds.setUrl("jdbc:singlestore://myhost:5500/db?someOption=val");
     assertEquals(
-        "jdbc:singlestore://address=(host=myhost)(port=5500)/db?user=dd&password=***&someOption=val&connectTimeout=50000",
+        "jdbc:singlestore://myhost:5500/db?user=dd&password=***&someOption=val&connectTimeout=50000",
         ds.getUrl());
     ds.close();
   }
@@ -582,7 +583,7 @@ public class PoolDataSourceTest extends Common {
     int initialConnection = getCurrentConnections();
 
     try (SingleStorePoolDataSource pool =
-        new SingleStorePoolDataSource(mDefUrl + "&maxPoolSize=10&minPoolSize=1")) {
+        new SingleStorePoolDataSource(mDefUrl + "&maxPoolSize=10&minPoolSize=3")) {
 
       try (Connection connection = pool.getConnection()) {
         connection.isValid(10_000);
