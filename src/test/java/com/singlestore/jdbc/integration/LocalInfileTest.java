@@ -130,14 +130,14 @@ public class LocalInfileTest extends Common {
           () ->
               stmt.execute(
                   "LOAD DATA LOCAL INFILE 'someFile' INTO TABLE LocalInfileInputStreamTest2 (id, test)"),
-          "LOAD DATA LOCAL is disabled by your client configuration");
+          "Local infile is disabled by connector. Enable `allowLocalInfile` to allow local infile commands");
       stmt.addBatch(
           "LOAD DATA LOCAL INFILE 'someFile' INTO TABLE LocalInfileInputStreamTest2 (id, test)");
       stmt.addBatch("SET UNIQUE_CHECKS=1");
       Common.assertThrowsContains(
           BatchUpdateException.class,
           () -> stmt.executeBatch(),
-          "LOAD DATA LOCAL is disabled by your client configuration");
+          "Local infile is disabled by connector. Enable `allowLocalInfile` to allow local infile commands");
     }
   }
 

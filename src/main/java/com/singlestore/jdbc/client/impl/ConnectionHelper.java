@@ -348,7 +348,7 @@ public final class ConnectionHelper {
       TrustManager[] trustManagers =
           socketPlugin.getTrustManager(conf, context.getExceptionFactory());
       try {
-        SSLContext sslContext = SSLContext.getInstance("TLS");
+        SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
         sslContext.init(
             socketPlugin.getKeyManager(conf, context.getExceptionFactory()), trustManagers, null);
         sslSocketFactory = sslContext.getSocketFactory();

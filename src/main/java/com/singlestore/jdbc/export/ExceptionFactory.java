@@ -254,6 +254,15 @@ public class ExceptionFactory {
       return new SQLTimeoutException(msg, sqlState, errorCode);
     }
 
+    if ((errorCode == 4166 || errorCode == 3948 || errorCode == 1148) && !conf.allowLocalInfile()) {
+      return new SQLException(
+          "Local infile is disabled by connector. Enable `allowLocalInfile` to allow local infile"
+              + " commands",
+          sqlState,
+          errorCode,
+          cause);
+    }
+
     SQLException returnEx;
     String sqlClass = sqlState == null ? "42" : sqlState.substring(0, 2);
     switch (sqlClass) {
