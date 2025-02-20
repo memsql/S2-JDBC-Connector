@@ -7,8 +7,12 @@ package com.singlestore.jdbc.plugin.credential;
 
 import com.singlestore.jdbc.Driver;
 import com.singlestore.jdbc.plugin.CredentialPlugin;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.sql.SQLException;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -38,15 +42,37 @@ public final class CredentialPluginLoader {
       return plugin;
     }
 
-    synchronized (loader) {
-      for (CredentialPlugin implClass : loader) {
-        String pluginType = implClass.type();
-        loadedPlugins.putIfAbsent(pluginType, implClass);
-
-        if (type.equals(pluginType)) {
-          return implClass;
+    StringWriter errorBuffer = new StringWriter();
+    try (PrintWriter errorWriter = new PrintWriter(errorBuffer)) {
+      synchronized (loader) {
+        Iterator<CredentialPlugin> iterator = loader.iterator();
+        while (iterator.hasNext()) {
+          try {
+            CredentialPlugin impl = iterator.next();
+            loadedPlugins.putIfAbsent(impl.type(), impl);
+            if (type.equals(impl.type())) {
+              return impl;
+            }
+          } catch (ServiceConfigurationError e) {
+            errorWriter.println(
+                "Failed to load credential plugin. Ensure all required dependencies for this plugin are available:");
+            e.printStackTrace(errorWriter);
+          }
         }
       }
+    }
+
+    String errorMsg = errorBuffer.toString();
+    if (errorMsg.length() > 0) {
+      throw new SQLException(
+          "No identity plugin registered with the type \""
+              + type
+              + "\" "
+              + "or the required plugin could not be loaded. "
+              + "Some plugins failed to load:\n"
+              + errorMsg,
+          "08004",
+          1251);
     }
     throw new IllegalArgumentException(
         "No identity plugin registered with the type \"" + type + "\".");
