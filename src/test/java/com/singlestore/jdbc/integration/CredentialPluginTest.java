@@ -106,7 +106,7 @@ public class CredentialPluginTest extends Common {
   @Test
   public void unknownCredentialTest() {
     Common.assertThrowsContains(
-        RuntimeException.class,
+        SQLException.class,
         () -> createCon("credentialType=UNKNOWN"),
         "No identity plugin registered with the type \"UNKNOWN\"");
   }

@@ -11,8 +11,10 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.sql.SQLException;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Provider to handle plugin authentication. This can allow library users to override our default
@@ -22,6 +24,8 @@ public final class CredentialPluginLoader {
 
   private static final ServiceLoader<CredentialPlugin> loader =
       ServiceLoader.load(CredentialPlugin.class, Driver.class.getClassLoader());
+
+  private static final Map<String, CredentialPlugin> loadedPlugins = new ConcurrentHashMap<>();
 
   /**
    * Get current Identity plugin according to option `identityType`.
@@ -33,40 +37,44 @@ public final class CredentialPluginLoader {
   public static CredentialPlugin get(String type) throws SQLException {
     if (type == null) return null;
 
-    Iterator<CredentialPlugin> iter = loader.iterator();
-    StringWriter errors = new StringWriter();
-    PrintWriter errorsWriter = new PrintWriter(errors);
+    CredentialPlugin plugin = loadedPlugins.get(type);
+    if (plugin != null) {
+      return plugin;
+    }
 
-    CredentialPlugin implClass = null;
-    do {
-      if (!iter.hasNext()) {
-        String msg = errors.toString();
-        if (msg.length() > 0) {
-          throw new SQLException(
-              "No identity plugin registered with the type \""
-                  + type
-                  + "\" "
-                  + "or the required plugin could not be loaded. "
-                  + "Some plugins failed to load:\n"
-                  + msg,
-              "08004",
-              1251);
-        } else {
-          throw new SQLException(
-              "No identity plugin registered with the type \"" + type + "\"", "08004", 1251);
+    StringWriter errorBuffer = new StringWriter();
+    try (PrintWriter errorWriter = new PrintWriter(errorBuffer)) {
+      synchronized (loader) {
+        Iterator<CredentialPlugin> iterator = loader.iterator();
+        while (iterator.hasNext()) {
+          try {
+            CredentialPlugin impl = iterator.next();
+            loadedPlugins.putIfAbsent(impl.type(), impl);
+            if (type.equals(impl.type())) {
+              return impl;
+            }
+          } catch (ServiceConfigurationError e) {
+            errorWriter.println(
+                "Failed to load credential plugin. Ensure all required dependencies for this plugin are available:");
+            e.printStackTrace(errorWriter);
+          }
         }
       }
+    }
 
-      try {
-        implClass = iter.next();
-      } catch (ServiceConfigurationError e) {
-        errorsWriter.println(
-            "Could not load credential plugin. Please verify that"
-                + " all optional packages required for this plugin are installed:");
-        e.printStackTrace(errorsWriter);
-      }
-    } while (implClass == null || !type.equals(implClass.type()));
-
-    return implClass;
+    String errorMsg = errorBuffer.toString();
+    if (errorMsg.length() > 0) {
+      throw new SQLException(
+          "No identity plugin registered with the type \""
+              + type
+              + "\" "
+              + "or the required plugin could not be loaded. "
+              + "Some plugins failed to load:\n"
+              + errorMsg,
+          "08004",
+          1251);
+    }
+    throw new IllegalArgumentException(
+        "No identity plugin registered with the type \"" + type + "\".");
   }
 }
