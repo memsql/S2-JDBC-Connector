@@ -375,11 +375,6 @@ public class Configuration {
     this.printStackTrace = builder.printStackTrace != null && builder.printStackTrace;
     this.maxPrintStackSizeToLog =
         builder.maxPrintStackSizeToLog != null ? builder.maxPrintStackSizeToLog : 10;
-    Loggers.resetLoggerFactoryProperties(
-        this.consoleLogLevel,
-        this.consoleLogFilepath,
-        this.printStackTrace,
-        this.maxPrintStackSizeToLog);
   }
 
   private void initializeExtendedTypesConfig(Builder builder) {
@@ -1668,6 +1663,7 @@ public class Configuration {
       appendConfigurationParameters(urlBuilder, conf);
 
       conf.loadCodecs();
+      conf.resetLoggerFactory();
       return urlBuilder.toString();
     } catch (SecurityException s) {
       throw new IllegalArgumentException("Security too restrictive: " + s.getMessage());
@@ -1829,6 +1825,14 @@ public class Configuration {
     List<Codec<?>> result = new ArrayList<>();
     loader.iterator().forEachRemaining(result::add);
     codecs = result.toArray(new Codec<?>[0]);
+  }
+
+  private void resetLoggerFactory() {
+    Loggers.resetLoggerFactoryProperties(
+        this.consoleLogLevel,
+        this.consoleLogFilepath,
+        this.printStackTrace,
+        this.maxPrintStackSizeToLog);
   }
 
   @Override
