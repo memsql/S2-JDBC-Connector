@@ -191,9 +191,9 @@ public class DefaultTlsSocketPlugin implements TlsSocketPlugin {
               "08000",
               generalSecurityEx);
         }
-      }
-      if (trustManager == null) {
-        throw new SQLException("No X509TrustManager found");
+        if (trustManager == null) {
+          throw new SQLException("No X509TrustManager found");
+        }
       }
     }
     return trustManager;
