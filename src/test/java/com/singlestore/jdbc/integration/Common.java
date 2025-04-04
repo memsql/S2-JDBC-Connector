@@ -17,7 +17,6 @@ import com.singlestore.jdbc.Statement;
 import com.singlestore.jdbc.export.HaMode;
 import com.singlestore.jdbc.export.SslMode;
 import com.singlestore.jdbc.integration.tools.TcpProxy;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.DriverManager;
@@ -293,32 +292,6 @@ public class Common {
 
   public static void assertEqualCoordinate(double expected, double actual) {
     assertEquals(expected, actual, geometryEpsilon);
-  }
-
-  public static String retrieveCertificatePath() throws Exception {
-    String serverCertificatePath =
-        checkAndCanonizePath(System.getProperty("serverCertificatePath"));
-
-    // try local server
-    if (serverCertificatePath == null) {
-      try (ResultSet rs = sharedConn.createStatement().executeQuery("select @@ssl_cert")) {
-        assertTrue(rs.next());
-        serverCertificatePath = checkAndCanonizePath(rs.getString(1));
-      }
-    }
-    if (serverCertificatePath == null) {
-      serverCertificatePath = checkAndCanonizePath("scripts/ssl/test-ca-cert.pem");
-    }
-    return serverCertificatePath;
-  }
-
-  protected static String checkAndCanonizePath(String path) throws IOException {
-    if (path == null) return null;
-    File f = new File(path);
-    if (f.exists()) {
-      return f.getCanonicalPath().replace("\\", "/");
-    }
-    return null;
   }
 
   @RegisterExtension public Extension watcher = new Follow();

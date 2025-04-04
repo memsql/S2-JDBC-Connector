@@ -841,20 +841,17 @@ public class ConnectionTest extends Common {
         "Socket fail to connect to host");
 
     if (haveSsl()) {
-      String serverCertPath = SslTest.retrieveCertificatePath();
-      if (serverCertPath != null) {
-        try (Connection con =
-            DriverManager.getConnection(
-                "jdbc:singlestore:///"
-                    + sharedConn.getCatalog()
-                    + "?sslMode=verify-full&user=testSocket&password=MySup5%rPassw@ord"
-                    + "&serverSslCert="
-                    + serverCertPath
-                    + "&localSocket="
-                    + path)) {
-          rs = con.createStatement().executeQuery("select 1");
-          assertTrue(rs.next());
-        }
+      try (Connection con =
+          DriverManager.getConnection(
+              "jdbc:singlestore:///"
+                  + sharedConn.getCatalog()
+                  + "?sslMode=verify-full&user=testSocket&password=MySup5%rPassw@ord"
+                  + "&serverSslCert="
+                  + SslTest.SERVER_CERT_PATH
+                  + "&localSocket="
+                  + path)) {
+        rs = con.createStatement().executeQuery("select 1");
+        assertTrue(rs.next());
       }
     }
     stmt.execute("DROP USER testSocket@'localhost'");
