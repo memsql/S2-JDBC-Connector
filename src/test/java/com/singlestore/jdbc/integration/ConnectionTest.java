@@ -718,7 +718,7 @@ public class ConnectionTest extends Common {
     Common.assertThrowsContains(
         SQLException.class,
         () -> createCon("credentialType=JWT&user=jwt_user&password=" + jwt),
-        "No X509TrustManager found");
+        "unable to find valid certification path to requested target");
     Common.assertThrowsContains(
         SQLException.class,
         () -> createCon("credentialType=JWT&sslMode=trust&user=jwt_user&password=" + "invalid_jwt"),
