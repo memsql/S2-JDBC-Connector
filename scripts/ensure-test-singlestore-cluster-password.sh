@@ -28,6 +28,33 @@ DEFAULT_SINGLESTORE_VERSION=""
 VERSION="${SINGLESTORE_VERSION:-$DEFAULT_SINGLESTORE_VERSION}"
 IMAGE_NAME="ghcr.io/singlestore-labs/singlestoredb-dev:latest"
 CONTAINER_NAME="singlestore-integration"
+SSL_DIR="scripts/ssl"
+
+rm -rf ${SSL_DIR}
+mkdir -p ${SSL_DIR}
+
+echo "Create a Certificate Authority (CA)"
+
+openssl genpkey -algorithm RSA -out ${SSL_DIR}/ca-key.pem
+openssl req -new -x509 -key  ${SSL_DIR}/ca-key.pem -out ${SSL_DIR}/ca-cert.pem -days 365 -subj "/CN=SingleStoreDBCA"
+
+echo "Generate the Server Certificate"
+
+openssl genpkey -algorithm RSA -out ${SSL_DIR}/server-key.pem
+openssl req -new -key ${SSL_DIR}/server-key.pem -out ${SSL_DIR}/server-req.csr -subj "/CN=singlestoredb-server"
+openssl x509 -req -in ${SSL_DIR}/server-req.csr -CA ${SSL_DIR}/ca-cert.pem -CAkey ${SSL_DIR}/ca-key.pem -CAcreateserial -out ${SSL_DIR}/server-cert.pem -days 365
+
+echo "Create truststore"
+keytool -import -trustcacerts -file ${SSL_DIR}/ca-cert.pem -keystore ${SSL_DIR}/truststore.jks -storepass password -alias singlestore-ca -noprompt
+
+echo "Generate the Client Certificate"
+
+openssl genpkey -algorithm RSA -out ${SSL_DIR}/client-key.pem
+openssl req -new -key ${SSL_DIR}/client-key.pem -out ${SSL_DIR}/client-req.csr -subj "/CN=singlestoredb-client"
+openssl x509 -req -in ${SSL_DIR}/client-req.csr -CA ${SSL_DIR}/ca-cert.pem -CAkey ${SSL_DIR}/ca-key.pem -CAcreateserial -out ${SSL_DIR}/client-cert.pem -days 365
+
+echo "Create keystore"
+openssl pkcs12 -export -inkey ${SSL_DIR}/client-key.pem -in ${SSL_DIR}/client-cert.pem -out ${SSL_DIR}/client-keystore.p12 -name client-cert -CAfile ${SSL_DIR}/ca-cert.pem -caname root -passout pass:password
 
 EXISTS=$(docker inspect ${CONTAINER_NAME} >/dev/null 2>&1 && echo 1 || echo 0)
 
