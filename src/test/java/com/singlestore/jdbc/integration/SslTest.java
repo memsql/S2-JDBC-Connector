@@ -36,7 +36,6 @@ public class SslTest extends Common {
 
   @AfterAll
   public static void drop() throws SQLException {
-    System.setProperty("javax.net.debug", "ssl:handshake");
     Statement stmt = sharedConn.createStatement();
     stmt.execute("DROP USER IF EXISTS serverAuthUser");
     if (haveMutualSsl()) {
