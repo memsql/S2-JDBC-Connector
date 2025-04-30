@@ -7,31 +7,40 @@ package com.singlestore.jdbc.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.singlestore.jdbc.*;
 import com.singlestore.jdbc.Connection;
 import com.singlestore.jdbc.Statement;
-import com.singlestore.jdbc.integration.tools.TcpProxy;
 import java.io.*;
 import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.SQLNonTransientConnectionException;
 import java.util.*;
 import javax.net.ssl.SSLContext;
 import org.junit.jupiter.api.*;
 
 @DisplayName("SSL tests")
 public class SslTest extends Common {
-  private static Integer sslPort = port;
-  private static String baseOptions = "&user=serverAuthUser&password=!Passw0rd3Works";
-  private static final String baseMutualOptions = "&user=mutualAuthUser&password=!Passw0rd3Works";
+  private static final String BASE_OPTIONS = "&user=serverAuthUser&password=!Passw0rd3Works";
+  private static final String BASE_MUTUAL_OPTIONS = "&user=mutualAuthUser&password=!Passw0rd3Works";
+
+  public static final String CA_CERT_PATH = "scripts/ssl/ca-cert.pem";
+  public static final String SERVER_CERT_PATH = "scripts/ssl/server-cert.pem";
+  public static final String TRUST_STORE_PATH = "scripts/ssl/truststore.jks";
+  public static final String CLIENT_KEY_STORE_PATH = "scripts/ssl/client-keystore.p12";
+  public static final String KEY_STORE_PASSWORD = "password";
+  public static final String TRUST_STORE_PASSWORD = "password";
 
   @AfterAll
   public static void drop() throws SQLException {
     Statement stmt = sharedConn.createStatement();
     stmt.execute("DROP USER IF EXISTS serverAuthUser");
+    if (haveMutualSsl()) {
+      stmt.execute("DROP USER IF EXISTS mutualAuthUser");
+    }
   }
 
   @BeforeAll
@@ -39,38 +48,9 @@ public class SslTest extends Common {
     drop();
     Assumptions.assumeTrue(haveSsl());
     createSslUser("serverAuthUser", "REQUIRE SSL");
-
-    Statement stmt = sharedConn.createStatement();
-    stmt.execute("FLUSH PRIVILEGES");
-  }
-
-  public static String retrieveCertificatePath() throws Exception {
-    String serverCertificatePath = checkFileExists(System.getProperty("serverCertificatePath"));
-    if (serverCertificatePath == null) {
-      serverCertificatePath = checkFileExists(System.getenv("TEST_DB_SERVER_CERT"));
+    if (haveMutualSsl()) {
+      createSslUser("mutualAuthUser", "REQUIRE X509");
     }
-
-    // try local server
-    if (serverCertificatePath == null) {
-
-      try (ResultSet rs = sharedConn.createStatement().executeQuery("select @@ssl_cert")) {
-        assertTrue(rs.next());
-        serverCertificatePath = checkFileExists(rs.getString(1));
-      }
-    }
-    if (serverCertificatePath == null) {
-      serverCertificatePath = checkFileExists("src/test/resources/ssl/server.crt");
-    }
-    return serverCertificatePath;
-  }
-
-  private static String checkFileExists(String path) throws IOException {
-    if (path == null) return null;
-    File f = new File(path);
-    if (f.exists()) {
-      return f.getCanonicalPath().replace("\\", "/");
-    }
-    return null;
   }
 
   private static void createSslUser(String user, String requirement) throws SQLException {
@@ -88,22 +68,164 @@ public class SslTest extends Common {
     return null;
   }
 
+  private static boolean haveMutualSsl() {
+    return minVersion(9, 0, 1);
+  }
+
+  private static String checkFileExists(String path) throws IOException {
+    if (path == null) return null;
+    File f = new File(path);
+    if (f.exists()) {
+      return f.getCanonicalPath().replace("\\", "/");
+    }
+    return null;
+  }
+
   @Test
   public void simpleSsl() throws SQLException {
-    try (Connection con = createCon("sslMode=trust", sslPort)) {
+    try (Connection con = createCon("sslMode=trust")) {
       assertNotNull(getSslVersion(con));
     }
-    try (Connection con = createCon("sslMode=trust&useReadAheadInput=false", sslPort)) {
+    try (Connection con = createCon("sslMode=trust&useReadAheadInput=false")) {
       assertNotNull(getSslVersion(con));
     }
   }
 
   @Test
-  public void mandatorySsl() throws SQLException {
-    try (Connection con = createCon(baseOptions + "&sslMode=trust", sslPort)) {
+  public void errorUsingWrongTypeOfKeystore() throws Exception {
+    Assumptions.assumeTrue(haveMutualSsl());
+    // wrong keystore type
+    assertThrows(
+        SQLNonTransientConnectionException.class,
+        () ->
+            createCon(
+                BASE_MUTUAL_OPTIONS
+                    + "&sslMode=verify-ca&serverSslCert="
+                    + SERVER_CERT_PATH
+                    + "&keyStoreType=JCEKS&keyStore="
+                    + CLIENT_KEY_STORE_PATH
+                    + "&keyStorePassword="
+                    + KEY_STORE_PASSWORD));
+  }
+
+  @Test
+  public void mutualAuthSsl() throws Exception {
+    Assumptions.assumeTrue(haveMutualSsl());
+    // without password
+    try {
+      assertThrows(
+          java.sql.SQLException.class, // expected SQLInvalidAuthorizationSpecException
+          () ->
+              createCon(BASE_MUTUAL_OPTIONS + "&sslMode=trust&keyStore=" + CLIENT_KEY_STORE_PATH));
+    } catch (Throwable e) {
+      e.printStackTrace();
+      throw e;
+    }
+    // with password
+    try (Connection con =
+        createCon(
+            BASE_MUTUAL_OPTIONS
+                + "&sslMode=trust&keyStore="
+                + CLIENT_KEY_STORE_PATH
+                + "&keyStorePassword="
+                + KEY_STORE_PASSWORD)) {
       assertNotNull(getSslVersion(con));
     }
-    assertThrows(SQLException.class, () -> createCon(baseOptions + "&sslMode=disable"));
+
+    String clientKeyStoreFullPath = checkFileExists(CLIENT_KEY_STORE_PATH);
+    // with URL
+    boolean isWin = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win");
+    try (Connection con =
+        createCon(
+            BASE_MUTUAL_OPTIONS
+                + "&sslMode=trust&keyStore="
+                + "file://"
+                + (isWin ? "/" : "")
+                + clientKeyStoreFullPath
+                + "&keyStorePassword="
+                + KEY_STORE_PASSWORD)) {
+      assertNotNull(getSslVersion(con));
+    }
+
+    String prevValue = System.getProperty("javax.net.ssl.keyStore");
+    String prevPwdValue = System.getProperty("javax.net.ssl.keyStorePassword");
+    System.setProperty(
+        "javax.net.ssl.keyStore", "file://" + (isWin ? "/" : "") + clientKeyStoreFullPath);
+    System.setProperty("javax.net.ssl.keyStorePassword", KEY_STORE_PASSWORD);
+    try {
+      try (Connection con = createCon(BASE_MUTUAL_OPTIONS + "&sslMode=trust")) {
+        assertNotNull(getSslVersion(con));
+      }
+    } finally {
+      if (prevValue == null) {
+        System.clearProperty("javax.net.ssl.keyStore");
+      } else {
+        System.setProperty("javax.net.ssl.keyStore", prevValue);
+      }
+      if (prevPwdValue == null) {
+        System.clearProperty("javax.net.ssl.keyStorePassword");
+      } else {
+        System.setProperty("javax.net.ssl.keyStorePassword", prevPwdValue);
+      }
+    }
+
+    // wrong keystore type
+    assertThrows(
+        SQLException.class, // expected SQLInvalidAuthorizationSpecException
+        () ->
+            createCon(
+                BASE_MUTUAL_OPTIONS
+                    + "&sslMode=trust&keyStoreType=JKS&keyStore="
+                    + CLIENT_KEY_STORE_PATH));
+    // good keystore type
+    try (Connection con =
+        createCon(
+            BASE_MUTUAL_OPTIONS
+                + "&sslMode=trust&keyStoreType=pkcs12&keyStore="
+                + CLIENT_KEY_STORE_PATH
+                + "&keyStorePassword="
+                + KEY_STORE_PASSWORD)) {
+      assertNotNull(getSslVersion(con));
+    }
+
+    // with system properties
+    System.setProperty("javax.net.ssl.keyStore", clientKeyStoreFullPath);
+    System.setProperty("javax.net.ssl.keyStorePassword", KEY_STORE_PASSWORD);
+    try (Connection con = createCon(BASE_MUTUAL_OPTIONS + "&sslMode=trust")) {
+      assertNotNull(getSslVersion(con));
+    }
+
+    System.setProperty("javax.net.ssl.keyStoreType", "JKS");
+    try (Connection con = createCon(BASE_MUTUAL_OPTIONS + "&sslMode=trust")) {
+      assertNotNull(getSslVersion(con));
+    }
+    try (Connection con = createCon(BASE_MUTUAL_OPTIONS + "&sslMode=trust")) {
+      assertNotNull(getSslVersion(con));
+    }
+
+    System.clearProperty("javax.net.ssl.keyStoreType");
+    try (Connection con = createCon(BASE_MUTUAL_OPTIONS + "&sslMode=trust&keyStoreType=JKS")) {
+      assertNotNull(getSslVersion(con));
+    }
+
+    // without password
+    System.clearProperty("javax.net.ssl.keyStorePassword");
+    assertThrows(
+        SQLException.class, // expected SQLInvalidAuthorizationSpecException
+        () -> createCon(BASE_MUTUAL_OPTIONS + "&sslMode=trust"));
+  }
+
+  @Test
+  public void mandatorySsl() throws SQLException {
+    try (Connection con = createCon(BASE_OPTIONS + "&sslMode=trust")) {
+      assertNotNull(getSslVersion(con));
+    }
+    assertThrows(SQLException.class, () -> createCon(BASE_OPTIONS + "&sslMode=disable"));
+    if (haveMutualSsl()) {
+      assertThrows(
+          SQLException.class, // expected SQLInvalidAuthorizationSpecException
+          () -> createCon(BASE_MUTUAL_OPTIONS + "&sslMode=trust"));
+    }
   }
 
   @Test
@@ -111,134 +233,93 @@ public class SslTest extends Common {
     try {
       List<String> protocols =
           Arrays.asList(SSLContext.getDefault().getSupportedSSLParameters().getProtocols());
-      Assumptions.assumeTrue(protocols.contains("TLSv1.3") && protocols.contains("TLSv1.2"));
+      Assumptions.assumeTrue(protocols.contains("TLSv1.2")); // SingleStore doesn't support TLSv1.3
     } catch (NoSuchAlgorithmException e) {
       // eat
     }
     try (Connection con =
-        createCon(
-            baseOptions + "&sslMode=trust&enabledSslProtocolSuites=TLSv1.2,TLSv1.3", sslPort)) {
+        createCon(BASE_OPTIONS + "&sslMode=trust&enabledSslProtocolSuites=TLSv1.2")) {
       assertNotNull(getSslVersion(con));
     }
-    Common.assertThrowsContains(
-        SQLNonTransientConnectionException.class,
-        () ->
-            createCon(baseMutualOptions + "&sslMode=trust&enabledSslProtocolSuites=SSLv3", sslPort),
-        "No appropriate protocol");
-    Common.assertThrowsContains(
-        SQLException.class,
-        () ->
-            createCon(
-                baseMutualOptions + "&sslMode=trust&enabledSslProtocolSuites=unknown", sslPort),
-        "Unsupported SSL protocol 'unknown'");
+    if (haveMutualSsl()) {
+      Common.assertThrowsContains(
+          SQLNonTransientConnectionException.class,
+          () -> createCon(BASE_MUTUAL_OPTIONS + "&sslMode=trust&enabledSslProtocolSuites=SSLv3"),
+          "No appropriate protocol");
+      Common.assertThrowsContains(
+          SQLException.class,
+          () -> createCon(BASE_MUTUAL_OPTIONS + "&sslMode=trust&enabledSslProtocolSuites=unknown"),
+          "Unsupported SSL protocol 'unknown'");
+    }
   }
 
   @Test
   public void enabledSslCipherSuites() throws SQLException {
     try (Connection con =
         createCon(
-            baseOptions
-                + "&sslMode=trust&enabledSslCipherSuites=TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256",
-            sslPort)) {
+            BASE_OPTIONS
+                + "&sslMode=trust&enabledSslCipherSuites=TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256")) {
       assertNotNull(getSslVersion(con));
     }
     Common.assertThrowsContains(
         SQLException.class,
-        () ->
-            createCon(
-                baseOptions + "&sslMode=trust&enabledSslCipherSuites=UNKNOWN_CIPHER", sslPort),
+        () -> createCon(BASE_OPTIONS + "&sslMode=trust&enabledSslCipherSuites=UNKNOWN_CIPHER"),
         "Unsupported SSL cipher");
   }
 
   @Test
   public void certificateMandatorySsl() throws Throwable {
+    Common.assertThrowsContains(
+        SQLException.class,
+        () -> createCon(BASE_OPTIONS + "&sslMode=VERIFY_CA"),
+        "No X509TrustManager found");
 
-    String serverCertPath = retrieveCertificatePath();
-    Assumptions.assumeTrue(serverCertPath != null, "Canceled, server certificate not provided");
-
-    // certificate path, like  /path/certificate.crt
     try (Connection con =
-        createCon(baseOptions + "&sslMode=VERIFY_CA&serverSslCert=" + serverCertPath, sslPort)) {
+        createCon(BASE_OPTIONS + "&sslMode=VERIFY_CA&serverSslCert=" + SERVER_CERT_PATH)) {
       assertNotNull(getSslVersion(con));
     }
-    if (!"localhost".equals(hostname)) {
-      try (Connection con =
-          createCon(
-              baseOptions + "&sslMode=VERIFY_FULL&serverSslCert=" + serverCertPath, sslPort)) {
-        assertNotNull(getSslVersion(con));
-      }
 
-      Configuration conf = Configuration.parse(mDefUrl);
-      HostAddress hostAddress = conf.addresses().get(0);
-      try {
-        proxy = new TcpProxy(hostAddress.host, sslPort == null ? hostAddress.port : sslPort);
-      } catch (IOException i) {
-        throw new SQLException("proxy error", i);
-      }
-
-      String url = mDefUrl.replaceAll("//([^/]*)/", "//localhost:" + proxy.getLocalPort() + "/");
-      Common.assertThrowsContains(
-          SQLException.class,
-          () ->
-              DriverManager.getConnection(
-                  url + "&sslMode=VERIFY_FULL&serverSslCert=" + serverCertPath),
-          "DNS host \"localhost\" doesn't correspond to certificate");
+    try (Connection con =
+        createCon(BASE_OPTIONS + "&sslMode=VERIFY_CA&serverSslCert=file:///wrongPath")) {
+      assertNotNull(getSslVersion(con));
+    } catch (Exception e) {
+      assertTrue(e.getCause() instanceof IOException);
     }
 
-    String urlPath = Paths.get(serverCertPath).toUri().toURL().toString();
+    String urlPath = Paths.get(SERVER_CERT_PATH).toUri().toURL().toString();
     // file certificate path, like  file:/path/certificate.crt
+    try (Connection con = createCon(BASE_OPTIONS + "&sslMode=VERIFY_CA&serverSslCert=" + urlPath)) {
+      assertNotNull(getSslVersion(con));
+    }
+
+    String certificateString = getServerCertificate(SERVER_CERT_PATH);
+    // file certificate, like  -----BEGIN CERTIFICATE-----...
     try (Connection con =
-        createCon(baseOptions + "&sslMode=VERIFY_CA&serverSslCert=" + urlPath, sslPort)) {
+        createCon(BASE_OPTIONS + "&sslMode=VERIFY_CA&serverSslCert=" + certificateString)) {
       assertNotNull(getSslVersion(con));
     }
 
     Common.assertThrowsContains(
         SQLException.class,
-        () -> createCon(baseOptions + "&sslMode=VERIFY_FULL&serverSslCert=" + urlPath, sslPort),
-        "DNS host \"localhost\" doesn't correspond to certificate CN \"test-memsql-server\"");
-
-    String certificateString = getServerCertificate(serverCertPath);
-    // file certificate, like  -----BEGIN CERTIFICATE-----...
-    try (Connection con =
-        createCon(baseOptions + "&sslMode=VERIFY_CA&serverSslCert=" + certificateString, sslPort)) {
-      assertNotNull(getSslVersion(con));
-    }
+        () -> createCon(BASE_OPTIONS + "&sslMode=VERIFY_FULL&serverSslCert=" + urlPath),
+        "DNS host \"localhost\" doesn't correspond to certificate CN \"singlestore-server\"");
   }
 
   @Test
   public void trustStoreMandatorySsl() throws Throwable {
-    String trustStorePath = checkAndCanonizePath("scripts/ssl/test-TS.jks");
-    Assumptions.assumeTrue(trustStorePath != null, "Canceled, server certificate not provided");
-
     try (Connection con =
         createCon(
-            baseOptions
+            BASE_OPTIONS
                 + "&sslMode=VERIFY_CA&trustStore="
-                + trustStorePath
-                + "&trustStorePassword=trustPass",
-            sslPort)) {
+                + TRUST_STORE_PATH
+                + "&trustStorePassword="
+                + TRUST_STORE_PASSWORD)) {
       assertNotNull(getSslVersion(con));
     }
   }
 
-  public static String retrieveCaCertificatePath() throws Exception {
-    String serverCertificatePath = checkFileExists(System.getProperty("serverCertificatePath"));
-    if (serverCertificatePath == null) {
-      serverCertificatePath = checkFileExists(System.getenv("TEST_DB_SERVER_CA_CERT"));
-    }
-
-    if (serverCertificatePath == null) {
-      serverCertificatePath = checkFileExists("src/test/resources/ssl/ca.crt");
-    }
-    return serverCertificatePath;
-  }
-
   @Test
   public void trustStoreParameter() throws Throwable {
-    String serverCertPath = retrieveCertificatePath();
-    String caCertPath = retrieveCaCertificatePath();
-    Assumptions.assumeTrue(serverCertPath != null, "Canceled, server certificate not provided");
-
     KeyStore ks = KeyStore.getInstance("jks");
     char[] pwdArray = "myPwd0".toCharArray();
     ks.load(null, pwdArray);
@@ -249,20 +330,18 @@ public class SslTest extends Common {
     ks2.load(null, pwdArray);
     File temptrustStoreFile2 = File.createTempFile("newKeyStoreFileName", ".pkcs12");
 
-    try (InputStream inStream = new File(serverCertPath).toURI().toURL().openStream()) {
+    try (InputStream inStream = new File(SERVER_CERT_PATH).toURI().toURL().openStream()) {
       CertificateFactory cf = CertificateFactory.getInstance("X.509");
       Collection<? extends Certificate> serverCertList = cf.generateCertificates(inStream);
       List<Certificate> certs = new ArrayList<>();
       for (Iterator<? extends Certificate> iter = serverCertList.iterator(); iter.hasNext(); ) {
         certs.add(iter.next());
       }
-      if (caCertPath != null) {
-        try (InputStream inStream2 = new File(caCertPath).toURI().toURL().openStream()) {
-          CertificateFactory cf2 = CertificateFactory.getInstance("X.509");
-          Collection<? extends Certificate> caCertList = cf2.generateCertificates(inStream2);
-          for (Iterator<? extends Certificate> iter = caCertList.iterator(); iter.hasNext(); ) {
-            certs.add(iter.next());
-          }
+      try (InputStream inStream2 = new File(CA_CERT_PATH).toURI().toURL().openStream()) {
+        CertificateFactory cf2 = CertificateFactory.getInstance("X.509");
+        Collection<? extends Certificate> caCertList = cf2.generateCertificates(inStream2);
+        for (Iterator<? extends Certificate> iter = caCertList.iterator(); iter.hasNext(); ) {
+          certs.add(iter.next());
         }
       }
       for (Certificate cert : certs) {
@@ -281,62 +360,56 @@ public class SslTest extends Common {
     // certificate path, like  /path/certificate.crt
     try (Connection con =
         createCon(
-            baseOptions
+            BASE_OPTIONS
                 + "&sslMode=VERIFY_CA&trustStore="
                 + temptrustStoreFile
-                + "&trustStoreType=jks&trustStorePassword=myPwd0",
-            sslPort)) {
+                + "&trustStoreType=jks&trustStorePassword=myPwd0")) {
       assertNotNull(getSslVersion(con));
     }
 
     // with alias
     try (Connection con =
         createCon(
-            baseOptions
+            BASE_OPTIONS
                 + "&sslMode=VERIFY_CA&trustCertificateKeystoreUrl="
                 + temptrustStoreFile
-                + "&trustCertificateKeyStoretype=jks&trustCertificateKeystorePassword=myPwd0",
-            sslPort)) {
+                + "&trustCertificateKeyStoretype=jks&trustCertificateKeystorePassword=myPwd0")) {
       assertNotNull(getSslVersion(con));
     }
     assertThrowsContains(
         SQLException.class,
         () ->
             createCon(
-                baseOptions
+                BASE_OPTIONS
                     + "&sslMode=VERIFY_CA&trustStore="
                     + temptrustStoreFile
-                    + "&trustStoreType=jks&trustStorePassword=wrongPwd",
-                sslPort),
+                    + "&trustStoreType=jks&trustStorePassword=wrongPwd"),
         "Failed load keyStore");
     assertThrowsContains(
         SQLException.class,
         () ->
             createCon(
-                baseOptions
+                BASE_OPTIONS
                     + "&sslMode=VERIFY_CA&trustCertificateKeystoreUrl="
                     + temptrustStoreFile
-                    + "&trustCertificateKeyStoretype=jks&trustCertificateKeystorePassword=wrongPwd",
-                sslPort),
+                    + "&trustCertificateKeyStoretype=jks&trustCertificateKeystorePassword=wrongPwd"),
         "Failed load keyStore");
     try (Connection con =
         createCon(
-            baseOptions
+            BASE_OPTIONS
                 + "&sslMode=VERIFY_CA&trustStore="
                 + temptrustStoreFile2
-                + "&trustStoreType=pkcs12&trustStorePassword=myPwd0",
-            sslPort)) {
+                + "&trustStoreType=pkcs12&trustStorePassword=myPwd0")) {
       assertNotNull(getSslVersion(con));
     }
     assertThrowsContains(
         SQLException.class,
         () ->
             createCon(
-                baseOptions
+                BASE_OPTIONS
                     + "&sslMode=VERIFY_CA&trustStore="
                     + temptrustStoreFile2
-                    + "&trustStoreType=pkcs12&trustStorePassword=wrongPwd",
-                sslPort),
+                    + "&trustStoreType=pkcs12&trustStorePassword=wrongPwd"),
         "Failed load keyStore");
   }
 
