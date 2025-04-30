@@ -74,8 +74,8 @@ if [[ "${EXISTS}" -eq 0 ]]; then
         --name ${CONTAINER_NAME} \
         -v ${PWD}/scripts/ssl:/test-ssl \
         -v ${PWD}/scripts/jwt:/test-jwt \
-        -e SINGLESTORE_LICENSE=${LICENSE_KEY} \
-        -e ROOT_PASSWORD=${SINGLESTORE_PASSWORD} \
+        -e SINGLESTORE_LICENSE=${SINGLESTORE_LICENSE} \
+        -e ROOT_PASSWORD=${ROOT_PASSWORD} \
         -e SINGLESTORE_VERSION=${VERSION} \
         -p 5506:3306 -p 5507:3307 -p 5508:3308 \
         ${IMAGE_NAME}
@@ -84,7 +84,7 @@ fi
 singlestore-wait-start() {
   echo -n "Waiting for SingleStore to start..."
   while true; do
-      if mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" -e "select 1" >/dev/null 2>/dev/null; then
+      if mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e "select 1" >/dev/null 2>/dev/null; then
           break
       fi
       echo -n "."
@@ -98,11 +98,11 @@ singlestore-wait-start
 if [[ "${EXISTS}" -eq 0 ]]; then
     echo
     echo "Creating aggregator node"
-    docker exec -it ${CONTAINER_NAME} memsqlctl create-node --yes --password ${SINGLESTORE_PASSWORD} --port 3308
+    docker exec -it ${CONTAINER_NAME} memsqlctl create-node --yes --password ${ROOT_PASSWORD} --port 3308
     docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key minimum_core_count --value 0
     docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key minimum_memory_mb --value 0
     docker exec -it ${CONTAINER_NAME} memsqlctl start-node --yes --all
-    docker exec -it ${CONTAINER_NAME} memsqlctl add-aggregator --yes --host 127.0.0.1 --password ${SINGLESTORE_PASSWORD} --port 3308
+    docker exec -it ${CONTAINER_NAME} memsqlctl add-aggregator --yes --host 127.0.0.1 --password ${ROOT_PASSWORD} --port 3308
 fi
 
 echo
@@ -116,34 +116,34 @@ echo "Restarting cluster"
 docker restart ${CONTAINER_NAME}
 singlestore-wait-start
 echo "Setting up root-ssl user"
-mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" -e 'create user "root-ssl"@"%" require ssl'
-mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
-mysql -u root -h 127.0.0.1 -P 5507 -p"${SINGLESTORE_PASSWORD}" -e 'create user "root-ssl"@"%" require ssl'
-mysql -u root -h 127.0.0.1 -P 5507 -p"${SINGLESTORE_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
-mysql -u root -h 127.0.0.1 -P 5508 -p"${SINGLESTORE_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
+mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e 'create user "root-ssl"@"%" require ssl'
+mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
+mysql -u root -h 127.0.0.1 -P 5507 -p"${ROOT_PASSWORD}" -e 'create user "root-ssl"@"%" require ssl'
+mysql -u root -h 127.0.0.1 -P 5507 -p"${ROOT_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
+mysql -u root -h 127.0.0.1 -P 5508 -p"${ROOT_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
 echo "Done!"
 
 sleep 0.5
 echo
 echo "Ensuring child nodes are connected using container IP"
 CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
-CURRENT_LEAF_IP=$(mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" --batch -N -e 'select host from information_schema.leaves')
+CURRENT_LEAF_IP=$(mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e 'select host from information_schema.leaves')
 if [[ ${CONTAINER_IP} != "${CURRENT_LEAF_IP}" ]]; then
     # remove leaf with current ip
-    mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" --batch -N -e "remove leaf '${CURRENT_LEAF_IP}':3307"
+    mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e "remove leaf '${CURRENT_LEAF_IP}':3307"
     # add leaf with correct ip
-    mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" --batch -N -e "add leaf root:'${SINGLESTORE_PASSWORD}'@'${CONTAINER_IP}':3307"
+    mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e "add leaf root:'${ROOT_PASSWORD}'@'${CONTAINER_IP}':3307"
 fi
-CURRENT_AGG_IP=$(mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" --batch -N -e 'select host from information_schema.aggregators where master_aggregator=0')
+CURRENT_AGG_IP=$(mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e 'select host from information_schema.aggregators where master_aggregator=0')
 if [[ ${CONTAINER_IP} != "${CURRENT_AGG_IP}" ]]; then
     # remove aggregator with current ip
-    mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" --batch -N -e "remove aggregator '${CURRENT_AGG_IP}':3308"
+    mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e "remove aggregator '${CURRENT_AGG_IP}':3308"
     # add aggregator with correct ip
-    mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" --batch -N -e "add aggregator root:'${SINGLESTORE_PASSWORD}'@'${CONTAINER_IP}':3308"
+    mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e "add aggregator root:'${ROOT_PASSWORD}'@'${CONTAINER_IP}':3308"
 fi
 
 # create the database used in tests
-mysql -u root -h 127.0.0.1 -P 5506 -p"${SINGLESTORE_PASSWORD}" -e 'create database if not exists test'
+mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e 'create database if not exists test'
 
 # setup PAM for tests
 docker exec -it ${CONTAINER_NAME} bash -c 'printf "read password
