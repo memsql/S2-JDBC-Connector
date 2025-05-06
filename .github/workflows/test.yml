@@ -16,6 +16,7 @@
 #   or write to the Free Software Foundation, Inc.,
 #   51 Franklin St., Fifth Floor, Boston, MA 02110, USA
 # *************************************************************************************/
+---
 name: Test
 
 on:
@@ -42,8 +43,9 @@ jobs:
 
     strategy:
       matrix:
-        singlestore_version: ${{ fromJson(needs.fetch-s2-versions.outputs.versions) }}
-
+        singlestore_version: ${{
+          fromJson(needs.fetch-s2-versions.outputs.versions)
+          }}
     permissions:
       checks: write
       contents: write

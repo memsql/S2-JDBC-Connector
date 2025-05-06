@@ -16,10 +16,9 @@
 #   or write to the Free Software Foundation, Inc.,
 #   51 Franklin St., Fifth Floor, Boston, MA 02110, USA
 # *************************************************************************************/
+---
 name: Release
 
-# This GitHub action creates a release when a tag that matches the pattern
-# "v*"
 on:
   push:
     tags:
@@ -40,9 +39,12 @@ jobs:
           settings-path: ci/settings.xml
       - name: Import GPG key
         run: |
-          openssl enc -d -aes-256-cbc -K ${{ secrets.ENCRYPTION_KEY }} -iv ${{ secrets.ENCRYPTION_IV }} -in ci/secring.asc.enc -out ci/secring.asc
+          openssl enc -d -aes-256-cbc -K ${{ secrets.ENCRYPTION_KEY }} \
+          -iv ${{ secrets.ENCRYPTION_IV }} -in ci/secring.asc.enc \
+          -out ci/secring.asc
           gpg --import ci/secring.asc
       - name: Release to Maven Central
-        if: success()
-        run: mvn clean deploy -DskipTests -Dsonatype.username=${{ secrets.SONATYPE_USERNAME }} -Dsonatype.password=${{ secrets.SONATYPE_PASSWORD }}
-
+        if: ${{ success() }}
+        run: mvn clean deploy -DskipTests \
+          -Dsonatype.username=${{ secrets.SONATYPE_USERNAME }} \
+          -Dsonatype.password=${{ secrets.SONATYPE_PASSWORD }}
