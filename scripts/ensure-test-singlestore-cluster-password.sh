@@ -98,20 +98,20 @@ singlestore-wait-start
 if [[ "${EXISTS}" -eq 0 ]]; then
     echo
     echo "Creating aggregator node"
-    docker exec -it ${CONTAINER_NAME} memsqlctl create-node --yes --password ${ROOT_PASSWORD} --port 3308
-    docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key minimum_core_count --value 0
-    docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key minimum_memory_mb --value 0
-    docker exec -it ${CONTAINER_NAME} memsqlctl start-node --yes --all
-    docker exec -it ${CONTAINER_NAME} memsqlctl add-aggregator --yes --host 127.0.0.1 --password ${ROOT_PASSWORD} --port 3308
+    docker exec ${CONTAINER_NAME} memsqlctl create-node --yes --password ${ROOT_PASSWORD} --port 3308
+    docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key minimum_core_count --value 0
+    docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key minimum_memory_mb --value 0
+    docker exec ${CONTAINER_NAME} memsqlctl start-node --yes --all
+    docker exec ${CONTAINER_NAME} memsqlctl add-aggregator --yes --host 127.0.0.1 --password ${ROOT_PASSWORD} --port 3308
 fi
 
 echo
 echo "Setting up SSL"
-docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_ca --value /test-ssl/ca-cert.pem
-docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_cert --value /test-ssl/server-cert.pem
-docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_key --value /test-ssl/server-key.pem
+docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_ca --value /test-ssl/ca-cert.pem
+docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_cert --value /test-ssl/server-cert.pem
+docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_key --value /test-ssl/server-key.pem
 echo "Setting up JWT"
-docker exec -it ${CONTAINER_NAME} memsqlctl update-config --yes --all --key jwt_auth_config_file --value /test-jwt/jwt_auth_config.json
+docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key jwt_auth_config_file --value /test-jwt/jwt_auth_config.json
 echo "Restarting cluster"
 docker restart ${CONTAINER_NAME}
 singlestore-wait-start
@@ -146,14 +146,14 @@ fi
 mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e 'create database if not exists test'
 
 # setup PAM for tests
-docker exec -it ${CONTAINER_NAME} bash -c 'printf "read password
+docker exec ${CONTAINER_NAME} bash -c 'printf "read password
 [ \"\$PAM_USER\" == \"%s\" ] || exit 1
 [ \"\$password\" == \"%s\" ] || exit 1
 " "test_pam" \
   "test_pass" \
   > /tmp/s2_pamauth'
 
-docker exec -itu 0 ${CONTAINER_NAME} bash -c 'printf "auth required pam_exec.so expose_authtok /bin/bash %s
+docker exec -iu 0 ${CONTAINER_NAME} bash -c 'printf "auth required pam_exec.so expose_authtok /bin/bash %s
 account required pam_permit.so
 session required pam_permit.so
 password required pam_permit.so

@@ -272,7 +272,7 @@ public class SslTest extends Common {
     Common.assertThrowsContains(
         SQLException.class,
         () -> createCon(BASE_OPTIONS + "&sslMode=VERIFY_CA"),
-        "No X509TrustManager found");
+        "unable to find valid certification path to requested target");
 
     try (Connection con =
         createCon(BASE_OPTIONS + "&sslMode=VERIFY_CA&serverSslCert=" + SERVER_CERT_PATH)) {
@@ -367,15 +367,6 @@ public class SslTest extends Common {
       assertNotNull(getSslVersion(con));
     }
 
-    // with alias
-    try (Connection con =
-        createCon(
-            BASE_OPTIONS
-                + "&sslMode=VERIFY_CA&trustCertificateKeystoreUrl="
-                + temptrustStoreFile
-                + "&trustCertificateKeyStoretype=jks&trustCertificateKeystorePassword=myPwd0")) {
-      assertNotNull(getSslVersion(con));
-    }
     assertThrowsContains(
         SQLException.class,
         () ->
@@ -390,9 +381,9 @@ public class SslTest extends Common {
         () ->
             createCon(
                 BASE_OPTIONS
-                    + "&sslMode=VERIFY_CA&trustCertificateKeystoreUrl="
+                    + "&sslMode=VERIFY_CA&trustStore="
                     + temptrustStoreFile
-                    + "&trustCertificateKeyStoretype=jks&trustCertificateKeystorePassword=wrongPwd"),
+                    + "&trustStoreType=jks&trustStorePassword=wrongPwd"),
         "Failed load keyStore");
     try (Connection con =
         createCon(

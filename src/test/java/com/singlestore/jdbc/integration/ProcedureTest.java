@@ -169,6 +169,8 @@ public class ProcedureTest extends Common {
           com.singlestore.jdbc.ParameterMetaData.parameterModeIn, meta.getParameterMode(4));
       assertEquals("t4", meta.getParameterName(4));
       assertEquals(Types.DOUBLE, meta.getParameterType(4));
+    } finally {
+      stmt.execute("DROP PROCEDURE parameter_meta");
     }
   }
 }

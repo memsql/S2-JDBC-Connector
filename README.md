@@ -4,10 +4,6 @@
 
 SingleStore JDBC Driver is a JDBC 4.2 compatible driver, used to connect applications developed in Java to SingleStore and MySQL databases. SingleStore JDBC Driver is LGPL licensed.
 
-## Status
-[![Linux Build](https://circleci.com/gh/memsql/S2-JDBC-Connector/tree/master.svg?branch=master)](https://circleci.com/gh/memsql/S2-JDBC-Connector)
-
-
 [![License (LGPL version 2.1)](https://img.shields.io/badge/license-GNU%20LGPL%20version%202.1-green.svg?style=flat-square)](http://opensource.org/licenses/LGPL-2.1)
 
 ## Obtaining the driver
