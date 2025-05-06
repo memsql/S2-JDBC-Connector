@@ -84,6 +84,7 @@ public final class Driver implements java.sql.Driver {
               lastException = e;
             }
           }
+          assert lastException != null;
           throw lastException;
         }
         break;
