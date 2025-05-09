@@ -1,0 +1,223 @@
+# ************************************************************************************
+#   Copyright (c) 2024 SingleStore, Inc.
+#
+#   This library is free software; you can redistribute it and/or
+#   modify it under the terms of the GNU Library General Public
+#   License as published by the Free Software Foundation; either
+#   version 2.1 of the License, or (at your option) any later version.
+#
+#   This library is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#   Library General Public License for more details.
+#
+#   You should have received a copy of the GNU Library General Public
+#   License along with this library; if not see <http://www.gnu.org/licenses>
+#   or write to the Free Software Foundation, Inc.,
+#   51 Franklin St., Fifth Floor, Boston, MA 02110, USA
+# *************************************************************************************/
+
+# Use the latest 2.1 version of CircleCI pipeline process engine. See: https://circleci.com/docs/2.0/configuration-reference
+version: 2.1
+commands:
+  setup_environment:
+    description: "Setup the machine environment"
+    parameters:
+      sbt_version:
+        type: string
+        default: 1.3.5
+      java_version:
+        type: string
+        default: '8'
+    steps:
+      - run:
+          name: Setup Machine
+          command: |
+            sudo apt-get update
+            sudo apt-get clean
+            sudo apt-get install -y sbt python3-pip git mariadb-client-core-10.6
+            sudo apt-get autoclean
+            # Install Java
+            sudo apt-get install -y openjdk-8-jdk
+            sudo apt-get install -y openjdk-11-jdk
+            sudo apt-get install -y openjdk-17-jdk
+            sudo apt-get install -y openjdk-21-jdk
+
+jobs:
+  test:
+    parameters:
+      singlestore_version:
+        type: string
+      singlestore_password:
+        type: string
+      machine_class:
+        type: string
+    working_directory: ~/singlestore-jdbc-client
+    machine:
+      image: ubuntu-2204:2024.01.1
+    resource_class: << parameters.machine_class >>
+    environment:
+      SINGLESTORE_VERSION: << parameters.singlestore_version >>
+      SINGLESTORE_PASSWORD: << parameters.singlestore_password >>
+      JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
+      RUN_LONG_TEST: true
+      TEST_ENVIRON: CIRCLE_CI
+    steps:
+      - setup_environment:
+          java_version: '8'
+      - checkout
+      - run:
+          name: Setup test cluster
+          command: ./scripts/ensure-test-singlestore-cluster-password.sh
+      - restore_cache: # restore the saved cache after the first run or if `pom.xml` has changed
+          # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
+          key: singlestore-jdbc-client-{{ checksum "pom.xml" }}
+      - run: mvn dependency:go-offline # gets the project dependencies
+      - save_cache: # saves the project dependencies
+          paths:
+            - ~/.m2
+          key: singlestore-jdbc-client-{{ checksum "pom.xml" }}
+      - run: mvn package -DjavadocExecutable=/usr/lib/jvm/java-8-openjdk-amd64/bin/javadoc
+      - store_test_results: # uploads the test metadata from the `target/surefire-reports` directory so that it can show up in the CircleCI dashboard.
+          # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
+          path: target/surefire-reports
+      - store_artifacts: # store the jar as an artifact
+          # Upload test summary for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
+          path: target/singlestore-jdbc-client-1.2.8.jar
+      - store_artifacts:
+          path: target/singlestore-jdbc-client-1.2.8-browser-sso-uber.jar
+      # See https://circleci.com/docs/2.0/deployment-integrations/ for deploy examples
+  test_jdk:
+    parameters:
+      java_version:
+        type: string
+      singlestore_version:
+        type: string
+      singlestore_password:
+        type: string
+      machine_class:
+        type: string
+    working_directory: ~/singlestore-jdbc-client
+    machine:
+      image: ubuntu-2204:2024.01.1
+    resource_class: << parameters.machine_class >>
+    environment:
+      SINGLESTORE_VERSION: << parameters.singlestore_version >>
+      SINGLESTORE_PASSWORD: << parameters.singlestore_password >>
+      TEST_ENVIRON: CIRCLE_CI
+      RUN_LONG_TEST: false
+      JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
+      JAVA_HOME_ROOT: /usr/lib/jvm
+      JAVA_VERSION: << parameters.java_version >>
+    steps:
+      - setup_environment:
+          java_version: << parameters.java_version >>
+      - checkout
+      - run:
+          name: Setup test cluster
+          command: ./scripts/ensure-test-singlestore-cluster-password.sh
+      - restore_cache: # restore the saved cache after the first run or if `pom.xml` has changed
+          # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
+          key: singlestore-jdbc-client-{{ checksum "pom.xml" }}
+      - run: mvn dependency:go-offline # gets the project dependencies
+      - save_cache: # saves the project dependencies
+          paths:
+            - ~/.m2
+          key: singlestore-jdbc-client-{{ checksum "pom.xml" }}
+      - run:
+          name: Compile
+          command: |
+            echo "Compile with JDK ${JAVA_HOME}"
+            if [ "${JAVA_VERSION}" = "8" ]; then
+              mvn clean test-compile -Pjava8
+            else
+              mvn clean test-compile
+            fi
+      - run:
+          name: Run JDK tests
+          command: |
+            echo "Run tests with JDK ${JAVA_VERSION}"
+            mvn --global-toolchains ci/toolchains.xml -Ptest-jdk surefire:test@jdk-${JAVA_VERSION}
+      - store_test_results: # uploads the test metadata from the `target/surefire-reports` directory so that it can show up in the CircleCI dashboard.
+          # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
+          path: target/surefire-reports
+  publish:
+    machine:
+      image: ubuntu-2204:2024.01.1
+    environment:
+      #      JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64
+      SONATYPE_USERNAME: memsql
+    steps:
+      - setup_environment:
+          java_version: '8'
+      - checkout
+      - run:
+          name: Import GPG key
+          command: |
+            openssl enc -d -aes-256-cbc -K ${ENCRYPTION_KEY} -iv ${ENCRYPTION_IV} -in ci/secring.asc.enc -out ci/secring.asc
+            gpg --import ci/secring.asc
+      - run:
+          name: Maven Settings
+          command: |
+            mkdir -p ~/.m2
+            cp ci/settings.xml ~/.m2/settings.xml
+      - run:
+          name: Publish
+          command: |
+            mvn clean deploy -DskipTests -DjavadocExecutable=/usr/lib/jvm/java-8-openjdk-amd64/bin/javadoc
+workflows:
+  test:
+    jobs:
+      - test:
+          filters:
+            tags:
+              only: /^v.*/
+          matrix:
+            parameters:
+              machine_class:
+                - large
+              singlestore_password:
+                - password
+              singlestore_version:
+                - '8.1.52-21a41f6e49'
+                - '8.5.30-4f46ab16a5'
+                - '8.7.21-f0b8de04d5'
+                - '8.9.3-bfa36a984a'
+  publish:
+    jobs:
+      - test_jdk:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+          matrix:
+            parameters:
+              machine_class:
+                - large
+              singlestore_password:
+                - password
+              singlestore_version:
+                - ''
+              java_version:
+                - '8'
+                - '11'
+                - '17'
+                - '21'
+      - approve-publish:
+          requires:
+            - test_jdk
+          type: approval
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+      - publish:
+          requires:
+            - approve-publish
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
