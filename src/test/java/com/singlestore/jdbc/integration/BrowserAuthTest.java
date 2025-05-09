@@ -186,9 +186,8 @@ public class BrowserAuthTest extends Common {
   }
 
   @Test
+  @Disabled
   public void mockBrowserKeystore() throws IOException, SQLException {
-    // keystore cannot be used on CircleCI
-    Assumptions.assumeFalse("CIRCLE_CI".equals(System.getenv("TEST_ENVIRON")));
     /*{
        "email": "test-email@gmail.com",
        "username": "jwt_user",

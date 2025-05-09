@@ -22,10 +22,10 @@ name: Test
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
     branches:
-      - main
+      - master
 
 jobs:
   fetch-s2-versions:
@@ -52,6 +52,22 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Remove unnecessary pre-installed toolchains for free disk spaces
+        run: |
+          echo "=== BEFORE ==="
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /opt/hostedtoolcache/Ruby
+          sudo rm -rf /opt/hostedtoolcache/Go
+          docker system prune -af || true
+          sudo apt-get clean
+          echo "=== AFTER ==="
+          df -h
       - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
@@ -66,21 +82,8 @@ jobs:
           ROOT_PASSWORD: ${{ secrets.SINGLESTORE_PASSWORD }}
           SINGLESTORE_VERSION: ${{ matrix.singlestore_version }}
 
-      - name: Build and Test
-        run: mvn package
+      - name: Run tests with Maven
+        run: mvn -B test
 
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-results
-          path: target/surefire-reports
-
-      - name: Upload Artifacts
-        if: success()
-        uses: actions/upload-artifact@v3
-        with:
-          name: singlestore-jdbc-client
-          path: |
-            target/singlestore-jdbc-client-1.2.7.jar
-            target/singlestore-jdbc-client-1.2.7-browser-sso-uber.jar
+      - name: Update dependency graph
+        uses: advanced-security/maven-dependency-submission-action@v4.0.0
