@@ -5,6 +5,7 @@
 
 package com.singlestore.jdbc.plugin.authentication.addon.gssapi;
 
+import com.singlestore.jdbc.client.Context;
 import com.singlestore.jdbc.client.ReadableByteBuf;
 import com.singlestore.jdbc.client.socket.Reader;
 import com.singlestore.jdbc.client.socket.Writer;
@@ -39,6 +40,7 @@ public class StandardGssapiAuthentication implements GssapiAuth {
    * @throws SQLException in any Exception occur
    */
   public void authenticate(
+      final Context ctx,
       final Writer out,
       final Reader in,
       final String servicePrincipalName,
@@ -56,7 +58,9 @@ public class StandardGssapiAuthentication implements GssapiAuth {
     String jaasEntryName =
         "".equals(jaasApplicationName) ? "Krb5ConnectorContext" : jaasApplicationName;
 
-    if (System.getProperty("java.security.auth.login.config") == null) {
+    final boolean useDefaultJaasLoginConfig =
+        System.getProperty("java.security.auth.login.config") == null;
+    if (useDefaultJaasLoginConfig) {
       logger.debug("Using temp jaas.conf as java.security.auth.login.config");
       final File jaasConfFile;
       try {
@@ -82,7 +86,11 @@ public class StandardGssapiAuthentication implements GssapiAuth {
           System.getProperty("java.security.auth.login.config"));
     }
     try {
-      LoginContext loginContext = initializeLoginContextAndGet(jaasEntryName);
+      final boolean reuseLoginContext =
+          ctx.getConf().cacheJaasLoginContext() == null
+              ? useDefaultJaasLoginConfig
+              : ctx.getConf().cacheJaasLoginContext();
+      LoginContext loginContext = initializeLoginContextAndGet(jaasEntryName, reuseLoginContext);
       // attempt authentication
       loginContext.login();
       final Subject mySubject = loginContext.getSubject();
@@ -138,18 +146,23 @@ public class StandardGssapiAuthentication implements GssapiAuth {
     }
   }
 
-  private LoginContext initializeLoginContextAndGet(String jaasEntryName) throws LoginException {
-    final LoginContext loginContext = LOGIN_CONTEXT.get(jaasEntryName);
-    if (loginContext != null) {
-      return loginContext;
-    } else {
-      logger.debug("Create LoginContext for {}", jaasEntryName);
-      LoginContext newLoginContext = new LoginContext(jaasEntryName);
-      final LoginContext previous = LOGIN_CONTEXT.putIfAbsent(jaasEntryName, newLoginContext);
-      if (previous != null) {
-        return previous;
+  private LoginContext initializeLoginContextAndGet(String jaasEntryName, boolean reuseLoginContext)
+      throws LoginException {
+    if (reuseLoginContext) {
+      final LoginContext loginContext = LOGIN_CONTEXT.get(jaasEntryName);
+      if (loginContext != null) {
+        return loginContext;
+      } else {
+        logger.debug("Create LoginContext for {}", jaasEntryName);
+        LoginContext newLoginContext = new LoginContext(jaasEntryName);
+        final LoginContext previous = LOGIN_CONTEXT.putIfAbsent(jaasEntryName, newLoginContext);
+        if (previous != null) {
+          return previous;
+        }
+        return newLoginContext;
       }
-      return newLoginContext;
+    } else {
+      return new LoginContext(jaasEntryName);
     }
   }
 }

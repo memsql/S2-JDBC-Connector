@@ -5,6 +5,7 @@
 
 package com.singlestore.jdbc.plugin.authentication.addon.gssapi;
 
+import com.singlestore.jdbc.client.Context;
 import com.singlestore.jdbc.client.ReadableByteBuf;
 import com.singlestore.jdbc.client.socket.Reader;
 import com.singlestore.jdbc.client.socket.Writer;
@@ -27,6 +28,7 @@ public class WindowsNativeSspiAuthentication implements GssapiAuth {
    * @throws IOException if socket error
    */
   public void authenticate(
+      final Context ctx,
       final Writer out,
       final Reader in,
       final String servicePrincipalName,
