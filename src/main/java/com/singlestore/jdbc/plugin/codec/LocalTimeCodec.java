@@ -40,7 +40,8 @@ public class LocalTimeCodec implements Codec<LocalTime> {
           DataType.MEDIUMBLOB,
           DataType.LONGBLOB);
 
-  public static int[] parseTime(ReadableByteBuf buf, MutableInt length, ColumnDecoder column)
+  public static int[] parseTime(
+      ReadableByteBuf buf, MutableInt length, ColumnDecoder column, boolean validateHours)
       throws SQLDataException {
     int initialPos = buf.pos();
     int[] parts = new int[5];
@@ -77,6 +78,15 @@ public class LocalTimeCodec implements Codec<LocalTime> {
       String val = buf.readString(length.get());
       throw new SQLDataException(
           String.format("%s value '%s' cannot be decoded as Time", column.getType(), val));
+    }
+
+    if (validateHours && (parts[1] < 0 || parts[1] >= 24)) {
+      buf.pos(initialPos);
+      String val = buf.readString(length.get());
+      throw new SQLDataException(
+          String.format(
+              "The value '%s' is an invalid TIME value. JDBC Time objects represent a wall-clock time and not a duration as SingleStore treats them. If you are treating this type as a duration, consider retrieving this value as a string and dealing with it according to your requirements.",
+              val));
     }
 
     // set nano real value
@@ -120,7 +130,7 @@ public class LocalTimeCodec implements Codec<LocalTime> {
         return LocalTime.of(parts[3], parts[4], parts[5], parts[6]);
 
       case TIME:
-        parts = parseTime(buf, length, column);
+        parts = parseTime(buf, length, column, true);
         parts[1] = parts[1] % 24;
         if (parts[0] == -1) {
           // negative

@@ -158,7 +158,7 @@ public class LocalDateTimeCodec implements Codec<LocalDateTime> {
             .plusNanos(parts[6]);
 
       case TIME:
-        parts = LocalTimeCodec.parseTime(buf, length, column);
+        parts = LocalTimeCodec.parseTime(buf, length, column, true);
         if (parts[0] == -1) {
           return LocalDateTime.of(1970, 1, 1, 0, 0)
               .minusHours(parts[1] % 24)
