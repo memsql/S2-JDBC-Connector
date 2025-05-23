@@ -5,6 +5,7 @@
 
 package com.singlestore.jdbc.plugin.authentication.addon.gssapi;
 
+import com.singlestore.jdbc.client.Context;
 import com.singlestore.jdbc.client.socket.Reader;
 import com.singlestore.jdbc.client.socket.Writer;
 import java.io.IOException;
@@ -24,6 +25,7 @@ public interface GssapiAuth {
    * @throws SQLException for any other type of errors
    */
   void authenticate(
+      Context ctx,
       Writer writer,
       Reader in,
       String servicePrincipalName,

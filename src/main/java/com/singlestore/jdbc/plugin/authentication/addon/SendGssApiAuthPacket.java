@@ -72,7 +72,8 @@ public class SendGssApiAuthPacket implements AuthenticationPlugin {
       mechanisms = "Kerberos";
     }
 
-    gssapiAuth.authenticate(out, in, servicePrincipalName, jaasApplicationName, mechanisms);
+    gssapiAuth.authenticate(
+        context, out, in, servicePrincipalName, jaasApplicationName, mechanisms);
 
     return in.readReusablePacket();
   }

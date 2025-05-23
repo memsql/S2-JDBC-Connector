@@ -150,6 +150,7 @@ public class Configuration {
   private String connectionAttributes;
   private String servicePrincipalName;
   private String jaasApplicationName;
+  private Boolean cacheJaasLoginContext;
 
   // meta
   private boolean blankTableNameMeta;
@@ -397,6 +398,7 @@ public class Configuration {
   private void initializeAdditionalConfig(Builder builder) {
     this.servicePrincipalName = builder.servicePrincipalName;
     this.jaasApplicationName = builder.jaasApplicationName;
+    this.cacheJaasLoginContext = builder.cacheJaasLoginContext;
     this.defaultFetchSize = builder.defaultFetchSize != null ? builder.defaultFetchSize : 0;
     this.tlsSocketType = builder.tlsSocketType;
     this.maxAllowedPacket = builder.maxAllowedPacket;
@@ -499,6 +501,7 @@ public class Configuration {
             .connectionAttributes(this.connectionAttributes)
             .servicePrincipalName(this.servicePrincipalName)
             .jaasApplicationName(this.jaasApplicationName)
+            .cacheJaasLoginContext(this.cacheJaasLoginContext)
             .blankTableNameMeta(this.blankTableNameMeta)
             .tinyInt1isBit(this.tinyInt1isBit)
             .transformedBitIsBoolean(this.transformedBitIsBoolean)
@@ -1489,6 +1492,16 @@ public class Configuration {
     return jaasApplicationName;
   }
 
+  /**
+   * When using GSSAPI authentication, explicitly enable or disable caching for the JAAS Login
+   * Context.
+   *
+   * @return cacheJaasLoginContext forced value
+   */
+  public Boolean cacheJaasLoginContext() {
+    return cacheJaasLoginContext;
+  }
+
   public int defaultFetchSize() {
     return defaultFetchSize;
   }
@@ -1912,6 +1925,7 @@ public class Configuration {
     private String connectionAttributes;
     private String servicePrincipalName;
     private String jaasApplicationName;
+    private Boolean cacheJaasLoginContext;
 
     // meta
     private Boolean blankTableNameMeta;
@@ -2391,6 +2405,11 @@ public class Configuration {
 
     public Builder jaasApplicationName(String jaasApplicationName) {
       this.jaasApplicationName = nullOrEmpty(jaasApplicationName);
+      return this;
+    }
+
+    public Builder cacheJaasLoginContext(Boolean cacheJaasLoginContext) {
+      this.cacheJaasLoginContext = cacheJaasLoginContext;
       return this;
     }
 
