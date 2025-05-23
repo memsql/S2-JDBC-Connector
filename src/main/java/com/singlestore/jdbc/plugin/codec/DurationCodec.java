@@ -86,7 +86,7 @@ public class DurationCodec implements Codec<Duration> {
       case TIME:
       case VARCHAR:
       case CHAR:
-        parts = LocalTimeCodec.parseTime(buf, length, column);
+        parts = LocalTimeCodec.parseTime(buf, length, column, false);
         Duration d =
             Duration.ZERO
                 .plusHours(parts[1])
@@ -166,7 +166,7 @@ public class DurationCodec implements Codec<Duration> {
 
       case VARCHAR:
       case CHAR:
-        int[] parts = LocalTimeCodec.parseTime(buf, length, column);
+        int[] parts = LocalTimeCodec.parseTime(buf, length, column, false);
         Duration d =
             Duration.ZERO
                 .plusHours(parts[1])

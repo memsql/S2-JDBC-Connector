@@ -286,7 +286,7 @@ public class TimeColumn extends ColumnDefinitionPacket implements ColumnDecoder 
       throws SQLDataException {
     Calendar c = cal == null ? Calendar.getInstance() : cal;
     int offset = c.getTimeZone().getOffset(0);
-    int[] parts = LocalTimeCodec.parseTime(buf, length, this);
+    int[] parts = LocalTimeCodec.parseTime(buf, length, this, true);
     long timeInMillis =
         (parts[1] * 3_600_000L + parts[2] * 60_000L + parts[3] * 1_000L + parts[4] / 1_000_000)
                 * parts[0]
@@ -333,7 +333,7 @@ public class TimeColumn extends ColumnDefinitionPacket implements ColumnDecoder 
   @Override
   public Timestamp decodeTimestampText(ReadableByteBuf buf, MutableInt length, Calendar calParam)
       throws SQLDataException {
-    int[] parts = LocalTimeCodec.parseTime(buf, length, this);
+    int[] parts = LocalTimeCodec.parseTime(buf, length, this, true);
     Timestamp t;
 
     // specific case for TIME, to handle value not in 00:00:00-23:59:59

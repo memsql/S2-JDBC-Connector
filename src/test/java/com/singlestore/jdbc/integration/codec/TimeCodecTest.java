@@ -26,6 +26,7 @@ public class TimeCodecTest extends CommonCodecTest {
     Statement stmt = sharedConn.createStatement();
     stmt.execute("DROP TABLE IF EXISTS TimeCodec");
     stmt.execute("DROP TABLE IF EXISTS TimeCodec2");
+    stmt.execute("DROP TABLE IF EXISTS TimeCodecOverflow");
   }
 
   @BeforeAll
@@ -38,23 +39,30 @@ public class TimeCodecTest extends CommonCodecTest {
             + " TABLE TimeCodec2 (id int not null primary key auto_increment, t1 TIME(0))");
     stmt.execute(
         "INSERT INTO TimeCodec VALUES ('01:55:12', '01:55:13.234567', '-18:30:12.55', null, 1), "
-            + "('-838:59:58.999', '838:59:58.999999', '00:00:00', '00:00:00', 2)");
+            + "('01:01:01.111', '23:59:59.999999', '00:00:00', '00:00:00', 2)");
+    stmt.execute(
+        "CREATE TABLE TimeCodecOverflow (id int not null primary key auto_increment, t1 TIME, t2 TIME)");
+    stmt.execute("INSERT INTO TimeCodecOverflow VALUES (1, '-838:59:59', '838:59:59')");
   }
 
   private ResultSet get() throws SQLException {
     Statement stmt = sharedConn.createStatement();
-    stmt.execute("START TRANSACTION"); // if MAXSCALE ensure using WRITER
     ResultSet rs =
         stmt.executeQuery(
             "select t1 as t1alias, t2 as t2alias, t3 as t3alias, t4 as t4alias from TimeCodec ORDER BY id");
     assertTrue(rs.next());
-    sharedConn.commit();
+    return rs;
+  }
+
+  private ResultSet getOverflow() throws SQLException {
+    Statement stmt = sharedConn.createStatement();
+    ResultSet rs =
+        stmt.executeQuery("select t1 as t1alias, t2 as t2alias from TimeCodecOverflow ORDER BY id");
+    assertTrue(rs.next());
     return rs;
   }
 
   private ResultSet getPrepare(Connection con) throws SQLException {
-    java.sql.Statement stmt = con.createStatement();
-    stmt.execute("START TRANSACTION"); // if MAXSCALE ensure using WRITER
     PreparedStatement preparedStatement =
         con.prepareStatement(
             "select t1 as t1alias, t2 as t2alias, t3 as t3alias, t4 as t4alias from TimeCodec"
@@ -63,7 +71,6 @@ public class TimeCodecTest extends CommonCodecTest {
     preparedStatement.setInt(1, 0);
     ResultSet rs = preparedStatement.executeQuery();
     assertTrue(rs.next());
-    con.commit();
     return rs;
   }
 
@@ -161,10 +168,10 @@ public class TimeCodecTest extends CommonCodecTest {
     assertNull(rs.getNString(4));
     assertTrue(rs.wasNull());
     rs.next();
-    assertTrue("-838:59:58".equals(rs.getString(1)) || "-838:59:58.999000".equals(rs.getString(1)));
+    assertTrue("01:01:01".equals(rs.getString(1)) || "01:01:01.111000".equals(rs.getString(1)));
     assertFalse(rs.wasNull());
-    assertEquals("838:59:58.999999", rs.getString(2));
-    assertEquals("838:59:58.999999", rs.getString("t2alias"));
+    assertEquals("23:59:59.999999", rs.getString(2));
+    assertEquals("23:59:59.999999", rs.getString("t2alias"));
     assertFalse(rs.wasNull());
     assertEquals("00:00:00.000000", rs.getString(3));
     assertEquals("00:00:00", rs.getString(4));
@@ -370,20 +377,41 @@ public class TimeCodecTest extends CommonCodecTest {
 
     assertTrue(rs.next());
     assertEquals(
-        -3020398000L, rs.getTime(1, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).getTime());
+        3661000, rs.getTime(1, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).getTime());
     assertFalse(rs.wasNull());
-    // Time.valueOf parses -838:59:58 as (starting_point - 838 hours + 59 minutes + 58 seconds),
-    // so pass -839:00:02 to get the correct value instead
-    Time t = Time.valueOf("-839:00:02");
-    assertEquals(Time.valueOf("-839:00:02").getTime(), rs.getTime(1).getTime());
+    assertEquals(Time.valueOf("01:01:01").getTime(), rs.getTime(1).getTime());
     assertFalse(rs.wasNull());
     assertEquals(
-        3020398999L, rs.getTime(2, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).getTime());
+        86399999, rs.getTime(2, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).getTime());
     assertFalse(rs.wasNull());
-    assertEquals(Time.valueOf("838:59:58").getTime() + 999, rs.getTime(2).getTime());
+    assertEquals(Time.valueOf("23:59:59").getTime() + 999, rs.getTime(2).getTime());
     assertFalse(rs.wasNull());
     assertEquals(Time.valueOf("0:00:00").getTime(), rs.getTime(3).getTime());
     assertFalse(rs.wasNull());
+  }
+
+  @Test
+  public void getTimeOverflow() throws SQLException {
+    ResultSet rs = getOverflow();
+    assertEquals("-838:59:59", rs.getString(1));
+    assertEquals(Duration.parse("PT-838H-59M-59S"), rs.getObject(1, Duration.class));
+    assertEquals(Duration.parse("PT838H59M59S"), rs.getObject(2, Duration.class));
+    assertThrowsContains(
+        SQLException.class,
+        () -> rs.getTimestamp(1),
+        "The value '-838:59:59' is an invalid TIME value. JDBC Time objects represent a wall-clock time and not a duration as SingleStore treats them. If you are treating this type as a duration, consider retrieving this value as a string and dealing with it according to your requirements.");
+    assertThrowsContains(
+        SQLException.class,
+        () -> rs.getTime(2),
+        "The value '838:59:59' is an invalid TIME value. JDBC Time objects represent a wall-clock time and not a duration as SingleStore treats them. If you are treating this type as a duration, consider retrieving this value as a string and dealing with it according to your requirements.");
+    assertThrowsContains(
+        SQLException.class,
+        () -> rs.getObject(2, LocalTime.class),
+        "The value '838:59:59' is an invalid TIME value. JDBC Time objects represent a wall-clock time and not a duration as SingleStore treats them. If you are treating this type as a duration, consider retrieving this value as a string and dealing with it according to your requirements.");
+    assertThrowsContains(
+        SQLException.class,
+        () -> rs.getObject(2, LocalDateTime.class),
+        "The value '838:59:59' is an invalid TIME value. JDBC Time objects represent a wall-clock time and not a duration as SingleStore treats them. If you are treating this type as a duration, consider retrieving this value as a string and dealing with it according to your requirements.");
   }
 
   @Test
@@ -409,10 +437,10 @@ public class TimeCodecTest extends CommonCodecTest {
     assertTrue(rs.wasNull());
 
     rs.next();
-    assertEquals(Duration.parse("PT-838H-59M-58S"), rs.getObject(1, Duration.class));
+    assertEquals(Duration.parse("PT1H1M1S"), rs.getObject(1, Duration.class));
     assertFalse(rs.wasNull());
-    assertEquals(Duration.parse("PT838H59M58.999999S"), rs.getObject(2, Duration.class));
-    assertEquals(Duration.parse("PT838H59M58.999999S"), rs.getObject("t2alias", Duration.class));
+    assertEquals(Duration.parse("PT23H59M59.999999S"), rs.getObject(2, Duration.class));
+    assertEquals(Duration.parse("PT23H59M59.999999S"), rs.getObject("t2alias", Duration.class));
     assertFalse(rs.wasNull());
     assertEquals(Duration.parse("PT0S"), rs.getObject(3, Duration.class));
     assertEquals(Duration.parse("PT0S"), rs.getObject(4, Duration.class));
@@ -443,10 +471,10 @@ public class TimeCodecTest extends CommonCodecTest {
     assertTrue(rs.wasNull());
 
     rs.next();
-    assertEquals(Duration.parse("PT-838H-59M-58S"), rs.getObject(1, Duration.class));
+    assertEquals(Duration.parse("PT1H1M1S"), rs.getObject(1, Duration.class));
     assertFalse(rs.wasNull());
-    assertEquals(Duration.parse("PT838H59M58.999999S"), rs.getObject(2, Duration.class));
-    assertEquals(Duration.parse("PT838H59M58.999999S"), rs.getObject("t2alias", Duration.class));
+    assertEquals(Duration.parse("PT23H59M59.999999S"), rs.getObject(2, Duration.class));
+    assertEquals(Duration.parse("PT23H59M59.999999S"), rs.getObject("t2alias", Duration.class));
     assertFalse(rs.wasNull());
     assertEquals(Duration.parse("PT0S"), rs.getObject(3, Duration.class));
     assertEquals(Duration.parse("PT0S"), rs.getObject(4, Duration.class));
@@ -485,18 +513,16 @@ public class TimeCodecTest extends CommonCodecTest {
     assertTrue(rs.wasNull());
 
     assertTrue(rs.next());
-    assertEquals(Timestamp.valueOf("1969-11-27 01:00:02").getTime(), rs.getTimestamp(1).getTime());
+    assertEquals(Timestamp.valueOf("1970-01-01 01:01:01").getTime(), rs.getTimestamp(1).getTime());
     assertEquals(
-        -3020398000L,
-        rs.getTimestamp(1, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).getTime());
+        3661000, rs.getTimestamp(1, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).getTime());
     assertFalse(rs.wasNull());
     assertEquals(
-        3020398999L,
-        rs.getTimestamp(2, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).getTime());
+        86399999, rs.getTimestamp(2, Calendar.getInstance(TimeZone.getTimeZone("UTC"))).getTime());
 
     assertFalse(rs.wasNull());
     assertEquals(
-        Timestamp.valueOf("1970-02-04 22:59:58.999").getTime(), rs.getTimestamp(2).getTime());
+        Timestamp.valueOf("1970-01-01 23:59:59.999999").getTime(), rs.getTimestamp(2).getTime());
 
     assertFalse(rs.wasNull());
     assertEquals(Timestamp.valueOf("1970-01-01 00:00:00").getTime(), rs.getTime(3).getTime());
