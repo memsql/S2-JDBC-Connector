@@ -1,5 +1,21 @@
 # SingleStore Change Log
 
+## [1.2.9](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.9)
+* [PLAT-7700] Simplified LOAD DATA LOCAL INFILE statement parsing
+* [PLAT-7493] Throw an exception on overflow time value
+* [PLAT-7511] Introduce a new JDBC connection string parameter to enable jaas Login Context caching
+* [mics] Update dependencies to fix Vulnerability alerts
+
+
+## [1.2.8](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.8)
+* [PLAT-7326] Update publish workflow to run only jdk test. Fix all java doc warnings
+* [PLAT-7329] DatabaseMetaData.getTypeInfo add missed types
+* [PLAT-7353] Fix java.util.ServiceLoader race condition in JDBC (#36)
+* [PLAT-7407] Fix console logger configuration (#38)
+* [PLAT-7414] Rollback additional aliases for truststore parameters (#39)
+* [PLAT-7398] Add a unit tests for JDBC mutual TLS (#37)
+* [PLAT-7464] Migrate JDBC from circleCI to GitHub actions (#44)
+
 ## [1.2.7](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.7)
 
 * [PLAT-7290] Fix the executeBatch return value when rewriteBatchedStatements are enabled
