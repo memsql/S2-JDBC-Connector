@@ -296,6 +296,23 @@ public class ConfigurationTest extends Common {
   }
 
   @Test
+  public void testProxyOptionsParse() throws Throwable {
+    Configuration conf =
+        Configuration.parse(
+            "jdbc:singlestore://localhost/test?socksProxyHost=127.0.0.1&socksProxyPort=1081");
+    assertEquals("127.0.0.1", conf.socksProxyHost());
+    assertEquals(1081, conf.socksProxyPort());
+  }
+
+  @Test
+  public void testProxyOptionsValidation() {
+    assertThrowsContains(
+        SQLException.class,
+        () -> Configuration.parse("jdbc:singlestore://localhost/test?socksProxyPort=1081"),
+        "socksProxyPort requires socksProxyHost to be set.");
+  }
+
+  @Test
   public void wrongTypeParsing() {
     assertThrowsContains(
         SQLException.class,

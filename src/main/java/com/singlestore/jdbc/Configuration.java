@@ -115,6 +115,8 @@ public class Configuration {
   private boolean tcpAbortiveClose;
   private String localSocketAddress;
   private int socketTimeout;
+  private String socksProxyHost;
+  private int socksProxyPort;
   private boolean useReadAheadInput;
   private String tlsSocketType;
 
@@ -290,6 +292,8 @@ public class Configuration {
     this.tcpAbortiveClose = builder.tcpAbortiveClose != null && builder.tcpAbortiveClose;
     this.localSocketAddress = builder.localSocketAddress;
     this.socketTimeout = builder.socketTimeout != null ? builder.socketTimeout : 0;
+    this.socksProxyHost = builder.socksProxyHost;
+    this.socksProxyPort = builder.socksProxyPort != null ? builder.socksProxyPort : 1080;
     this.useReadAheadInput = builder.useReadAheadInput != null && builder.useReadAheadInput;
     this.tlsSocketType = builder.tlsSocketType;
     this.useCompression = builder.useCompression != null && builder.useCompression;
@@ -416,6 +420,13 @@ public class Configuration {
   private void validateConfiguration() {
     // Validate integer fields
     validateIntegerFields();
+    validateProxyConfiguration();
+  }
+
+  private void validateProxyConfiguration() {
+    if (socksProxyHost == null && socksProxyPort != 1080) {
+      throw new IllegalArgumentException("socksProxyPort requires socksProxyHost to be set.");
+    }
   }
 
   private void validateIntegerFields() {
@@ -474,6 +485,8 @@ public class Configuration {
             .tcpAbortiveClose(this.tcpAbortiveClose)
             .localSocketAddress(this.localSocketAddress)
             .socketTimeout(this.socketTimeout)
+            .socksProxyHost(this.socksProxyHost)
+            .socksProxyPort(this.socksProxyPort)
             .useReadAheadInput(this.useReadAheadInput)
             .tlsSocketType(this.tlsSocketType)
             .sslMode(this.sslMode.name())
@@ -1302,6 +1315,24 @@ public class Configuration {
   }
 
   /**
+   * SOCKS proxy host.
+   *
+   * @return SOCKS proxy host or null when disabled
+   */
+  public String socksProxyHost() {
+    return socksProxyHost;
+  }
+
+  /**
+   * SOCKS proxy port.
+   *
+   * @return SOCKS proxy port
+   */
+  public int socksProxyPort() {
+    return socksProxyPort;
+  }
+
+  /**
    * permit using multi queries command
    *
    * @return permit using multi queries command
@@ -1891,6 +1922,8 @@ public class Configuration {
     private Boolean tcpAbortiveClose;
     private String localSocketAddress;
     private Integer socketTimeout;
+    private String socksProxyHost;
+    private Integer socksProxyPort;
     private Boolean useReadAheadInput;
     private String tlsSocketType;
 
@@ -2205,6 +2238,28 @@ public class Configuration {
      */
     public Builder socketTimeout(Integer socketTimeout) {
       this.socketTimeout = socketTimeout;
+      return this;
+    }
+
+    /**
+     * SOCKS proxy host to connect through.
+     *
+     * @param socksProxyHost SOCKS proxy host
+     * @return this {@link Builder}
+     */
+    public Builder socksProxyHost(String socksProxyHost) {
+      this.socksProxyHost = nullOrEmpty(socksProxyHost);
+      return this;
+    }
+
+    /**
+     * SOCKS proxy port to connect through. Default: 1080
+     *
+     * @param socksProxyPort SOCKS proxy port
+     * @return this {@link Builder}
+     */
+    public Builder socksProxyPort(Integer socksProxyPort) {
+      this.socksProxyPort = socksProxyPort;
       return this;
     }
 

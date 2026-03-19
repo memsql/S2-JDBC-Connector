@@ -7,6 +7,7 @@ package com.singlestore.jdbc.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -14,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.singlestore.jdbc.Configuration;
 import com.singlestore.jdbc.HostAddress;
+import com.singlestore.jdbc.integration.tools.ProxyTunnelServer;
 import com.singlestore.jdbc.integration.util.SocketFactoryTest;
 import com.singlestore.jdbc.util.constants.Capabilities;
 import java.net.InetAddress;
@@ -894,6 +896,35 @@ public class ConnectionTest extends Common {
             createCon("socketFactory=com.singlestore.jdbc.integration.util.WrongSocketFactoryTest"),
         "Socket factory failed to initialized with option \"socketFactory\" set to \"com.singlestore.jdbc.integration.util.WrongSocketFactoryTest\"");
     assertEquals(0, staticTestValue);
+  }
+
+  @Test
+  public void socksProxyTest() throws Exception {
+    try (ProxyTunnelServer proxy = ProxyTunnelServer.startSocks5();
+        Connection conn =
+            createCon(
+                "socksProxyHost=127.0.0.1&socksProxyPort="
+                    + proxy.getPort()
+                    + "&connectTimeout=5000")) {
+      ResultSet rs = conn.createStatement().executeQuery("SELECT 1");
+      assertTrue(rs.next());
+      assertEquals(1, rs.getInt(1));
+    }
+  }
+
+  @Test
+  public void socksProxySslTest() throws Exception {
+    try (ProxyTunnelServer proxy = ProxyTunnelServer.startSocks5();
+        Connection conn =
+            createCon(
+                "socksProxyHost=127.0.0.1&socksProxyPort="
+                    + proxy.getPort()
+                    + "&sslMode=trust&connectTimeout=5000")) {
+      ResultSet rs = conn.createStatement().executeQuery("SHOW STATUS LIKE 'Ssl_version'");
+      assertTrue(rs.next());
+      assertNotNull(rs.getString(2));
+      assertFalse(rs.getString(2).isEmpty());
+    }
   }
 
   @Test

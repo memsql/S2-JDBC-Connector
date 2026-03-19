@@ -26,6 +26,7 @@ import com.singlestore.jdbc.util.constants.Capabilities;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.security.KeyManagementException;
@@ -103,6 +104,14 @@ public final class ConnectionHelper {
                 + "\"",
             exp);
       }
+    }
+    // Proxy connections bypass the default SocketFactory (but not a custom socketFactory above).
+    // createUnresolved is used so that DNS resolution happens on the proxy side.
+    if (conf.socksProxyHost() != null) {
+      return new Socket(
+          new Proxy(
+              Proxy.Type.SOCKS,
+              InetSocketAddress.createUnresolved(conf.socksProxyHost(), conf.socksProxyPort())));
     }
     socketFactory = SocketFactory.getDefault();
     return socketFactory.createSocket();
