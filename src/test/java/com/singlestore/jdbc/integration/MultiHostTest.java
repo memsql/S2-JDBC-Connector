@@ -15,9 +15,16 @@ import com.singlestore.jdbc.export.SslMode;
 import com.singlestore.jdbc.integration.tools.TcpProxy;
 import java.io.IOException;
 import java.sql.*;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 public class MultiHostTest extends Common {
+
+  @BeforeAll
+  public static void beforeAll() throws Exception {
+    Common.beforeAll();
+    createSequenceTables();
+  }
 
   @Test
   public void closedConnectionMulti() throws Exception {
