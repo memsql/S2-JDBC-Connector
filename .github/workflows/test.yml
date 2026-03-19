@@ -26,6 +26,9 @@ on:
   pull_request:
     branches:
       - master
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
 
 jobs:
   fetch-s2-versions:
@@ -36,16 +39,17 @@ jobs:
       - name: Get supported versions of SingleStore
         id: get_versions
         uses: singlestore-labs/singlestore-supported-versions@main
+        with:
+          include_rc: true
 
   test:
     needs: fetch-s2-versions
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
-        singlestore_version: ${{
-          fromJson(needs.fetch-s2-versions.outputs.versions)
-          }}
+        singlestore_version: ${{ fromJson(needs.fetch-s2-versions.outputs.versions) }}
     permissions:
       checks: write
       contents: write
