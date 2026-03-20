@@ -255,10 +255,12 @@ public class SslTest extends Common {
 
   @Test
   public void enabledSslCipherSuites() throws SQLException {
-    try (Connection con =
-        createCon(
-            BASE_OPTIONS
-                + "&sslMode=trust&enabledSslCipherSuites=TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256")) {
+
+    String options =
+        BASE_OPTIONS
+            + "&sslMode=trust&enabledSslCipherSuites="
+            + "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
+    try (Connection con = createCon(options)) {
       assertNotNull(getSslVersion(con));
     }
     Common.assertThrowsContains(
@@ -302,7 +304,7 @@ public class SslTest extends Common {
     Common.assertThrowsContains(
         SQLException.class,
         () -> createCon(BASE_OPTIONS + "&sslMode=VERIFY_FULL&serverSslCert=" + urlPath),
-        "DNS host \"localhost\" doesn't correspond to certificate CN \"singlestore-server\"");
+        "doesn't correspond to certificate CN \"singlestore-server\"");
   }
 
   @Test

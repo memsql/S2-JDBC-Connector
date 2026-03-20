@@ -24,7 +24,7 @@ set -eu
 cd "$(git rev-parse --show-toplevel)"
 
 
-DEFAULT_SINGLESTORE_VERSION=""
+DEFAULT_SINGLESTORE_VERSION="9.0"
 VERSION="${SINGLESTORE_VERSION:-$DEFAULT_SINGLESTORE_VERSION}"
 IMAGE_NAME="ghcr.io/singlestore-labs/singlestoredb-dev:latest"
 CONTAINER_NAME="singlestore-integration"
@@ -110,7 +110,7 @@ echo "Setting up SSL"
 docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_ca --value /test-ssl/ca-cert.pem
 docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_cert --value /test-ssl/server-cert.pem
 docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_key --value /test-ssl/server-key.pem
-if dpkg --compare-versions "$VERSION" ge "9.0"; then
+if [ "$(printf '%s\n' "9.0" "$VERSION" | sort -V | head -n1)" = "9.0" ]; then
   docker exec ${CONTAINER_NAME} memsqlctl update-config --yes --all --key ssl_ca_for_client_cert --value /test-ssl/ca-cert.pem
 fi
 echo "Setting up JWT"
