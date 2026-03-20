@@ -22,7 +22,6 @@ public class MultiHostTest extends Common {
 
   @BeforeAll
   public static void beforeAll() throws Exception {
-    Common.beforeAll();
     createSequenceTables();
   }
 
