@@ -255,15 +255,11 @@ public class SslTest extends Common {
 
   @Test
   public void enabledSslCipherSuites() throws SQLException {
-    String oldSuites = "TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256";
-    String newSuites =
-        "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
-    String options;
-    if (minVersion(9, 0, 1)) {
-      options = BASE_OPTIONS + "&sslMode=trust&enabledSslCipherSuites=" + newSuites;
-    } else {
-      options = BASE_OPTIONS + "&sslMode=trust&enabledSslCipherSuites=" + oldSuites;
-    }
+
+    String options =
+        BASE_OPTIONS
+            + "&sslMode=trust&enabledSslCipherSuites="
+            + "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
     try (Connection con = createCon(options)) {
       assertNotNull(getSslVersion(con));
     }
