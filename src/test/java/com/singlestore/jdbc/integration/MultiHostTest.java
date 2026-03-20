@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 public class MultiHostTest extends Common {
 
   @BeforeAll
-  public static void beforeAll() throws Exception {
+  public static void beforeAll2() throws Exception {
     createSequenceTables();
   }
 
