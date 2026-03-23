@@ -236,7 +236,7 @@ public class Configuration {
     initializeAdditionalConfig(builder);
 
     // Validate configuration
-    validateConfiguration();
+    validateConfiguration(builder);
   }
 
   private void initializeBasicConfig(Builder builder) throws SQLException {
@@ -417,14 +417,14 @@ public class Configuration {
     this.codecs = null;
   }
 
-  private void validateConfiguration() {
+  private void validateConfiguration(Builder builder) {
     // Validate integer fields
     validateIntegerFields();
-    validateProxyConfiguration();
+    validateProxyConfiguration(builder);
   }
 
-  private void validateProxyConfiguration() {
-    if (socksProxyHost == null && socksProxyPort != 1080) {
+  private void validateProxyConfiguration(Builder builder) {
+    if (socksProxyHost == null && builder.socksProxyPort != null) {
       throw new IllegalArgumentException("socksProxyPort requires socksProxyHost to be set.");
     }
   }

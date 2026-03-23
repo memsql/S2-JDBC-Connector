@@ -310,6 +310,10 @@ public class ConfigurationTest extends Common {
         SQLException.class,
         () -> Configuration.parse("jdbc:singlestore://localhost/test?socksProxyPort=1081"),
         "socksProxyPort requires socksProxyHost to be set.");
+    assertThrowsContains(
+        SQLException.class,
+        () -> Configuration.parse("jdbc:singlestore://localhost/test?socksProxyPort=1080"),
+        "socksProxyPort requires socksProxyHost to be set.");
   }
 
   @Test
