@@ -104,19 +104,30 @@ public final class ProxyTunnelServer implements Closeable {
     String host = readSocksAddress(in, atyp);
     int port = readUnsignedShort(in);
 
-    try (Socket upstream = new Socket(host, port)) {
+    Socket upstream;
+    try {
+      upstream = new Socket(host, port);
+    } catch (IOException e) {
+      // Host unreachable / connection refused – send SOCKS5 failure reply.
+      out.write(new byte[] {0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0});
+      out.flush();
+      throw e;
+    }
+    try {
       // Success reply.
       out.write(new byte[] {0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0});
       out.flush();
-      tunnel(clientSocket, upstream);
+      tunnel(clientSocket, in, out, upstream);
+    } finally {
+      upstream.close();
     }
   }
 
-  private void tunnel(Socket clientSocket, Socket upstream) throws IOException {
+  private void tunnel(
+      Socket clientSocket, InputStream clientIn, OutputStream clientOut, Socket upstream)
+      throws IOException {
     activeSockets.add(upstream);
     try {
-      InputStream clientIn = clientSocket.getInputStream();
-      OutputStream clientOut = clientSocket.getOutputStream();
       InputStream upstreamIn = upstream.getInputStream();
       OutputStream upstreamOut = upstream.getOutputStream();
 
