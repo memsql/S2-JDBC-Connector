@@ -116,7 +116,7 @@ public class Configuration {
   private String localSocketAddress;
   private int socketTimeout;
   private String socksProxyHost;
-  private int socksProxyPort;
+  private Integer socksProxyPort;
   private boolean useReadAheadInput;
   private String tlsSocketType;
 
@@ -293,7 +293,7 @@ public class Configuration {
     this.localSocketAddress = builder.localSocketAddress;
     this.socketTimeout = builder.socketTimeout != null ? builder.socketTimeout : 0;
     this.socksProxyHost = builder.socksProxyHost;
-    this.socksProxyPort = builder.socksProxyPort != null ? builder.socksProxyPort : 1080;
+    this.socksProxyPort = builder.socksProxyPort;
     this.useReadAheadInput = builder.useReadAheadInput != null && builder.useReadAheadInput;
     this.tlsSocketType = builder.tlsSocketType;
     this.useCompression = builder.useCompression != null && builder.useCompression;
@@ -420,11 +420,11 @@ public class Configuration {
   private void validateConfiguration(Builder builder) {
     // Validate integer fields
     validateIntegerFields();
-    validateProxyConfiguration(builder);
+    validateProxyConfiguration();
   }
 
-  private void validateProxyConfiguration(Builder builder) {
-    if (socksProxyHost == null && builder.socksProxyPort != null) {
+  private void validateProxyConfiguration() {
+    if (socksProxyPort != null && socksProxyHost == null) {
       throw new IllegalArgumentException("socksProxyPort requires socksProxyHost to be set.");
     }
   }
@@ -1326,9 +1326,9 @@ public class Configuration {
   /**
    * SOCKS proxy port.
    *
-   * @return SOCKS proxy port
+   * @return SOCKS proxy port, or null when unset
    */
-  public int socksProxyPort() {
+  public Integer socksProxyPort() {
     return socksProxyPort;
   }
 
@@ -2253,7 +2253,7 @@ public class Configuration {
     }
 
     /**
-     * SOCKS proxy port to connect through. Default: 1080
+     * SOCKS proxy port to connect through. Default: null (uses 1080 when proxy is enabled)
      *
      * @param socksProxyPort SOCKS proxy port
      * @return this {@link Builder}

@@ -301,7 +301,22 @@ public class ConfigurationTest extends Common {
         Configuration.parse(
             "jdbc:singlestore://localhost/test?socksProxyHost=127.0.0.1&socksProxyPort=1081");
     assertEquals("127.0.0.1", conf.socksProxyHost());
-    assertEquals(1081, conf.socksProxyPort());
+    assertEquals(Integer.valueOf(1081), conf.socksProxyPort());
+  }
+
+  @Test
+  public void testProxyDefaultsToNullInConfiguration() throws Throwable {
+    Configuration conf = Configuration.parse("jdbc:singlestore://localhost/test");
+    assertNull(conf.socksProxyHost());
+    assertNull(conf.socksProxyPort());
+  }
+
+  @Test
+  public void testProxyHostWithoutPortKeepsNullPortInConfiguration() throws Throwable {
+    Configuration conf =
+        Configuration.parse("jdbc:singlestore://localhost/test?socksProxyHost=127.0.0.1");
+    assertEquals("127.0.0.1", conf.socksProxyHost());
+    assertNull(conf.socksProxyPort());
   }
 
   @Test

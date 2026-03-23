@@ -107,13 +107,27 @@ public final class ConnectionHelper {
     }
     // The SOCKS proxy address itself is resolved locally; target resolution is handled separately.
     if (conf.socksProxyHost() != null) {
+      int socksProxyPort = resolveSocksProxyPort(conf);
       return new Socket(
           new Proxy(
-              Proxy.Type.SOCKS,
-              new InetSocketAddress(conf.socksProxyHost(), conf.socksProxyPort())));
+              Proxy.Type.SOCKS, new InetSocketAddress(conf.socksProxyHost(), socksProxyPort)));
     }
     socketFactory = SocketFactory.getDefault();
     return socketFactory.createSocket();
+  }
+
+  private static int resolveSocksProxyPort(Configuration conf) throws SQLException {
+    Integer configuredPort = conf.socksProxyPort();
+    if (configuredPort == null) {
+      return 1080;
+    }
+    if (configuredPort <= 0 || configuredPort > 65535) {
+      throw new SQLException(
+          "Invalid socksProxyPort value "
+              + configuredPort
+              + ". Value must be between 1 and 65535.");
+    }
+    return configuredPort;
   }
 
   /**

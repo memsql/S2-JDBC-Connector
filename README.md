@@ -33,7 +33,7 @@ Example:
 
 The driver supports connecting through a SOCKS proxy:
 
-- `socksProxyHost` / `socksProxyPort` (default port `1080`)
+- `socksProxyHost` / `socksProxyPort` (port defaults to `1080` when host is set and port is omitted)
 
 Example:
 ```
