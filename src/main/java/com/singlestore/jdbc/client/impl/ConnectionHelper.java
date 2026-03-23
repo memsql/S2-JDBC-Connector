@@ -105,13 +105,12 @@ public final class ConnectionHelper {
             exp);
       }
     }
-    // Proxy connections bypass the default SocketFactory (but not a custom socketFactory above).
-    // createUnresolved is used so that DNS resolution happens on the proxy side.
+    // The SOCKS proxy address itself is resolved locally; target resolution is handled separately.
     if (conf.socksProxyHost() != null) {
       return new Socket(
           new Proxy(
               Proxy.Type.SOCKS,
-              InetSocketAddress.createUnresolved(conf.socksProxyHost(), conf.socksProxyPort())));
+              new InetSocketAddress(conf.socksProxyHost(), conf.socksProxyPort())));
     }
     socketFactory = SocketFactory.getDefault();
     return socketFactory.createSocket();
