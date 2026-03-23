@@ -599,7 +599,11 @@ public class PoolDataSourceTest extends Common {
       Thread.sleep(500);
       assertTrue(getCurrentConnections() > initialConnection);
     }
-    Thread.sleep(2000); // ensure that previous close are effective
+    // wait for connections to close, may take a while on some server versions
+    for (int i = 0; i < 10; i++) {
+      Thread.sleep(500);
+      if (getCurrentConnections() <= initialConnection) break;
+    }
     assertEquals(initialConnection, getCurrentConnections());
   }
 
