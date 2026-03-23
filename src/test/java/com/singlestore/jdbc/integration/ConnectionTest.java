@@ -7,7 +7,6 @@ package com.singlestore.jdbc.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -919,11 +918,10 @@ public class ConnectionTest extends Common {
             createCon(
                 "socksProxyHost=127.0.0.1&socksProxyPort="
                     + proxy.getPort()
-                    + "&sslMode=trust&connectTimeout=5000")) {
-      ResultSet rs = conn.createStatement().executeQuery("SHOW STATUS LIKE 'Ssl_version'");
+                    + "&user=root-ssl&password=&sslMode=trust&connectTimeout=5000")) {
+      ResultSet rs = conn.createStatement().executeQuery("SELECT 1");
       assertTrue(rs.next());
-      assertNotNull(rs.getString(2));
-      assertFalse(rs.getString(2).isEmpty());
+      assertEquals(1, rs.getInt(1));
     }
   }
 
