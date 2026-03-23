@@ -15,9 +15,14 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /** Lightweight in-process SOCKS5 proxy used in integration tests. */
 public final class ProxyTunnelServer implements Closeable {
@@ -27,6 +32,7 @@ public final class ProxyTunnelServer implements Closeable {
   private final ExecutorService tunnelExecutor;
   private final Set<Socket> activeSockets = Collections.newSetFromMap(new ConcurrentHashMap<>());
   private volatile boolean closed;
+  private volatile Future<?> acceptFuture;
 
   private ProxyTunnelServer() throws IOException {
     this.serverSocket = new ServerSocket();
@@ -46,20 +52,21 @@ public final class ProxyTunnelServer implements Closeable {
   }
 
   private void start() {
-    acceptExecutor.submit(
-        () -> {
-          while (!closed) {
-            try {
-              Socket client = serverSocket.accept();
-              tunnelExecutor.submit(() -> handleClient(client));
-            } catch (IOException e) {
-              if (!closed) {
-                throw new RuntimeException(e);
+    acceptFuture =
+        acceptExecutor.submit(
+            () -> {
+              while (!closed) {
+                try {
+                  Socket client = serverSocket.accept();
+                  tunnelExecutor.submit(() -> handleClient(client));
+                } catch (IOException e) {
+                  if (!closed) {
+                    throw new RuntimeException(e);
+                  }
+                  return;
+                }
               }
-              return;
-            }
-          }
-        });
+            });
   }
 
   private void handleClient(Socket client) {
@@ -197,6 +204,19 @@ public final class ProxyTunnelServer implements Closeable {
     // Close all active sockets to unblock threads stuck on blocking reads.
     for (Socket s : activeSockets) {
       closeQuietly(s);
+    }
+    // Wait briefly for the accept loop to finish and surface any unexpected failure.
+    if (acceptFuture != null) {
+      try {
+        acceptFuture.get(5, TimeUnit.SECONDS);
+      } catch (ExecutionException e) {
+        throw new IOException("Proxy accept loop failed unexpectedly", e.getCause());
+      } catch (TimeoutException e) {
+        // Loop did not finish in time; proceed with forced shutdown.
+      } catch (CancellationException | InterruptedException e) {
+        // Cancelled or interrupted during shutdown; restore interrupt status and continue.
+        Thread.currentThread().interrupt();
+      }
     }
     acceptExecutor.shutdownNow();
     tunnelExecutor.shutdownNow();
