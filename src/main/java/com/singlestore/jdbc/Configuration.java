@@ -236,7 +236,7 @@ public class Configuration {
     initializeAdditionalConfig(builder);
 
     // Validate configuration
-    validateConfiguration(builder);
+    validateConfiguration();
   }
 
   private void initializeBasicConfig(Builder builder) throws SQLException {
@@ -417,7 +417,7 @@ public class Configuration {
     this.codecs = null;
   }
 
-  private void validateConfiguration(Builder builder) {
+  private void validateConfiguration() {
     // Validate integer fields
     validateIntegerFields();
     validateProxyConfiguration();
