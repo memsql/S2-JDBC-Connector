@@ -486,7 +486,9 @@ public class Configuration {
             .localSocketAddress(this.localSocketAddress)
             .socketTimeout(this.socketTimeout)
             .socksProxyHost(this.socksProxyHost)
-            .socksProxyPort(this.socksProxyPort)
+            // Keep the builder state consistent with validation:
+            // socksProxyPort must only be set when socksProxyHost is set.
+            .socksProxyPort(this.socksProxyHost == null ? null : this.socksProxyPort)
             .useReadAheadInput(this.useReadAheadInput)
             .tlsSocketType(this.tlsSocketType)
             .sslMode(this.sslMode.name())

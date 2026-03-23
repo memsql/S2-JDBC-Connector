@@ -5,6 +5,7 @@
 package com.singlestore.jdbc.unit.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -314,6 +315,28 @@ public class ConfigurationTest extends Common {
         SQLException.class,
         () -> Configuration.parse("jdbc:singlestore://localhost/test?socksProxyPort=1080"),
         "socksProxyPort requires socksProxyHost to be set.");
+  }
+
+  @Test
+  public void testToBuilderRoundTripWithoutSocksProxy() throws SQLException {
+    Configuration conf = Configuration.parse("jdbc:singlestore://localhost/test");
+
+    Configuration rebuilt = assertDoesNotThrow(() -> conf.toBuilder().build());
+
+    assertNull(rebuilt.socksProxyHost());
+    assertEquals(1080, rebuilt.socksProxyPort());
+  }
+
+  @Test
+  public void testCloneWithoutSocksProxy() throws SQLException {
+    Configuration conf = Configuration.parse("jdbc:singlestore://localhost/test");
+
+    Configuration cloned = assertDoesNotThrow(() -> conf.clone("user", "password"));
+
+    assertEquals("user", cloned.user());
+    assertEquals("password", cloned.password());
+    assertNull(cloned.socksProxyHost());
+    assertEquals(1080, cloned.socksProxyPort());
   }
 
   @Test
