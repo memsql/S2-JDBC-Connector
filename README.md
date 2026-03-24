@@ -29,6 +29,17 @@ Example:
 "jdbc:singlestore://localhost:3306/test?user=root&password=myPassword"
 ```
 
+### Proxy support
+
+The driver supports connecting through a SOCKS proxy:
+
+- `socksProxyHost` / `socksProxyPort` (port defaults to `1080` when host is set and port is omitted)
+
+Example:
+```
+jdbc:singlestore://localhost:3306/test?user=root&password=myPassword&socksProxyHost=127.0.0.1&socksProxyPort=1080
+```
+
 You can then get a connection by using the [Driver manager](https://docs.oracle.com/javase/8/docs/api/java/sql/DriverManager.html) class:
 ```script
 Connection connection = DriverManager.getConnection("jdbc:singlestore://localhost:3306/test?user=root&password=myPassword");
