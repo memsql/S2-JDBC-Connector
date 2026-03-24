@@ -555,7 +555,7 @@ public class UpdateBatchResultSetTest extends Common {
       assertEquals(-3, rs.getInt(2));
     }
 
-    ResultSet rs = stmt.executeQuery("SELECT * FROM testDelete");
+    ResultSet rs = stmt.executeQuery("SELECT * FROM testDelete ORDER BY id, id2");
     assertTrue(rs.next());
     assertEquals(1, rs.getInt(1));
     assertEquals(-1, rs.getInt(2));
