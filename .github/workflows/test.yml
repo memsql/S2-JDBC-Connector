@@ -39,9 +39,8 @@ jobs:
       - name: Get supported versions of SingleStore
         id: get_versions
         uses: singlestore-labs/singlestore-supported-versions@main
-        # with:
-        #   include_rc: true
-        # TODO: uncomment the above lines to include RC versions in the test matrix once we have RC versions available for testing
+        with:
+          include_rc: true
 
   test:
     needs: fetch-s2-versions
