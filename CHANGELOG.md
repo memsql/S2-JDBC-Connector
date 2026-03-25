@@ -1,5 +1,10 @@
 # SingleStore Change Log
 
+## [1.2.10](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.10)
+* Add socksProxyHost and socksProxyPort connection parameters (#53)
+* Add scheduled and manual triggering for CI tests
+* Update dependencies to fix security vulnerabilities (#59)
+
 ## [1.2.9](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.9)
 * [PLAT-7700] Simplified LOAD DATA LOCAL INFILE statement parsing
 * [PLAT-7493] Throw an exception on overflow time value
