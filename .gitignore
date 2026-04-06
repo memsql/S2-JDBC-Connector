@@ -8,3 +8,5 @@
 .idea
 /mariadb-java-client.iml
 scripts/ssl/*
+
+.claude/*
