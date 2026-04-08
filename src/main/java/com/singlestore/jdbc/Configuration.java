@@ -18,6 +18,7 @@ import java.lang.reflect.Method;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.*;
+import org.ietf.jgss.GSSCredential;
 
 /**
  * parse and verification of URL.
@@ -63,6 +64,7 @@ public class Configuration {
     EXCLUDED_FIELDS.add("$jacocoData");
     EXCLUDED_FIELDS.add("addresses");
     EXCLUDED_FIELDS.add("transactionIsolation");
+    EXCLUDED_FIELDS.add("gssCredential");
 
     SECURE_FIELDS = new HashSet<>();
     SECURE_FIELDS.add("password");
@@ -74,6 +76,7 @@ public class Configuration {
     PROPERTIES_TO_SKIP.add("logger");
     PROPERTIES_TO_SKIP.add("codecs");
     PROPERTIES_TO_SKIP.add("$jacocoData");
+    PROPERTIES_TO_SKIP.add("gssCredential");
 
     SENSITIVE_FIELDS = new HashSet<>();
     SENSITIVE_FIELDS.add("password");
@@ -154,6 +157,8 @@ public class Configuration {
   private String servicePrincipalName;
   private String jaasApplicationName;
   private Boolean cacheJaasLoginContext;
+  private GSSCredential gssCredential;
+  private Boolean requestCredentialDelegation;
 
   // meta
   private boolean blankTableNameMeta;
@@ -405,6 +410,8 @@ public class Configuration {
     this.servicePrincipalName = builder.servicePrincipalName;
     this.jaasApplicationName = builder.jaasApplicationName;
     this.cacheJaasLoginContext = builder.cacheJaasLoginContext;
+    this.gssCredential = builder.gssCredential;
+    this.requestCredentialDelegation = builder.requestCredentialDelegation;
     this.defaultFetchSize = builder.defaultFetchSize != null ? builder.defaultFetchSize : 0;
     this.tlsSocketType = builder.tlsSocketType;
     this.maxAllowedPacket = builder.maxAllowedPacket;
@@ -518,6 +525,8 @@ public class Configuration {
             .servicePrincipalName(this.servicePrincipalName)
             .jaasApplicationName(this.jaasApplicationName)
             .cacheJaasLoginContext(this.cacheJaasLoginContext)
+            .gssCredential(this.gssCredential)
+            .requestCredentialDelegation(this.requestCredentialDelegation)
             .blankTableNameMeta(this.blankTableNameMeta)
             .tinyInt1isBit(this.tinyInt1isBit)
             .transformedBitIsBoolean(this.transformedBitIsBoolean)
@@ -736,6 +745,16 @@ public class Configuration {
       Object originalKey,
       Properties nonMappedOptions)
       throws ReflectiveOperationException {
+
+    if ("gssCredential".equalsIgnoreCase(realKey)) {
+      if (propertyValue instanceof GSSCredential) {
+        builder.gssCredential((GSSCredential) propertyValue);
+      } else {
+        throw new IllegalArgumentException(
+            "Optional parameter gssCredential must be a GSSCredential instance");
+      }
+      return;
+    }
 
     boolean used = false;
     for (Field field : Builder.class.getDeclaredFields()) {
@@ -1545,6 +1564,21 @@ public class Configuration {
     return cacheJaasLoginContext;
   }
 
+  /**
+   * @return pre-supplied GSS credential for GSSAPI auth, or null to use JAAS / default credentials
+   */
+  public GSSCredential gssCredential() {
+    return gssCredential;
+  }
+
+  /**
+   * @return when true, GSSAPI auth requests credential delegation ({@code
+   *     GSSContext.requestCredDeleg})
+   */
+  public Boolean requestCredentialDelegation() {
+    return requestCredentialDelegation;
+  }
+
   public int defaultFetchSize() {
     return defaultFetchSize;
   }
@@ -1972,6 +2006,8 @@ public class Configuration {
     private String servicePrincipalName;
     private String jaasApplicationName;
     private Boolean cacheJaasLoginContext;
+    private GSSCredential gssCredential;
+    private Boolean requestCredentialDelegation;
 
     // meta
     private Boolean blankTableNameMeta;
@@ -2483,6 +2519,16 @@ public class Configuration {
 
     public Builder cacheJaasLoginContext(Boolean cacheJaasLoginContext) {
       this.cacheJaasLoginContext = cacheJaasLoginContext;
+      return this;
+    }
+
+    public Builder gssCredential(GSSCredential gssCredential) {
+      this.gssCredential = gssCredential;
+      return this;
+    }
+
+    public Builder requestCredentialDelegation(Boolean requestCredentialDelegation) {
+      this.requestCredentialDelegation = requestCredentialDelegation;
       return this;
     }
 

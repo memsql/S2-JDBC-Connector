@@ -15,6 +15,7 @@ import com.singlestore.jdbc.plugin.authentication.addon.gssapi.GssapiAuth;
 import com.singlestore.jdbc.plugin.authentication.addon.gssapi.StandardGssapiAuthentication;
 import java.io.IOException;
 import java.sql.SQLException;
+import org.ietf.jgss.GSSCredential;
 
 public class SendGssApiAuthPacket implements AuthenticationPlugin {
 
@@ -33,6 +34,8 @@ public class SendGssApiAuthPacket implements AuthenticationPlugin {
   private byte[] seed;
   private String optionServicePrincipalName;
   private String optionJaasApplicationName;
+  private GSSCredential optionGssCredential;
+  private boolean optionRequestCredentialDelegation;
 
   /**
    * Initialization.
@@ -44,6 +47,9 @@ public class SendGssApiAuthPacket implements AuthenticationPlugin {
     this.seed = seed;
     this.optionServicePrincipalName = conf.servicePrincipalName();
     this.optionJaasApplicationName = conf.jaasApplicationName();
+    this.optionGssCredential = conf.gssCredential();
+    this.optionRequestCredentialDelegation =
+        Boolean.TRUE.equals(conf.requestCredentialDelegation());
   }
 
   /**
@@ -73,7 +79,14 @@ public class SendGssApiAuthPacket implements AuthenticationPlugin {
     }
 
     gssapiAuth.authenticate(
-        context, out, in, servicePrincipalName, jaasApplicationName, mechanisms);
+        context,
+        out,
+        in,
+        servicePrincipalName,
+        jaasApplicationName,
+        optionGssCredential,
+        optionRequestCredentialDelegation,
+        mechanisms);
 
     return in.readReusablePacket();
   }

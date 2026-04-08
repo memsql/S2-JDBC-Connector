@@ -10,6 +10,7 @@ import com.singlestore.jdbc.client.socket.Reader;
 import com.singlestore.jdbc.client.socket.Writer;
 import java.io.IOException;
 import java.sql.SQLException;
+import org.ietf.jgss.GSSCredential;
 
 public interface GssapiAuth {
 
@@ -19,8 +20,10 @@ public interface GssapiAuth {
    * @param writer socket writer
    * @param in socket reader
    * @param servicePrincipalName SPN
-   * @param mechanisms mechanisms
    * @param jaasApplicationName application name
+   * @param gssCredential optional pre-obtained credential; when non-null, JAAS login is skipped
+   * @param requestCredentialDelegation when true, request GSS credential delegation
+   * @param mechanisms mechanisms
    * @throws IOException if any socket error occurs
    * @throws SQLException for any other type of errors
    */
@@ -30,6 +33,8 @@ public interface GssapiAuth {
       Reader in,
       String servicePrincipalName,
       String jaasApplicationName,
+      GSSCredential gssCredential,
+      boolean requestCredentialDelegation,
       String mechanisms)
       throws SQLException, IOException;
 }
