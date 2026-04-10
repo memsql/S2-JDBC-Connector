@@ -82,6 +82,16 @@ public class SslTest extends Common {
   }
 
   @Test
+  public void testHostnameVerification() throws SQLException {
+    try (Connection con =
+        createCon(
+            "sslMode=verify-full&hostNameInCertificate=singlestore-server&serverSslCert="
+                + SERVER_CERT_PATH)) {
+      assertNotNull(getSslVersion(con));
+    }
+  }
+
+  @Test
   public void simpleSsl() throws SQLException {
     try (Connection con = createCon("sslMode=trust")) {
       assertNotNull(getSslVersion(con));

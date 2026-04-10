@@ -151,6 +151,7 @@ public class StandardClient implements Client, AutoCloseable {
       SSLSocket sslSocket =
           ConnectionHelper.sslWrapper(
               hostAddress,
+              conf.hostNameInCertificate(),
               socket,
               clientCapabilities,
               (byte) handshake.getDefaultCollation(),
