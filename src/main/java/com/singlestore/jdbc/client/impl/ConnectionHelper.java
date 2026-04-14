@@ -371,6 +371,7 @@ public final class ConnectionHelper {
    */
   public static SSLSocket sslWrapper(
       final HostAddress hostAddress,
+      final String hostNameInCertificate,
       final Socket socket,
       long clientCapabilities,
       final byte exchangeCharset,
@@ -423,7 +424,8 @@ public final class ConnectionHelper {
 
         SSLSession session = sslSocket.getSession();
         try {
-          socketPlugin.verify(hostAddress.host, session, context.getThreadId());
+          String host = hostNameInCertificate == null ? hostAddress.host : hostNameInCertificate;
+          socketPlugin.verify(host, session, context.getThreadId());
         } catch (SSLException ex) {
           throw context
               .getExceptionFactory()

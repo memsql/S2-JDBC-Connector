@@ -132,6 +132,7 @@ public class Configuration {
   private String keyStoreType;
   private String enabledSslCipherSuites;
   private String enabledSslProtocolSuites;
+  private String hostNameInCertificate;
 
   // protocol
   private boolean allowMultiQueries;
@@ -251,6 +252,7 @@ public class Configuration {
 
   private void initializeSslConfig(Builder builder) {
     this.enabledSslProtocolSuites = builder.enabledSslProtocolSuites;
+    this.hostNameInCertificate = builder.hostNameInCertificate;
     this.serverSslCert = builder.serverSslCert;
     this.keyStore = builder.keyStore;
     this.trustStore = builder.trustStore;
@@ -500,6 +502,7 @@ public class Configuration {
             .trustStoreType(this.trustStoreType)
             .enabledSslCipherSuites(this.enabledSslCipherSuites)
             .enabledSslProtocolSuites(this.enabledSslProtocolSuites)
+            .hostNameInCertificate(this.hostNameInCertificate)
             .allowMultiQueries(this.allowMultiQueries)
             .allowLocalInfile(this.allowLocalInfile)
             .useCompression(this.useCompression)
@@ -1202,6 +1205,15 @@ public class Configuration {
    */
   public String enabledSslProtocolSuites() {
     return enabledSslProtocolSuites;
+  }
+
+  /**
+   * the host name to be used to validate the SingleStore TLS/SSL certificate
+   *
+   * @return the host name to be used to validate the SingleStore TLS/SSL certificate
+   */
+  public String hostNameInCertificate() {
+    return hostNameInCertificate;
   }
 
   /**
@@ -1939,6 +1951,7 @@ public class Configuration {
     private String keyStoreType;
     private String enabledSslCipherSuites;
     private String enabledSslProtocolSuites;
+    private String hostNameInCertificate;
 
     // protocol
     private Boolean allowMultiQueries;
@@ -2066,6 +2079,11 @@ public class Configuration {
 
     public Builder enabledSslProtocolSuites(String enabledSslProtocolSuites) {
       this.enabledSslProtocolSuites = nullOrEmpty(enabledSslProtocolSuites);
+      return this;
+    }
+
+    public Builder hostNameInCertificate(String hostNameInCertificate) {
+      this.hostNameInCertificate = nullOrEmpty(hostNameInCertificate);
       return this;
     }
 
