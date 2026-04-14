@@ -12,10 +12,14 @@ Follow these steps:
    * <change description> (#PR)
    ```
 
-4. **Create a branch**: `release-<version>`
+4. **Update .circleci/config.yml**: Change the `path` field in the `store_artifacts` steps of the `test` job to the `target/singlestore-jdbc-client-<version>.jar` and `target/singlestore-jdbc-client-<version>-browser-sso-uber.jar`.
 
-5. **Show the diff** to the user for review before committing.
+5. **Update README.md**: Update the version number in the `## Version` section and in the `## Obtaining the driver` section.
 
-6. **After user confirms**: Commit with message `chore: bump version to <version>` and body `Incremented version, updated changelog`.
+6**Create a branch**: `release-<version>`
 
-7. **Push and open PR** with title `chore: bump version to <version>` and body `Incremented version, updated changelog`.
+7**Show the diff** to the user for review before committing.
+
+8**After user confirms**: Commit with message `chore: bump version to <version>` and body `Incremented version, updated changelog`.
+
+9**Push and open PR** with title `chore: bump version to <version>` and body `Incremented version, updated changelog`.
