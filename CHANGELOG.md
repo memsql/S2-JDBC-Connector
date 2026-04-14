@@ -1,8 +1,5 @@
 # SingleStore Change Log
 
-## [1.2.11](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.11)
-* [PLAT-7862] Added hostNameInCertificate option
-
 ## [1.2.10](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.10)
 * Add socksProxyHost and socksProxyPort connection parameters (#53)
 * Add scheduled and manual triggering for CI tests
