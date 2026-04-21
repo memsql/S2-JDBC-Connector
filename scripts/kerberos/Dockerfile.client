@@ -1,4 +1,4 @@
-FROM eclipse-temurin:11-jdk
+FROM eclipse-temurin:21-jdk
 
 RUN apt-get update && \
     apt-get install -y krb5-user mariadb-client maven software-properties-common && \

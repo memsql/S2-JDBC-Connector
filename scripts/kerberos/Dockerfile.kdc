@@ -2,13 +2,21 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Heimdal is used instead of MIT krb5 because MIT's DB2 KDB backend does not
+# implement the `check_allowed_to_delegate` callback, so traditional
+# S4U2Proxy (Kerberos constrained delegation) requests are always rejected
+# with UNSUPPORTED_S4U2PROXY_REQUEST. Heimdal supports S4U2Self + S4U2Proxy
+# natively through its built-in HDB backend and the
+# `--constrained-delegation=...` kadmin flag.
 RUN apt-get update && \
-    apt-get install -y krb5-kdc krb5-admin-server krb5-user && \
+    apt-get install -y heimdal-kdc heimdal-servers heimdal-clients && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY krb5.conf /etc/krb5.conf
 
 COPY setup-kdc.sh /setup-kdc.sh
 RUN chmod +x /setup-kdc.sh
+
+EXPOSE 88/tcp 88/udp 749/tcp 464/tcp 464/udp
 
 ENTRYPOINT ["/setup-kdc.sh"]

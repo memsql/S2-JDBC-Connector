@@ -23,7 +23,7 @@
 # Architecture:
 #   1. kdc-server              — MIT Kerberos KDC (realm S2.TEST)
 #   2. singlestore-integration — SingleStore with GSSAPI auth + keytab from KDC
-#   3. krb-client              — JDK 11 container that runs kinit + JDBC connection test
+#   3. krb-client              — JDK 21 container that runs kinit + JDBC connection test
 #
 # Usage:
 #   export SINGLESTORE_LICENSE="<your-license>"
@@ -58,6 +58,7 @@ else
 fi
 SINGLESTORE_VERSION="${SINGLESTORE_VERSION:-9.0}"
 KRB_CLIENT_PRINCIPAL="test_krb_user"
+KRB_IMPERSONATED_PRINCIPAL="impersonated_user"
 KRB_SERVICE_PRINCIPAL="singlestore/${S2_CONTAINER}"
 
 # ---------------------------------------------------------------------------
@@ -208,10 +209,13 @@ docker exec "$S2_CONTAINER" memsql -u root -p"${ROOT_PASSWORD}" -e "
     DROP USER IF EXISTS '${KRB_CLIENT_PRINCIPAL}'@'%';
     CREATE USER '${KRB_CLIENT_PRINCIPAL}'@'%' IDENTIFIED WITH authentication_gss AS '${KRB_CLIENT_PRINCIPAL}@${REALM}';
     GRANT ALL PRIVILEGES ON *.* TO '${KRB_CLIENT_PRINCIPAL}'@'%';
+    DROP USER IF EXISTS '${KRB_IMPERSONATED_PRINCIPAL}'@'%';
+    CREATE USER '${KRB_IMPERSONATED_PRINCIPAL}'@'%' IDENTIFIED WITH authentication_gss AS '${KRB_IMPERSONATED_PRINCIPAL}@${REALM}';
+    GRANT ALL PRIVILEGES ON *.* TO '${KRB_IMPERSONATED_PRINCIPAL}'@'%';
     CREATE DATABASE IF NOT EXISTS test;
 "
 
-log "User '${KRB_CLIENT_PRINCIPAL}' created with GSSAPI auth."
+log "Users '${KRB_CLIENT_PRINCIPAL}' and '${KRB_IMPERSONATED_PRINCIPAL}' created with GSSAPI auth."
 
 # ---------------------------------------------------------------------------
 # Step 6: Build & start Kerberos client container
@@ -283,7 +287,11 @@ docker exec -w /jdbc "$CLIENT_CONTAINER" \
 # Supported env vars (see KerberosIntegrationTest.java for details):
 #   KRB_JDBC_URL             (string, required)
 #   KRB_USER                 (string, required)
-#   KRB_USE_GSS_CREDENTIAL   (boolean, optional, default false)
+#   KRB_USE_GSS_CREDENTIAL   (boolean, optional, default false) — when true,
+#                                                 requires KRB_IMPERSONATE_AS
+#   KRB_IMPERSONATE_AS       (string, required when KRB_USE_GSS_CREDENTIAL=true)
+#                                                 full principal to impersonate
+#                                                 via constrained delegation
 #   KRB_CONNECTION_ATTEMPTS  (integer, optional, default 1)
 #   KRB_EXPECT_FAILURE       (boolean, optional, default false)
 # ---------------------------------------------------------------------------
@@ -324,42 +332,50 @@ run_kerberos_test \
 log "STEP 10 PASSED"
 
 # ---------------------------------------------------------------------------
-# Step 11: Connect with a pre-obtained GSSCredential passed via Properties
+# Step 11: Connect with a custom jaasApplicationName
 # ---------------------------------------------------------------------------
-log "STEP 11: Run JDBC Kerberos test with pre-obtained GSSCredential"
-run_kerberos_test \
-    "KRB_JDBC_URL=${JDBC_URL_BASE}" \
-    "KRB_USER=${KRB_CLIENT_PRINCIPAL}" \
-    "KRB_USE_GSS_CREDENTIAL=true"
-log "STEP 11 PASSED"
-
-# ---------------------------------------------------------------------------
-# Step 12: Connect with a custom jaasApplicationName
-# ---------------------------------------------------------------------------
-log "STEP 12: Run JDBC Kerberos test with jaasApplicationName=CustomKrbEntry"
+log "STEP 11: Run JDBC Kerberos test with jaasApplicationName=CustomKrbEntry"
 run_kerberos_test \
     "KRB_JDBC_URL=${JDBC_URL_BASE}&jaasApplicationName=CustomKrbEntry" \
     "KRB_USER=${KRB_CLIENT_PRINCIPAL}"
-log "STEP 12 PASSED"
+log "STEP 11 PASSED"
 
 # ---------------------------------------------------------------------------
-# Step 13: cacheJaasLoginContext=true (two sequential connections)
+# Step 12: cacheJaasLoginContext=true (two sequential connections)
 # ---------------------------------------------------------------------------
-log "STEP 13: Run JDBC Kerberos test with cacheJaasLoginContext=true"
+log "STEP 12: Run JDBC Kerberos test with cacheJaasLoginContext=true"
 run_kerberos_test \
     "KRB_JDBC_URL=${JDBC_URL_BASE}&cacheJaasLoginContext=true" \
     "KRB_USER=${KRB_CLIENT_PRINCIPAL}" \
     "KRB_CONNECTION_ATTEMPTS=2"
-log "STEP 13 PASSED"
+log "STEP 12 PASSED"
 
 # ---------------------------------------------------------------------------
-# Step 14: Negative — wrong servicePrincipalName must fail auth
+# Step 13: Negative — wrong servicePrincipalName must fail auth
 # ---------------------------------------------------------------------------
-log "STEP 14: Run JDBC Kerberos test with wrong servicePrincipalName (expect failure)"
+log "STEP 13: Run JDBC Kerberos test with wrong servicePrincipalName (expect failure)"
 run_kerberos_test \
     "KRB_JDBC_URL=jdbc:singlestore://${S2_CONTAINER}:3306/test?servicePrincipalName=wrong/${S2_CONTAINER}@${REALM}" \
     "KRB_USER=${KRB_CLIENT_PRINCIPAL}" \
     "KRB_EXPECT_FAILURE=true"
+log "STEP 13 PASSED"
+
+# ---------------------------------------------------------------------------
+# Step 14: Kerberos constrained delegation (S4U2Self + S4U2Proxy)
+#
+# The middle-tier principal (${KRB_CLIENT_PRINCIPAL}) logs in via JAAS, then
+# uses ExtendedGSSCredential.impersonate() to mint a credential for
+# ${KRB_IMPERSONATED_PRINCIPAL}. The JDBC driver receives that credential via
+# the `gssCredential` connection property and establishes a GSS context to
+# the SingleStore SPN — which triggers S4U2Proxy at the KDC. SingleStore
+# must then see the session as the impersonated user.
+# ---------------------------------------------------------------------------
+log "STEP 14: Run JDBC Kerberos test with constrained delegation (S4U2Self/S4U2Proxy)"
+run_kerberos_test \
+    "KRB_JDBC_URL=${JDBC_URL_BASE}" \
+    "KRB_USER=${KRB_IMPERSONATED_PRINCIPAL}" \
+    "KRB_USE_GSS_CREDENTIAL=true" \
+    "KRB_IMPERSONATE_AS=${KRB_IMPERSONATED_PRINCIPAL}@${REALM}"
 log "STEP 14 PASSED"
 
 echo ""
