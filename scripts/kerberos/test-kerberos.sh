@@ -56,7 +56,7 @@ if [ "$STARTUP" = "1" ]; then
 else
     SINGLESTORE_LICENSE="${SINGLESTORE_LICENSE:-}"
 fi
-SINGLESTORE_VERSION="${SINGLESTORE_VERSION:-9.0}"
+SINGLESTORE_VERSION="${SINGLESTORE_VERSION:-}"
 KRB_CLIENT_PRINCIPAL="test_krb_user"
 KRB_IMPERSONATED_PRINCIPAL="impersonated_user"
 KRB_SERVICE_PRINCIPAL="singlestore/${S2_CONTAINER}"
@@ -165,13 +165,19 @@ if [ "$S2_EXISTS" = "1" ]; then
     log "SingleStore container already exists — connecting to network"
     docker network connect "$NETWORK_NAME" "$S2_CONTAINER" 2>/dev/null || true
 else
+    s2_env_args=(
+        -e "SINGLESTORE_LICENSE=${SINGLESTORE_LICENSE}"
+        -e "ROOT_PASSWORD=${ROOT_PASSWORD}"
+    )
+    if [ -n "${SINGLESTORE_VERSION}" ]; then
+        s2_env_args+=(-e "SINGLESTORE_VERSION=${SINGLESTORE_VERSION}")
+    fi
+
     docker run -d \
         --name "$S2_CONTAINER" \
         --hostname "$S2_CONTAINER" \
         --network "$NETWORK_NAME" \
-        -e SINGLESTORE_LICENSE="${SINGLESTORE_LICENSE}" \
-        -e ROOT_PASSWORD="${ROOT_PASSWORD}" \
-        -e SINGLESTORE_VERSION="${SINGLESTORE_VERSION}" \
+        "${s2_env_args[@]}" \
         -p ${S2_PORT}:3306 -p 5507:3307 -p 5508:3308 \
         "$S2_IMAGE"
 fi
