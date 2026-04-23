@@ -8,5 +8,6 @@
 .idea
 /mariadb-java-client.iml
 scripts/ssl/*
+dependency-reduced-pom.xml
 
 .claude/*
