@@ -58,10 +58,15 @@ jobs:
       - name: Free up disk space
         run: ./scripts/ci/free-disk-space.sh
 
-      - name: Run Kerberos E2E test
-        run: ./scripts/kerberos/test-kerberos.sh startup
+      - name: Set up Kerberos environment
+        run: ./scripts/kerberos/setup-kerberos.sh
         env:
           SINGLESTORE_LICENSE: ${{ secrets.SINGLESTORE_LICENSE }}
+          ROOT_PASSWORD: ${{ secrets.SINGLESTORE_PASSWORD }}
+
+      - name: Run Kerberos E2E tests
+        run: ./scripts/kerberos/test-kerberos.sh
+        env:
           ROOT_PASSWORD: ${{ secrets.SINGLESTORE_PASSWORD }}
 
       - name: Collect container logs on failure
@@ -82,4 +87,4 @@ jobs:
 
       - name: Teardown
         if: always()
-        run: ./scripts/kerberos/test-kerberos.sh teardown
+        run: ./scripts/kerberos/setup-kerberos.sh teardown
