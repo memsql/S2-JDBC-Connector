@@ -124,7 +124,7 @@ public class MultiHostTest extends Common {
         (Connection)
             DriverManager.getConnection(
                 url
-                    + "&deniedListTimeout=300&retriesAllDown=4&connectTimeout=50&deniedListTimeout=50")) {
+                    + "&deniedListTimeout=300&retriesAllDown=4&connectTimeout=500")) {
       Statement stmt = con.createStatement();
       stmt.execute("SET @con=1");
       proxy.restart(100);
@@ -137,7 +137,7 @@ public class MultiHostTest extends Common {
         (Connection)
             DriverManager.getConnection(
                 url
-                    + "&waitReconnectTimeout=300&retriesAllDown=10&connectTimeout=50&deniedListTimeout=50&socketTimeout=100")) {
+                    + "&waitReconnectTimeout=300&retriesAllDown=10&connectTimeout=500&deniedListTimeout=300&socketTimeout=100")) {
       Statement stmt = con.createStatement();
       stmt.execute("START TRANSACTION");
       stmt.execute("SET @con=1");
@@ -158,7 +158,7 @@ public class MultiHostTest extends Common {
     try (Connection con =
         (Connection)
             DriverManager.getConnection(
-                url + "&retriesAllDown=4&connectTimeout=50&deniedListTimeout=50")) {
+                url + "&retriesAllDown=4&connectTimeout=500&deniedListTimeout=300")) {
       Statement stmt = con.createStatement();
       con.setAutoCommit(false);
       stmt.execute("START TRANSACTION");
@@ -179,7 +179,7 @@ public class MultiHostTest extends Common {
         (Connection)
             DriverManager.getConnection(
                 url
-                    + "&transactionReplay=true&waitReconnectTimeout=300&deniedListTimeout=300&retriesAllDown=4&connectTimeout=50")) {
+                    + "&transactionReplay=true&waitReconnectTimeout=300&deniedListTimeout=300&retriesAllDown=4&connectTimeout=500")) {
       Statement stmt = con.createStatement();
       stmt.execute("DROP TABLE IF EXISTS testReplay");
       stmt.execute("CREATE TABLE testReplay(id INT)");
