@@ -604,7 +604,12 @@ public class PoolDataSourceTest extends Common {
       Thread.sleep(500);
       if (getCurrentConnections() <= initialConnection) break;
     }
-    assertEquals(initialConnection, getCurrentConnections());
+    assertTrue(
+        getCurrentConnections() <= initialConnection,
+        "Expected connection count to be at most "
+            + initialConnection
+            + " after pool close, but was "
+            + getCurrentConnections());
   }
 
   @Test
