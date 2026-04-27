@@ -579,7 +579,7 @@ public class PoolDataSourceTest extends Common {
 
   @Test
   public void ensureClosed() throws Throwable {
-    Thread.sleep(500); // ensure that previous close are effective
+    Thread.sleep(2000); // ensure that previous close are effective
     int initialConnection = getCurrentConnections();
 
     try (SingleStorePoolDataSource pool =
