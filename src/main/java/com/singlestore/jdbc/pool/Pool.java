@@ -223,7 +223,13 @@ public class Pool implements AutoCloseable, PoolMBean {
               } catch (SQLException sqle) {
 
                 // sql exception during reset, removing connection from pool
-                totalConnection.decrementAndGet();
+                // Only decrement totalConnection if it was not already decremented
+                // by connectionErrorOccurred (which marks the item as failed)
+                boolean wasFailed = item.isFailed();
+                item.setFailed(false);
+                if (!wasFailed) {
+                  totalConnection.decrementAndGet();
+                }
                 silentCloseConnection(item.getConnection());
                 logger.debug("connection removed from pool {} due to error during reset", poolTag);
               }
@@ -234,7 +240,13 @@ public class Pool implements AutoCloseable, PoolMBean {
               } catch (SQLException sqle) {
                 // eat
               }
-              totalConnection.decrementAndGet();
+              // Only decrement totalConnection if it was not already decremented
+              // by connectionErrorOccurred (which marks the item as failed)
+              boolean wasFailed = item.isFailed();
+              item.setFailed(false);
+              if (!wasFailed) {
+                totalConnection.decrementAndGet();
+              }
             }
           }
 
