@@ -1,0 +1,91 @@
+# ************************************************************************************
+#   Copyright (c) 2026 SingleStore, Inc.
+#
+#   This library is free software; you can redistribute it and/or
+#   modify it under the terms of the GNU Library General Public
+#   License as published by the Free Software Foundation; either
+#   version 2.1 of the License, or (at your option) any later version.
+#
+#   This library is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#   Library General Public License for more details.
+#
+#   You should have received a copy of the GNU Library General Public
+#   License along with this library; if not see <http://www.gnu.org/licenses>
+#   or write to the Free Software Foundation, Inc.,
+#   51 Franklin St., Fifth Floor, Boston, MA 02110, USA
+# *************************************************************************************/
+---
+name: Kerberos E2E test
+
+# The Kerberos E2E test spins up three Docker containers (Heimdal KDC,
+# SingleStore, JDK 21 client), builds the driver, and exercises GSSAPI
+# auth end-to-end. It's expensive, so we only run it on master, when
+# Kerberos code changes on a PR, on a weekly schedule, or on demand.
+#
+# The SingleStore version is intentionally not pinned — whichever version
+# the singlestoredb-dev:latest image defaults to is what gets tested.
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'scripts/kerberos/**'
+      - '.github/workflows/kerberos.yml'
+      - 'src/main/java/com/singlestore/jdbc/plugin/authentication/addon/gssapi/**'
+      - 'src/main/java/com/singlestore/jdbc/plugin/authentication/addon/SendGssApiAuthPacket*.java'
+      - 'pom.xml'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'scripts/kerberos/**'
+      - '.github/workflows/kerberos.yml'
+      - 'src/main/java/com/singlestore/jdbc/plugin/authentication/addon/gssapi/**'
+      - 'src/main/java/com/singlestore/jdbc/plugin/authentication/addon/SendGssApiAuthPacket*.java'
+      - 'pom.xml'
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  kerberos-e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Free up disk space
+        run: ./scripts/ci/free-disk-space.sh
+
+      - name: Set up Kerberos environment
+        run: ./scripts/kerberos/setup-kerberos.sh
+        env:
+          SINGLESTORE_LICENSE: ${{ secrets.SINGLESTORE_LICENSE }}
+          ROOT_PASSWORD: ${{ secrets.SINGLESTORE_PASSWORD }}
+
+      - name: Run Kerberos E2E tests
+        run: ./scripts/kerberos/test-kerberos.sh
+        env:
+          ROOT_PASSWORD: ${{ secrets.SINGLESTORE_PASSWORD }}
+
+      - name: Collect container logs on failure
+        if: failure()
+        run: |
+          mkdir -p kerberos-logs
+          for c in kdc-server singlestore-integration krb-client; do
+            docker logs "$c" > "kerberos-logs/$c.log" 2>&1 || true
+          done
+
+      - name: Upload container logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kerberos-logs
+          path: kerberos-logs/
+          if-no-files-found: ignore
+
+      - name: Teardown
+        if: always()
+        run: ./scripts/kerberos/setup-kerberos.sh teardown
