@@ -131,8 +131,8 @@ docker cp "/tmp/singlestore.keytab" "${S2_CONTAINER}:/singlestore.keytab"
 docker cp "${SCRIPT_DIR}/krb5.conf" "${S2_CONTAINER}:/etc/krb5.conf"
 
 docker exec -u 0 "$S2_CONTAINER" bash -c '
-    yum -y install krb5-workstation krb5-libs 2>/dev/null || \
-    apt-get update && apt-get install -y krb5-user 2>/dev/null || true
+    { yum -y install krb5-workstation krb5-libs 2>/dev/null; } || \
+    { apt-get update && apt-get install -y krb5-user; } 2>/dev/null || true
 '
 
 docker exec "$S2_CONTAINER" memsqlctl update-config --yes --all \
