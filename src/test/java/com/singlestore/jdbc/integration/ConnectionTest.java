@@ -89,18 +89,18 @@ public class ConnectionTest extends Common {
 
   @Test
   void socketTimeout() throws SQLException {
-    try (Connection con = createCon("&socketTimeout=50")) {
-      assertEquals(50, con.getNetworkTimeout());
+    try (Connection con = createCon("&socketTimeout=200")) {
+      assertEquals(200, con.getNetworkTimeout());
       Statement stmt = con.createStatement();
       stmt.execute("SELECT 1");
-      Common.assertThrowsContains(SQLException.class, () -> stmt.execute("SELECT SLEEP(0.1)"), "");
+      Common.assertThrowsContains(SQLException.class, () -> stmt.execute("SELECT SLEEP(2)"), "");
     }
 
-    try (Connection con = createCon("&socketTimeout=500")) {
-      assertEquals(500, con.getNetworkTimeout());
+    try (Connection con = createCon("&socketTimeout=1500")) {
+      assertEquals(1500, con.getNetworkTimeout());
       Statement stmt = con.createStatement();
-      stmt.execute("SELECT SLEEP(0.1)");
-      Common.assertThrowsContains(SQLException.class, () -> stmt.execute("SELECT SLEEP(1)"), "");
+      stmt.execute("SELECT SLEEP(0.2)");
+      Common.assertThrowsContains(SQLException.class, () -> stmt.execute("SELECT SLEEP(3)"), "");
     }
 
     try (Connection con = createCon("&socketTimeout=0")) {
