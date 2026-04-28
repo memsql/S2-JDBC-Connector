@@ -158,13 +158,13 @@ log "TEST 5 PASSED"
 # the SingleStore SPN — which triggers S4U2Proxy at the KDC. SingleStore
 # must then see the session as the impersonated user.
 # ---------------------------------------------------------------------------
-# log "TEST 6: Run JDBC Kerberos test with constrained delegation (S4U2Self/S4U2Proxy)"
-# run_kerberos_test \
-#     "KRB_JDBC_URL=${JDBC_URL_BASE}" \
-#     "KRB_USER=${KRB_IMPERSONATED_PRINCIPAL}" \
-#     "KRB_USE_GSS_CREDENTIAL=true" \
-#     "KRB_IMPERSONATE_AS=${KRB_IMPERSONATED_PRINCIPAL}@${REALM}"
-# log "TEST 6 PASSED"
+log "TEST 6: Run JDBC Kerberos test with constrained delegation (S4U2Self/S4U2Proxy)"
+run_kerberos_test \
+    "KRB_JDBC_URL=${JDBC_URL_BASE}" \
+    "KRB_USER=${KRB_IMPERSONATED_PRINCIPAL}" \
+    "KRB_USE_GSS_CREDENTIAL=true" \
+    "KRB_IMPERSONATE_AS=${KRB_IMPERSONATED_PRINCIPAL}@${REALM}"
+log "TEST 6 PASSED"
 
 echo ""
 log "=========================================="
