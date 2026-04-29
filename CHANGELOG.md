@@ -1,5 +1,11 @@
 # SingleStore Change Log
 
+## [1.2.12](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.12)
+* Kerberos constrained delegation: `gssCredential` connection property and `requestCredentialDelegation` option for GSSAPI authentication
+* Add Docker-based Kerberos/GSSAPI end-to-end test scripts (#67)
+* Stabilize flaky integration tests (#69, #71, #73)
+* Ignore `dependency-reduced-pom.xml` (#68)
+
 ## [1.2.11](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.11)
 * [PLAT-7862] Added hostNameInCertificate option
 
