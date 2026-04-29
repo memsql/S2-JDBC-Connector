@@ -158,7 +158,7 @@ public class Configuration {
   private String jaasApplicationName;
   private Boolean cacheJaasLoginContext;
   private GSSCredential gssCredential;
-  private Boolean requestCredentialDelegation;
+  private boolean requestCredentialDelegation;
 
   // meta
   private boolean blankTableNameMeta;
@@ -411,7 +411,8 @@ public class Configuration {
     this.jaasApplicationName = builder.jaasApplicationName;
     this.cacheJaasLoginContext = builder.cacheJaasLoginContext;
     this.gssCredential = builder.gssCredential;
-    this.requestCredentialDelegation = builder.requestCredentialDelegation;
+    this.requestCredentialDelegation =
+        builder.requestCredentialDelegation != null && builder.requestCredentialDelegation;
     this.defaultFetchSize = builder.defaultFetchSize != null ? builder.defaultFetchSize : 0;
     this.tlsSocketType = builder.tlsSocketType;
     this.maxAllowedPacket = builder.maxAllowedPacket;
@@ -1572,10 +1573,10 @@ public class Configuration {
   }
 
   /**
-   * @return when true, GSSAPI auth requests credential delegation ({@code
-   *     GSSContext.requestCredDeleg})
+   * @return {@code true} when GSSAPI auth should request credential delegation ({@code
+   *     GSSContext.requestCredDeleg}); {@code false} when unset or explicitly false.
    */
-  public Boolean requestCredentialDelegation() {
+  public boolean requestCredentialDelegation() {
     return requestCredentialDelegation;
   }
 

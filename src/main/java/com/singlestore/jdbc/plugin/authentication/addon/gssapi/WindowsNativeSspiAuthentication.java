@@ -15,6 +15,7 @@ import com.sun.jna.platform.win32.Sspi;
 import com.sun.jna.platform.win32.SspiUtil;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import org.ietf.jgss.GSSCredential;
 import waffle.windows.auth.IWindowsSecurityContext;
 import waffle.windows.auth.impl.WindowsSecurityContextImpl;
@@ -34,6 +35,7 @@ public class WindowsNativeSspiAuthentication implements GssapiAuth {
    * @param requestCredentialDelegation request Kerberos delegation (not exposed by Waffle {@link
    *     WindowsSecurityContextImpl#getCurrent})
    * @param mechanisms gssapi mechanism
+   * @throws SQLFeatureNotSupportedException if {@code gssCredential} is non-null on this SSPI path
    * @throws IOException if socket error
    */
   public void authenticate(
@@ -48,10 +50,9 @@ public class WindowsNativeSspiAuthentication implements GssapiAuth {
       throws IOException, SQLException {
 
     if (gssCredential != null) {
-      throw new SQLException(
+      throw new SQLFeatureNotSupportedException(
           "GSSCredential passthrough is not supported with Windows native SSPI authentication. "
-              + "Use the JGSS (Kerberos) code path: run on non-Windows or remove Waffle from the classpath.",
-          "28000");
+              + "Use the JGSS (Kerberos) code path: run on non-Windows or remove Waffle from the classpath.");
     }
 
     // WindowsSecurityContextImpl.getCurrent(protocol, target) does not expose ISC_REQ_DELEGATE

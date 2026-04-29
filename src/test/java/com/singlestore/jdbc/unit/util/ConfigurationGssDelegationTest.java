@@ -4,7 +4,7 @@
 package com.singlestore.jdbc.unit.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -27,13 +27,13 @@ public class ConfigurationGssDelegationTest {
   public void requestCredentialDelegationFromUrl() throws SQLException {
     Configuration conf =
         Configuration.parse("jdbc:singlestore://localhost/test?requestCredentialDelegation=true");
-    assertTrue(Boolean.TRUE.equals(conf.requestCredentialDelegation()));
+    assertTrue(conf.requestCredentialDelegation());
   }
 
   @Test
-  public void requestCredentialDelegationDefaultNull() throws SQLException {
+  public void requestCredentialDelegationDefaultsToFalse() throws SQLException {
     Configuration conf = Configuration.parse("jdbc:singlestore://localhost/test");
-    assertNull(conf.requestCredentialDelegation());
+    assertFalse(conf.requestCredentialDelegation());
   }
 
   @Test
@@ -54,6 +54,32 @@ public class ConfigurationGssDelegationTest {
     props.put("gssCredential", cred);
     Configuration conf = Configuration.parse("jdbc:singlestore://localhost/test", props);
     assertEquals(cred, conf.gssCredential());
+  }
+
+  /**
+   * {@link com.singlestore.jdbc.Configuration#gssCredential} must never appear in the JDBC URL
+   * string rebuilt by {@link Configuration#initialUrl()} / {@link Configuration#toString()} ({@link
+   * com.singlestore.jdbc.Configuration#buildUrl} excludes it via {@code EXCLUDED_FIELDS});
+   * otherwise credential handles could leak into logs or equality strings.
+   */
+  @Test
+  public void gssCredentialDoesNotAppearInInitialUrlOrToString() throws SQLException {
+    StubGssCredential cred = new StubGssCredential();
+    Properties props = new Properties();
+    props.put("gssCredential", cred);
+    Configuration conf =
+        Configuration.parse(
+            "jdbc:singlestore://localhost:3306/fromprops?user=u&requestCredentialDelegation=true",
+            props);
+
+    assertEquals(cred, conf.gssCredential());
+
+    String initialUrl = conf.initialUrl();
+    assertFalse(
+        initialUrl.contains("gssCredential"),
+        "rebuilt URL must not contain gssCredential; got: " + initialUrl);
+
+    assertEquals(initialUrl, conf.toString());
   }
 
   /** Minimal {@link GSSCredential} for configuration property tests only. */

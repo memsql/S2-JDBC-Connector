@@ -48,8 +48,7 @@ public class SendGssApiAuthPacket implements AuthenticationPlugin {
     this.optionServicePrincipalName = conf.servicePrincipalName();
     this.optionJaasApplicationName = conf.jaasApplicationName();
     this.optionGssCredential = conf.gssCredential();
-    this.optionRequestCredentialDelegation =
-        Boolean.TRUE.equals(conf.requestCredentialDelegation());
+    this.optionRequestCredentialDelegation = conf.requestCredentialDelegation();
   }
 
   /**
