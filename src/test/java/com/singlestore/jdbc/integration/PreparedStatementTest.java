@@ -354,7 +354,7 @@ public class PreparedStatementTest extends Common {
       }
 
       try (PreparedStatement pstmt =
-          conn.prepareStatement("SELECT * from sequence_1_to_10;SELECT * from sequence_1_to_10")) {
+          conn.prepareStatement("SELECT * from prepare4;SELECT * from prepare4")) {
         pstmt.execute();
         pstmt.closeOnCompletion();
         assertTrue(pstmt.getMoreResults(Statement.CLOSE_CURRENT_RESULT));

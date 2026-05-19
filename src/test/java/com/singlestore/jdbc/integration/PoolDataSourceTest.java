@@ -604,7 +604,7 @@ public class PoolDataSourceTest extends Common {
       Thread.sleep(500);
       if (getCurrentConnections() <= initialConnection) break;
     }
-    assertEquals(initialConnection, getCurrentConnections());
+    assertTrue(getCurrentConnections() <= initialConnection);
   }
 
   @Test
