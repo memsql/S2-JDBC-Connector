@@ -158,16 +158,19 @@ public class OffsetDateTimeCodec implements Codec<OffsetDateTime> {
     if (context.getConf().preserveInstants()
         && epochSec >= 0L
         && epochSec <= (long) Integer.MAX_VALUE) {
-      int nanos = zdt.getNano();
       // Build FROM_UNIXTIME(...) without String.format to avoid the regex
       // parsing and intermediate allocations in this hot path (every batched
       // OffsetDateTime parameter passes through here when
       // rewriteBatchedStatements=true).
+      // TIMESTAMP/DATETIME column precision tops out at microseconds, so
+      // sub-microsecond nanoseconds (1..999) are truncated server-side
+      // anyway; only emit the fractional part when it is non-zero in
+      // microsecond resolution to keep the literal clean.
+      int micros = zdt.getNano() / 1000;
       encoder.writeAscii("FROM_UNIXTIME(");
       encoder.writeAscii(Long.toString(epochSec));
-      if (nanos > 0) {
+      if (micros > 0) {
         encoder.writeByte('.');
-        int micros = nanos / 1000;
         // Manual six-digit zero-padding (micros is guaranteed < 1_000_000).
         if (micros < 100000) encoder.writeByte('0');
         if (micros < 10000) encoder.writeByte('0');
