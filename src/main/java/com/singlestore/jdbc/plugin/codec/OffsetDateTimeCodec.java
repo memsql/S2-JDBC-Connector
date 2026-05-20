@@ -147,16 +147,36 @@ public class OffsetDateTimeCodec implements Codec<OffsetDateTime> {
     // and the server session timezone disagree across DST or historical
     // timezone boundaries (e.g. 1987-1988 KDT in Asia/Seoul).
     //
+    // FROM_UNIXTIME's accepted range is [0, INT32_MAX] (1970-01-01 00:00:00 UTC
+    // through 2038-01-19 03:14:07 UTC). Values outside that range return NULL
+    // on the server, which would silently lose data — so we fall back to the
+    // wall-clock literal path for negative or post-2038 OffsetDateTime values.
+    //
     // Aligns with MySQL Connector/J's preserveInstants option (default true
     // since 8.0.23) and MariaDB Connector/J's preserveInstants option.
-    if (context.getConf().preserveInstants()) {
-      long epochSec = zdt.toEpochSecond();
+    long epochSec = zdt.toEpochSecond();
+    if (context.getConf().preserveInstants()
+        && epochSec >= 0L
+        && epochSec <= (long) Integer.MAX_VALUE) {
       int nanos = zdt.getNano();
+      // Build FROM_UNIXTIME(...) without String.format to avoid the regex
+      // parsing and intermediate allocations in this hot path (every batched
+      // OffsetDateTime parameter passes through here when
+      // rewriteBatchedStatements=true).
+      encoder.writeAscii("FROM_UNIXTIME(");
+      encoder.writeAscii(Long.toString(epochSec));
       if (nanos > 0) {
-        encoder.writeAscii(String.format("FROM_UNIXTIME(%d.%06d)", epochSec, nanos / 1000));
-      } else {
-        encoder.writeAscii("FROM_UNIXTIME(" + epochSec + ")");
+        encoder.writeByte('.');
+        int micros = nanos / 1000;
+        // Manual six-digit zero-padding (micros is guaranteed < 1_000_000).
+        if (micros < 100000) encoder.writeByte('0');
+        if (micros < 10000) encoder.writeByte('0');
+        if (micros < 1000) encoder.writeByte('0');
+        if (micros < 100) encoder.writeByte('0');
+        if (micros < 10) encoder.writeByte('0');
+        encoder.writeAscii(Integer.toString(micros));
       }
+      encoder.writeByte(')');
       return;
     }
     Calendar cal = calParam == null ? Calendar.getInstance() : calParam;

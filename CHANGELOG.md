@@ -4,7 +4,7 @@
 * Kerberos constrained delegation: `gssCredential` connection property and `requestCredentialDelegation` option for GSSAPI authentication
 * Add Docker-based Kerberos/GSSAPI end-to-end test scripts (#67)
 * Stabilize flaky integration tests (#69, #71, #73)
-* Add `preserveInstants` connection option that preserves the absolute UTC instant of `OffsetDateTime` parameters by emitting `FROM_UNIXTIME(epoch)` SQL literals in `encodeText` instead of timezone-naive wall-clock strings. Default `false` for backwards compatibility. Aligns with the same-named option in MySQL Connector/J (default `true` since 8.0.23) and MariaDB Connector/J. Fixes 1-hour drift across DST/historical timezone boundaries (e.g. 1987-1988 KDT in `Asia/Seoul`) when used with `rewriteBatchedStatements=true`.
+* Add `preserveInstants` connection option that preserves the absolute UTC instant of `OffsetDateTime` parameters by emitting `FROM_UNIXTIME(epoch)` SQL literals in `encodeText` instead of timezone-naive wall-clock strings. Default `false` for backwards compatibility. Falls back to the wall-clock literal path for `OffsetDateTime` values outside FROM_UNIXTIME's supported range `[0, INT32_MAX]` (1970-01-01 00:00:00 UTC to 2038-01-19 03:14:07 UTC) to avoid silent NULL conversion for pre-1970 or post-2038 data. Aligns with the same-named option in MySQL Connector/J (default `true` since 8.0.23) and MariaDB Connector/J. Fixes 1-hour drift across DST/historical timezone boundaries (e.g. 1987-1988 KDT in `Asia/Seoul`) when used with `rewriteBatchedStatements=true`.
 
 ## [1.2.11](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.11)
 * [PLAT-7862] Added hostNameInCertificate option
