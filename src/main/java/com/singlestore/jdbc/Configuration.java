@@ -149,6 +149,7 @@ public class Configuration {
   private int prepStmtCacheSize;
   private boolean useServerPrepStmts;
   private boolean rewriteBatchedStatements;
+  private boolean preserveInstants;
 
   // authentication
   private CredentialPlugin credentialType;
@@ -334,6 +335,7 @@ public class Configuration {
     this.useServerPrepStmts = builder.useServerPrepStmts != null && builder.useServerPrepStmts;
     this.rewriteBatchedStatements =
         builder.rewriteBatchedStatements != null && builder.rewriteBatchedStatements;
+    this.preserveInstants = builder.preserveInstants != null && builder.preserveInstants;
     this.connectionAttributes = builder.connectionAttributes;
     this.allowLocalInfile = builder.allowLocalInfile == null || builder.allowLocalInfile;
     this.allowMultiQueries = builder.allowMultiQueries != null && builder.allowMultiQueries;
@@ -516,6 +518,7 @@ public class Configuration {
             .useCompression(this.useCompression)
             .useAffectedRows(this.useAffectedRows)
             .rewriteBatchedStatements(this.rewriteBatchedStatements)
+            .preserveInstants(this.preserveInstants)
             .disablePipeline(this.disablePipeline)
             .cachePrepStmts(this.cachePrepStmts)
             .prepStmtCacheSize(this.prepStmtCacheSize)
@@ -1692,6 +1695,28 @@ public class Configuration {
     return rewriteBatchedStatements;
   }
 
+  /**
+   * When {@code true}, {@link java.time.OffsetDateTime} parameters bound to TIMESTAMP/DATETIME
+   * columns are serialized as {@code FROM_UNIXTIME(epoch)} SQL literals, preserving the absolute
+   * UTC instant regardless of the server's {@code @@session.time_zone} interpretation at INSERT
+   * time.
+   *
+   * <p>Without this option, the existing behavior converts the OffsetDateTime to a wall-clock
+   * string via the JVM default time zone and emits a timezone-naive literal. The server then
+   * re-interprets the wall clock via its own session time zone, which can disagree with the JVM's
+   * IANA tzdata across DST and historical timezone boundaries (e.g. 1987-1988 KDT in {@code
+   * Asia/Seoul}) — causing 1-hour drifts. This is most visible with {@code
+   * rewriteBatchedStatements=true} because batch values flow through {@code encodeText}.
+   *
+   * <p>Aligns with the same-named option in MySQL Connector/J (default {@code true} since 8.0.23)
+   * and MariaDB Connector/J. Default {@code false} here for backwards compatibility.
+   *
+   * @return preserve instants flag
+   */
+  public boolean preserveInstants() {
+    return preserveInstants;
+  }
+
   public String getConsoleLogLevel() {
     return consoleLogLevel;
   }
@@ -2035,6 +2060,7 @@ public class Configuration {
     private Boolean useResetConnection;
 
     private Boolean rewriteBatchedStatements;
+    private Boolean preserveInstants;
     private String consoleLogLevel;
     private String consoleLogFilepath;
     private Boolean printStackTrace;
@@ -2656,6 +2682,18 @@ public class Configuration {
 
     public Builder rewriteBatchedStatements(Boolean rewriteBatchedStatements) {
       this.rewriteBatchedStatements = rewriteBatchedStatements;
+      return this;
+    }
+
+    /**
+     * Set preserveInstants.
+     *
+     * @param preserveInstants when true, OffsetDateTime parameters are encoded as {@code
+     *     FROM_UNIXTIME(epoch)} preserving the UTC instant
+     * @return this {@link Builder}
+     */
+    public Builder preserveInstants(Boolean preserveInstants) {
+      this.preserveInstants = preserveInstants;
       return this;
     }
 

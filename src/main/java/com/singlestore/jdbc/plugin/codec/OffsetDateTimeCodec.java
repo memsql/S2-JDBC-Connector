@@ -140,6 +140,25 @@ public class OffsetDateTimeCodec implements Codec<OffsetDateTime> {
       Writer encoder, Context context, Object val, Calendar calParam, Long length)
       throws IOException {
     OffsetDateTime zdt = (OffsetDateTime) val;
+    // When preserveInstants is enabled, emit FROM_UNIXTIME(epoch) to preserve
+    // the absolute UTC instant of the OffsetDateTime regardless of the server's
+    // @@session.time_zone interpretation at INSERT time. This avoids the 1-hour
+    // drift that occurs with naked wall-clock literals when the JVM IANA tzdata
+    // and the server session timezone disagree across DST or historical
+    // timezone boundaries (e.g. 1987-1988 KDT in Asia/Seoul).
+    //
+    // Aligns with MySQL Connector/J's preserveInstants option (default true
+    // since 8.0.23) and MariaDB Connector/J's preserveInstants option.
+    if (context.getConf().preserveInstants()) {
+      long epochSec = zdt.toEpochSecond();
+      int nanos = zdt.getNano();
+      if (nanos > 0) {
+        encoder.writeAscii(String.format("FROM_UNIXTIME(%d.%06d)", epochSec, nanos / 1000));
+      } else {
+        encoder.writeAscii("FROM_UNIXTIME(" + epochSec + ")");
+      }
+      return;
+    }
     Calendar cal = calParam == null ? Calendar.getInstance() : calParam;
     encoder.writeByte('\'');
     encoder.writeAscii(
