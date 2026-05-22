@@ -45,13 +45,12 @@ public class OffsetDateTimePreserveInstantsTest extends CommonCodecTest {
   private TimeZone originalDefaultTimeZone;
 
   @BeforeAll
-  public static void beforeAll() throws SQLException {
+  public static void beforeAll2() throws SQLException {
     drop();
     Statement stmt = sharedConn.createStatement();
     stmt.execute(
         "CREATE TABLE OffsetDateTimePreserveInstants ("
             + "id INT NOT NULL PRIMARY KEY, ts TIMESTAMP(6) NULL DEFAULT NULL)");
-    stmt.execute("FLUSH TABLES");
   }
 
   @AfterAll
