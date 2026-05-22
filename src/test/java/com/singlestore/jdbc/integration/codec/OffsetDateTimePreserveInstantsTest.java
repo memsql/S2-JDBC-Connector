@@ -28,14 +28,13 @@ import org.junit.jupiter.api.Test;
  * Integration tests for the {@code preserveInstants} connection option introduced for {@link
  * com.singlestore.jdbc.plugin.codec.OffsetDateTimeCodec#encodeText}.
  *
- * <p>Reproduces the issue described in the PR: with {@code rewriteBatchedStatements=true}, batched
- * {@link OffsetDateTime} parameters flow through {@code encodeText}, which converts them to a
- * wall-clock string via the JVM default time zone. Across DST and historical timezone boundaries
- * (e.g. 1987-1988 KDT in {@code Asia/Seoul}) the JVM IANA tzdata and the server's
- * {@code @@session.time_zone} interpretation can disagree, drifting the stored UTC instant by one
- * hour. When {@code preserveInstants=true}, the codec instead emits {@code
- * FROM_UNIXTIME(epoch[.us])}, which the server evaluates as a deterministic UTC instant regardless
- * of its session timezone.
+ * <p>With {@code rewriteBatchedStatements=true}, batched {@link OffsetDateTime} parameters flow
+ * through {@code encodeText}, which converts them to a wall-clock string via the JVM default time
+ * zone. Across DST and historical timezone boundaries (e.g. 1987-1988 KDT in {@code Asia/Seoul})
+ * the JVM IANA tzdata and the server's {@code @@session.time_zone} interpretation can disagree,
+ * drifting the stored UTC instant by one hour. When {@code preserveInstants=true}, the codec
+ * instead emits {@code FROM_UNIXTIME(epoch[.us])}, which the server evaluates as a deterministic
+ * UTC instant regardless of its session timezone.
  *
  * <p>Each test pins the JVM default time zone to {@code Asia/Seoul} for the duration of the body so
  * that the codec's wall-clock conversion path exercises tzdata with DST history. The {@code
@@ -104,11 +103,10 @@ public class OffsetDateTimePreserveInstantsTest extends CommonCodecTest {
   }
 
   /**
-   * Core fix verification. With {@code preserveInstants=true} and {@code
-   * rewriteBatchedStatements=true} (which forces every batched parameter through {@code
-   * encodeText}), batched {@link OffsetDateTime} parameters must round-trip the absolute UTC
-   * instant exactly, including across historical KDT (1988-07-15 in {@code Asia/Seoul}) and at the
-   * {@code FROM_UNIXTIME} accepted boundaries.
+   * With {@code preserveInstants=true} and {@code rewriteBatchedStatements=true} (which forces
+   * every batched parameter through {@code encodeText}), batched {@link OffsetDateTime} parameters
+   * must round-trip the absolute UTC instant exactly, including across historical KDT (1988-07-15
+   * in {@code Asia/Seoul}) and at the {@code FROM_UNIXTIME} accepted boundaries.
    */
   @Test
   public void preserveInstantsRoundTripsBatchedOffsetDateTime() throws SQLException {
@@ -116,11 +114,11 @@ public class OffsetDateTimePreserveInstantsTest extends CommonCodecTest {
         PreparedStatement ps =
             con.prepareStatement(
                 "INSERT INTO OffsetDateTimePreserveInstants (id, ts) VALUES (?, ?)")) {
-      // 1988-07-15T04:00:00Z = KDT 14:00 in Asia/Seoul (the PR's reproducer instant).
+      // 1988-07-15T04:00:00Z = KDT 14:00 in Asia/Seoul.
       long kdt = 584_942_400L;
-      // 2025-07-15T05:00:00Z = modern KST 14:00 (control: no DST in this era).
+      // 2025-07-15T05:00:00Z = modern KST 14:00.
       long modern = 1_752_555_600L;
-      // FROM_UNIXTIME accepts [0, INT32_MAX]. Test both interior boundaries.
+      // FROM_UNIXTIME accepts [0, INT32_MAX].
       long lowerBound = 1L;
       long upperBound = (long) Integer.MAX_VALUE;
 
