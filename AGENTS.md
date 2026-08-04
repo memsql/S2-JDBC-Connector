@@ -18,10 +18,13 @@ This repo is the **SingleStore JDBC Driver** — a Java 11 / Maven *library* (JD
 ### Starting the SingleStore database (needed for integration tests)
 The DB runs in Docker and is **not** a persistent service — after a VM restart you must restart the Docker daemon and re-create the container.
 1. Start the daemon (once per VM boot): `sudo dockerd > /tmp/dockerd.log 2>&1 &` (a tmux session named `dockerd` is the convenient way). The daemon is configured for `fuse-overlayfs`.
-2. Bring up the cluster: `ROOT_PASSWORD=password SINGLESTORE_LICENSE="" sudo -E ./scripts/ensure-test-singlestore-cluster-password.sh`.
-   - `SINGLESTORE_LICENSE` must be **set** (empty is fine — the dev image no longer needs a license) because the script runs under `set -u`.
-   - The script **fails at the `ADD AGGREGATOR` step** with `Feature 'child aggregators' is not supported in SingleStore Developer Image Edition`. This is expected: the free Developer Edition allows only the master aggregator on port 5506, which is all the tests need. After that failure the container `singlestore-integration` is still up and healthy.
-3. Create the test database (the script aborts before doing so): `mysql -u root -h 127.0.0.1 -P 5506 -ppassword -e 'CREATE DATABASE IF NOT EXISTS test'`.
-4. Verify: `mysql -u root -h 127.0.0.1 -P 5506 -ppassword -e 'SELECT @@memsql_version'`.
+2. Bring up the cluster: `ROOT_PASSWORD=password SINGLESTORE_LICENSE="$SINGLESTORE_LICENSE" sudo -E ./scripts/ensure-test-singlestore-cluster-password.sh`.
+   - `SINGLESTORE_LICENSE` must be **set** (the script runs under `set -u`), but it can be empty — the dev image no longer requires a license to start.
 
-SSL / JWT / PAM / Kerberos test setup performed by the script (after the aggregator step) is skipped due to the early exit; the corresponding tests (e.g. `SslTest`) will not have their fixtures and can be ignored unless you complete that setup manually.
+**With a valid Premium `SINGLESTORE_LICENSE`:** the script runs to completion — it adds the child aggregator, creates the `test` database, and sets up SSL / JWT / PAM fixtures. No manual follow-up is needed. If such a license is available, add it as the `SINGLESTORE_LICENSE` secret so the full suite (including `SslTest`, JWT, PAM tests) can run.
+
+**Without a license (empty `SINGLESTORE_LICENSE` → free Developer Image Edition):** the script **fails at the `ADD AGGREGATOR` step** with `Feature 'child aggregators' is not supported in SingleStore Developer Image Edition`, then exits early (`set -e`). This is expected in the free edition, which allows only the master aggregator on port 5506 — enough for most integration tests. The container `singlestore-integration` stays up and healthy, but you must finish the skipped steps manually:
+- Create the test database: `mysql -u root -h 127.0.0.1 -P 5506 -ppassword -e 'CREATE DATABASE IF NOT EXISTS test'`.
+- SSL / JWT / PAM / Kerberos fixtures are not set up, so those tests (e.g. `SslTest`) will fail unless you complete that setup manually.
+
+Verify either way: `mysql -u root -h 127.0.0.1 -P 5506 -ppassword -e 'SELECT @@memsql_version'`.
