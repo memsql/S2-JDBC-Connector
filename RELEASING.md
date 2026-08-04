@@ -10,6 +10,15 @@ Repository secrets used by the release workflow:
 | --- | --- |
 | `ENCRYPTION_KEY` / `ENCRYPTION_IV` | Decrypt the GPG signing key in `ci/secring.asc.enc` |
 | `SONATYPE_USER` / `SONATYPE_PASSWORD` | Authenticate to Maven Central (Sonatype) |
+| `AZURE_CLIENT_ID` / `AZURE_TENANT_ID` / `AZURE_SUBSCRIPTION_ID` | Azure OIDC login for Trusted Signing |
+
+Repository variables used for Azure Trusted Signing:
+
+| Variable | Purpose |
+| --- | --- |
+| `AZURE_SIGNING_ENDPOINT` | Trusted Signing endpoint URL (Jsign `--keystore`) |
+| `AZURE_SIGNING_ACCOUNT`  | Trusted Signing account name |
+| `AZURE_SIGNING_PROFILE`  | Trusted Signing certificate profile name |
 
 ## Using AI release skills
 
@@ -62,9 +71,10 @@ Tag format: `v` followed by the exact `pom.xml` version (for example `v1.2.13` o
 
 Pushing the tag starts the Release workflow, which:
 
-1. Builds and deploys signed artifacts to Maven Central.
-2. Creates a GitHub Release named `SingleStore JDBC Driver <version>`.
-3. Attaches:
+1. Builds and deploys GPG-signed artifacts to Maven Central.
+2. Authenticode-signs the release JARs with Azure Trusted Signing (Jsign).
+3. Creates a GitHub Release named `SingleStore JDBC Driver <version>`.
+4. Attaches the signed JARs:
    - `singlestore-jdbc-client-<version>.jar`
    - `singlestore-jdbc-client-<version>-browser-sso-uber.jar`
 
