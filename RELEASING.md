@@ -72,9 +72,10 @@ Tag format: `v` followed by the exact `pom.xml` version (for example `v1.2.13` o
 Pushing the tag starts the Release workflow, which:
 
 1. Builds and deploys GPG-signed artifacts to Maven Central.
-2. Authenticode-signs the release JARs with Azure Trusted Signing (Jsign).
-3. Creates a GitHub Release named `SingleStore JDBC Driver <version>`.
-4. Attaches the signed JARs:
+2. Signs the release JARs with Azure Trusted Signing via `jarsigner` and Jsign's JCA provider.
+3. Verifies the JAR signatures with `jarsigner -verify`.
+4. Creates a GitHub Release named `SingleStore JDBC Driver <version>`.
+5. Attaches the signed JARs:
    - `singlestore-jdbc-client-<version>.jar`
    - `singlestore-jdbc-client-<version>-browser-sso-uber.jar`
 
