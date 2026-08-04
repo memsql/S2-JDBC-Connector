@@ -99,6 +99,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: SingleStore JDBC Driver ${{ env.RELEASE_VERSION }}
+          draft: true
           prerelease: false
           generate_release_notes: true
           fail_on_unmatched_files: true

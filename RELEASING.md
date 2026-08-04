@@ -1,6 +1,6 @@
 # Releasing
 
-A JDBC release is triggered by pushing a version tag to GitHub. The [Release](.github/workflows/release.yml) workflow then publishes artifacts to Maven Central and creates a GitHub Release.
+A JDBC release is triggered by pushing a version tag to GitHub. The [Release](.github/workflows/release.yml) workflow then publishes artifacts to Maven Central and creates a draft GitHub Release for manual review before publishing.
 
 ## Prerequisites
 
@@ -74,13 +74,22 @@ Pushing the tag starts the Release workflow, which:
 1. Builds and deploys GPG-signed artifacts to Maven Central.
 2. Signs the release JARs with Azure Trusted Signing via `jarsigner` and Jsign's JCA provider.
 3. Verifies the JAR signatures with `jarsigner -verify`.
-4. Creates a GitHub Release named `SingleStore JDBC Driver <version>`.
+4. Creates a **draft** GitHub Release named `SingleStore JDBC Driver <version>` with generated release notes.
 5. Attaches the signed JARs:
    - `singlestore-jdbc-client-<version>.jar`
    - `singlestore-jdbc-client-<version>-browser-sso-uber.jar`
 
-## 3. Verify
+## 3. Publish the GitHub Release
+
+After the workflow succeeds:
+
+1. Open the draft [GitHub Release](https://github.com/memsql/S2-JDBC-Connector/releases) for the new tag.
+2. Review and edit the auto-generated release notes (align with `CHANGELOG.md` as needed).
+3. Confirm the expected JARs are attached.
+4. Publish the release and mark it as the latest release.
+
+## 4. Verify
 
 1. Confirm the [Release](https://github.com/memsql/S2-JDBC-Connector/actions/workflows/release.yml) workflow succeeded.
-2. Confirm the [GitHub Release](https://github.com/memsql/S2-JDBC-Connector/releases) exists with the expected JARs.
+2. Confirm the published [GitHub Release](https://github.com/memsql/S2-JDBC-Connector/releases) is marked as latest with the expected JARs and finalized notes.
 3. Confirm the artifact appears on [Maven Central](https://central.sonatype.com/artifact/com.singlestore/singlestore-jdbc-client) (propagation can take some time).
