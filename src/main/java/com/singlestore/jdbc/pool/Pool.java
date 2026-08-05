@@ -213,21 +213,21 @@ public class Pool implements AutoCloseable, PoolMBean {
                 if (!idleConnections.contains(item)) {
                   item.getConnection().reset();
                   item.lastUsedToNow();
-                  if (item.isFailed()) {
-                    // some connections after error are closing and returns to idle state
-                    item.setFailed(false);
+                  if (item.isRemovedFromTotal()) {
+                    // connectionErrorOccurred already released the slot; returning to idle
+                    // puts it back into totalConnection.
+                    item.setRemovedFromTotal(false);
                     totalConnection.incrementAndGet();
                   }
                   idleConnections.addFirst(item);
                 }
               } catch (SQLException sqle) {
 
-                // sql exception during reset, removing connection from pool
-                // Only decrement totalConnection if it was not already decremented
-                // by connectionErrorOccurred (which marks the item as failed)
-                boolean wasFailed = item.isFailed();
-                item.setFailed(false);
-                if (!wasFailed) {
+                // sql exception during reset, removing connection from pool.
+                // if the slot was already released by connectionErrorOccurred, keep the
+                // flag set so a repeated close event cannot decrement it twice.
+                if (!item.isRemovedFromTotal()) {
+                  item.setRemovedFromTotal(true);
                   totalConnection.decrementAndGet();
                 }
                 silentCloseConnection(item.getConnection());
@@ -240,11 +240,9 @@ public class Pool implements AutoCloseable, PoolMBean {
               } catch (SQLException sqle) {
                 // eat
               }
-              // Only decrement totalConnection if it was not already decremented
-              // by connectionErrorOccurred (which marks the item as failed)
-              boolean wasFailed = item.isFailed();
-              item.setFailed(false);
-              if (!wasFailed) {
+              // same accounting as above: only release the slot once
+              if (!item.isRemovedFromTotal()) {
+                item.setRemovedFromTotal(true);
                 totalConnection.decrementAndGet();
               }
             }
@@ -254,7 +252,7 @@ public class Pool implements AutoCloseable, PoolMBean {
           public void connectionErrorOccurred(ConnectionEvent event) {
 
             InternalPoolConnection item = ((InternalPoolConnection) event.getSource());
-            item.setFailed(true);
+            item.setRemovedFromTotal(true);
             totalConnection.decrementAndGet();
             idleConnections.remove(item);
 
