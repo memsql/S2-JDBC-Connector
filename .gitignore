@@ -11,3 +11,4 @@ scripts/ssl/*
 dependency-reduced-pom.xml
 
 .claude/*
+.vscode/*

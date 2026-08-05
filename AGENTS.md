@@ -7,13 +7,13 @@ This repo is the **SingleStore JDBC Driver** — a Java 11 / Maven *library* (JD
 ### Java / Maven
 - Build and tests target **JDK 11** (matches CI in `.circleci/config.yml` / `.github/workflows/test.yml`). JDK 11 is the default `java`/`javac` (set via `update-alternatives`), so `mvn` uses it automatically — do not override `JAVA_HOME`.
 - Build the driver jar: `mvn -Dmaven.test.skip -Dmaven.javadoc.skip package` (output in `target/`).
-- There is no separate lint gate; code formatting is enforced by the `git-code-format-maven-plugin` (google-java-format) git hooks, not a Maven verify goal.
+- Format check in CI: `mvn -B git-code-format:validate-code-format` (dedicated `lint` job in `.github/workflows/test.yml`); local formatting is still enforced by the `git-code-format-maven-plugin` (google-java-format) git hooks.
 
 ### Tests
 - Unit tests need **no database**: `mvn test -Dtest='com.singlestore.jdbc.unit.**' -DfailIfNoTests=false`.
 - Integration tests (everything under `com.singlestore.jdbc.integration`, plus a few `unit` tests that extend `integration.Common`) require a running SingleStore server. Connection defaults are in `src/test/resources/conf.properties` (`localhost:5506`, db `test`, user `root`, password `password`) and are overridable via `TEST_DB_HOST` / `TEST_DB_PORT` / `TEST_DB_USER` / `TEST_DB_PASSWORD` env vars or system properties.
 - Run the whole suite with `mvn test`, or a single class with `-Dtest=com.singlestore.jdbc.integration.StatementTest`.
-- `Test_SingleStore.java` at the repo root is a legacy smoke test that **fails against SingleStore 9.x** (it creates users via deprecated `GRANT`). Use `mvn test` instead.
+- The legacy root-level `Test_SingleStore.java` smoke test has been deleted; use `mvn test` for all testing.
 
 ### Starting the SingleStore database (needed for integration tests)
 The DB runs in Docker and is **not** a persistent service — after a VM restart you must restart the Docker daemon and re-create the container.

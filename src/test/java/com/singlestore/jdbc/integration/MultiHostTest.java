@@ -123,8 +123,7 @@ public class MultiHostTest extends Common {
     try (Connection con =
         (Connection)
             DriverManager.getConnection(
-                url
-                    + "&deniedListTimeout=300&retriesAllDown=4&connectTimeout=500")) {
+                url + "&deniedListTimeout=300&retriesAllDown=4&connectTimeout=500")) {
       Statement stmt = con.createStatement();
       stmt.execute("SET @con=1");
       proxy.restart(100);
