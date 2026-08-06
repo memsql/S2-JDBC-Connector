@@ -17,12 +17,14 @@
 #   51 Franklin St., Fifth Floor, Boston, MA 02110, USA
 # *************************************************************************************/
 ---
-name: Release & Sign with Jsign
+name: Release & Sign
 
 on:
   push:
     tags:
       - 'v*'
+  # TEMPORARY: remove after dry-run testing
+  workflow_dispatch:
 
 jobs:
   build:
@@ -49,12 +51,22 @@ jobs:
         run: |
           mkdir -p ~/.m2
           cp ci/settings.xml ~/.m2/settings.xml
-      - name: Release to Maven Central
+      # TEMPORARY: package only (no Maven Central publish) for dry-run testing
+      # - name: Release to Maven Central
+      #   if: ${{ success() }}
+      #   run: mvn -s ci/settings.xml clean deploy -DskipTests -Dsonatype.username=${{ secrets.SONATYPE_USER }} -Dsonatype.password=${{ secrets.SONATYPE_PASSWORD }}
+      - name: Build release JARs
         if: ${{ success() }}
-        run: mvn -s ci/settings.xml clean deploy -DskipTests -Dsonatype.username=${{ secrets.SONATYPE_USER }} -Dsonatype.password=${{ secrets.SONATYPE_PASSWORD }}
+        run: mvn -s ci/settings.xml clean package -DskipTests
       - name: Derive release version
         if: ${{ success() }}
-        run: echo "RELEASE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            echo "RELEASE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            VERSION=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)
+            echo "RELEASE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          fi
       - name: Install Jsign
         if: ${{ success() }}
         run: |
@@ -94,15 +106,16 @@ jobs:
             "target/singlestore-jdbc-client-${{ env.RELEASE_VERSION }}.jar"
           jarsigner -verify \
             "target/singlestore-jdbc-client-${{ env.RELEASE_VERSION }}-browser-sso-uber.jar"
-      - name: Create GitHub Release
-        if: ${{ success() }}
-        uses: softprops/action-gh-release@v2
-        with:
-          name: SingleStore JDBC Driver ${{ env.RELEASE_VERSION }}
-          draft: true
-          prerelease: false
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-          files: |
-            target/singlestore-jdbc-client-${{ env.RELEASE_VERSION }}-browser-sso-uber.jar
-            target/singlestore-jdbc-client-${{ env.RELEASE_VERSION }}.jar
+      # TEMPORARY: skipped during dry-run testing
+      # - name: Create GitHub Release
+      #   if: ${{ success() }}
+      #   uses: softprops/action-gh-release@v2
+      #   with:
+      #     name: SingleStore JDBC Driver ${{ env.RELEASE_VERSION }}
+      #     draft: true
+      #     prerelease: false
+      #     generate_release_notes: true
+      #     fail_on_unmatched_files: true
+      #     files: |
+      #       target/singlestore-jdbc-client-${{ env.RELEASE_VERSION }}-browser-sso-uber.jar
+      #       target/singlestore-jdbc-client-${{ env.RELEASE_VERSION }}.jar
