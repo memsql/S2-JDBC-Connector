@@ -112,9 +112,10 @@ jobs:
             echo "Unexpected root CA fingerprint: $ACTUAL_SHA256" >&2
             exit 1
           fi
-          keytool -importcert -noprompt \
+          # setup-java installs the JDK as root; the runner user cannot write cacerts.
+          sudo keytool -importcert -noprompt \
             -alias microsoft-identity-verification-root-ca-2020 \
-            -keystore "$JAVA_HOME/lib/security/cacerts" \
+            -cacerts \
             -storepass changeit \
             -file msroot2020.crt
       - name: Verify signed JARs
