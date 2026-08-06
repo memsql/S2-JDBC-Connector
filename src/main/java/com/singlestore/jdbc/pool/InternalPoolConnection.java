@@ -11,7 +11,11 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class InternalPoolConnection extends SingleStorePoolConnection {
   private final AtomicLong lastUsed;
-  private boolean failed;
+  /**
+   * True once this item's slot has been removed from {@code Pool.totalConnection}. Used to make
+   * error/close accounting idempotent across repeated connection events.
+   */
+  private boolean removedFromTotal;
 
   /**
    * Constructor.
@@ -37,12 +41,12 @@ public class InternalPoolConnection extends SingleStorePoolConnection {
     lastUsed.set(System.nanoTime());
   }
 
-  public boolean isFailed() {
-    return failed;
+  public boolean isRemovedFromTotal() {
+    return removedFromTotal;
   }
 
-  public void setFailed(boolean failed) {
-    this.failed = failed;
+  public void setRemovedFromTotal(boolean removedFromTotal) {
+    this.removedFromTotal = removedFromTotal;
   }
 
   /** Reset last used time, to ensure next retrieval will validate connection before borrowing */

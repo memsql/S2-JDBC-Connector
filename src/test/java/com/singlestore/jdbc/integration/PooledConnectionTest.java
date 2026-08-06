@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.*;
+import java.util.concurrent.TimeUnit;
 import javax.sql.*;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
@@ -165,6 +166,123 @@ public class PooledConnectionTest extends Common {
               || contents.contains("closing pool SingleStore-pool (total:2, active:1, pending:0)"));
       logger.setLevel(initialLevel);
       logger.detachAppender(fa);
+    }
+  }
+
+  /**
+   * Regression: connectionErrorOccurred releases the item from totalConnection; connectionClosed
+   * must not release it again when reset() fails on that killed connection. Without the guard,
+   * totalConnection goes negative and/or settles at 0 instead of 1 after replacement.
+   *
+   * <p>useResetConnection=true forces reset() to send a server command, which fails after the
+   * connection was killed — the path that previously double-decremented the counter.
+   */
+  @Test
+  public void testPoolKillConnectionDoesNotDoubleDecrementTotal() throws Exception {
+    try (Pool pool =
+        Pools.retrievePool(
+            Configuration.parse(
+                mDefUrl
+                    + "&maxPoolSize=1&minPoolSize=1&useResetConnection=true"
+                    + "&poolName=killNoDoubleDecrement"))) {
+      InternalPoolConnection pc = pool.getPoolConnection();
+      com.singlestore.jdbc.Connection conn = pc.getConnection();
+      long threadId = conn.getThreadId();
+      try {
+        conn.createStatement().execute("KILL " + threadId);
+      } catch (SQLException e) {
+        assertTrue(e.getMessage().contains("Socket error"));
+      }
+
+      pc.close();
+
+      // Poll through the async replacement window: without the fix, total briefly hits -1 and/or
+      // settles at 0 after one replacement increments from that double-decrement.
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+      long observedMin = pool.getTotalConnections();
+      long total;
+      do {
+        total = pool.getTotalConnections();
+        observedMin = Math.min(observedMin, total);
+        if (total >= 1) {
+          break;
+        }
+        Thread.sleep(50);
+      } while (System.nanoTime() < deadline);
+
+      assertTrue(
+          observedMin >= 0,
+          "totalConnection must not go negative after kill+close (observed min="
+              + observedMin
+              + ")");
+      assertEquals(
+          1, total, "pool must restore exactly one connection after kill without double-decrement");
+
+      InternalPoolConnection replacement = pool.getPoolConnection();
+      try (ResultSet rs = replacement.getConnection().createStatement().executeQuery("SELECT 1")) {
+        assertTrue(rs.next());
+        assertEquals(1, rs.getInt(1));
+      }
+      assertEquals(1, pool.getTotalConnections());
+      replacement.close();
+      assertEquals(1, pool.getTotalConnections());
+    }
+  }
+
+  /**
+   * Regression: SingleStorePoolConnection.close() fires connectionClosed on every call with no
+   * idempotency guard. After a kill, connectionErrorOccurred already removed the slot; a repeated
+   * close must not decrement again. Clearing removedFromTotal on discard would disarm that guard.
+   */
+  @Test
+  public void testPoolKillConnectionRepeatedCloseDoesNotDoubleDecrementTotal() throws Exception {
+    try (Pool pool =
+        Pools.retrievePool(
+            Configuration.parse(
+                mDefUrl
+                    + "&maxPoolSize=1&minPoolSize=1&useResetConnection=true"
+                    + "&poolName=killRepeatedCloseNoDoubleDecrement"))) {
+      InternalPoolConnection pc = pool.getPoolConnection();
+      com.singlestore.jdbc.Connection conn = pc.getConnection();
+      long threadId = conn.getThreadId();
+      try {
+        conn.createStatement().execute("KILL " + threadId);
+      } catch (SQLException e) {
+        assertTrue(e.getMessage().contains("Socket error"));
+      }
+
+      long observedMin = pool.getTotalConnections();
+      for (int i = 0; i < 3; i++) {
+        pc.close();
+        observedMin = Math.min(observedMin, pool.getTotalConnections());
+      }
+
+      assertTrue(
+          observedMin >= 0,
+          "totalConnection must not go negative across repeated closes after kill (observed min="
+              + observedMin
+              + ")");
+
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+      long total;
+      do {
+        total = pool.getTotalConnections();
+        observedMin = Math.min(observedMin, total);
+        if (total >= 1) {
+          break;
+        }
+        Thread.sleep(50);
+      } while (System.nanoTime() < deadline);
+
+      assertTrue(
+          observedMin >= 0,
+          "totalConnection must stay non-negative while waiting for replacement (observed min="
+              + observedMin
+              + ")");
+      assertEquals(
+          1,
+          total,
+          "pool must restore exactly one connection after kill+repeated close without double-decrement");
     }
   }
 
