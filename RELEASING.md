@@ -73,9 +73,10 @@ Pushing the tag starts the Release workflow, which:
 
 1. Builds and deploys GPG-signed artifacts to Maven Central.
 2. Signs the release JARs with Azure Trusted Signing via `jarsigner` and Jsign's JCA provider.
-3. Verifies the JAR signatures with `jarsigner -verify`.
-4. Creates a **draft** GitHub Release named `SingleStore JDBC Driver <version>` with generated release notes.
-5. Attaches the signed JARs:
+3. Imports the Microsoft Identity Verification Root Certificate Authority 2020 into the JDK truststore. Trusted Signing chains to this root, and the JDK does not ship it, so `jarsigner` cannot validate the signer or timestamp chains without it. Anyone verifying the published JARs on a stock JDK will see `PKIX path building failed` warnings unless they import the same root.
+4. Verifies the JAR signatures with `jarsigner -verify`.
+5. Creates a **draft** GitHub Release named `SingleStore JDBC Driver <version>` with generated release notes.
+6. Attaches the signed JARs:
    - `singlestore-jdbc-client-<version>.jar`
    - `singlestore-jdbc-client-<version>-browser-sso-uber.jar`
 

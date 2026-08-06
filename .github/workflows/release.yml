@@ -99,6 +99,24 @@ jobs:
               -tsa "http://timestamp.acs.microsoft.com" \
               "$JAR" "$ALIAS"
           done
+      # The Trusted Signing root is not shipped in the JDK truststore, so without
+      # it jarsigner reports the signer and timestamp chains as unverifiable.
+      - name: Trust the Azure Trusted Signing root CA
+        if: ${{ success() }}
+        run: |
+          EXPECTED_SHA256="53:67:F2:0C:7A:DE:0E:2B:CA:79:09:15:05:6D:08:6B:72:0C:33:C1:FA:2A:26:61:AC:F7:87:E3:29:2E:12:70"
+          curl -fsSL -o msroot2020.crt \
+            "https://www.microsoft.com/pkiops/certs/Microsoft%20Identity%20Verification%20Root%20Certificate%20Authority%202020.crt"
+          ACTUAL_SHA256=$(openssl x509 -inform DER -in msroot2020.crt -noout -fingerprint -sha256 | cut -d= -f2)
+          if [[ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]]; then
+            echo "Unexpected root CA fingerprint: $ACTUAL_SHA256" >&2
+            exit 1
+          fi
+          keytool -importcert -noprompt \
+            -alias microsoft-identity-verification-root-ca-2020 \
+            -keystore "$JAVA_HOME/lib/security/cacerts" \
+            -storepass changeit \
+            -file msroot2020.crt
       - name: Verify signed JARs
         if: ${{ success() }}
         run: |
