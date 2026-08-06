@@ -6,6 +6,7 @@ package com.singlestore.jdbc.integration;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.singlestore.jdbc.Statement;
+import com.singlestore.jdbc.integration.util.MockBrowserCredentialPlugin;
 import com.singlestore.jdbc.plugin.credential.CredentialPluginLoader;
 import com.singlestore.jdbc.plugin.credential.browser.BrowserCredentialPlugin;
 import com.singlestore.jdbc.plugin.credential.browser.TokenWaiterServer;
@@ -453,7 +454,7 @@ public class BrowserAuthTest extends Common {
     public MockHttpServer(
         String jwt, boolean shouldHaveEmail, int expectedPackets, int shouldReceiveErrorWithCode)
         throws IOException {
-      server = HttpServer.create(new InetSocketAddress(18087), 0);
+      server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
       packetsLeft = expectedPackets;
 
       String path = "/";
@@ -499,10 +500,13 @@ public class BrowserAuthTest extends Common {
             }
           });
       server.start();
+      MockBrowserCredentialPlugin.setBaseURL(
+          "http://127.0.0.1:" + server.getAddress().getPort() + path);
     }
 
     public void stop() {
       server.stop(0);
+      MockBrowserCredentialPlugin.resetBaseURL();
     }
   }
 }

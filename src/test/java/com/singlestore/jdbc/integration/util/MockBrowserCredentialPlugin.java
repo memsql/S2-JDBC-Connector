@@ -16,7 +16,20 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClients;
 
 public class MockBrowserCredentialPlugin extends BrowserCredentialPlugin {
-  private static final String baseURL = "http://127.0.0.1:18087";
+  // A port outside the ephemeral range, so that no other test server can end up listening on it.
+  private static final String UNREACHABLE_BASE_URL = "http://127.0.0.1:18087";
+
+  // The mock SSO server listens on an ephemeral port, so tests publish its address here before
+  // connecting. Defaults to an unreachable URL, which is what timeout tests expect.
+  private static volatile String baseURL = UNREACHABLE_BASE_URL;
+
+  public static void setBaseURL(String url) {
+    baseURL = url;
+  }
+
+  public static void resetBaseURL() {
+    baseURL = UNREACHABLE_BASE_URL;
+  }
 
   @Override
   public String type() {
