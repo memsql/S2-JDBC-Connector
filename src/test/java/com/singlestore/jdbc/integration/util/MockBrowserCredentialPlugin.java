@@ -16,7 +16,13 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClients;
 
 public class MockBrowserCredentialPlugin extends BrowserCredentialPlugin {
-  private static final String baseURL = "http://127.0.0.1:18087";
+  // The mock SSO server listens on an ephemeral port, so tests publish its address here before
+  // connecting. Defaults to a port nobody listens on, which is what timeout tests expect.
+  private static volatile String baseURL = "http://127.0.0.1:18087";
+
+  public static void setBaseURL(String url) {
+    baseURL = url;
+  }
 
   @Override
   public String type() {
