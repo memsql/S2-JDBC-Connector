@@ -506,6 +506,7 @@ public class BrowserAuthTest extends Common {
 
     public void stop() {
       server.stop(0);
+      MockBrowserCredentialPlugin.resetBaseURL();
     }
   }
 }
