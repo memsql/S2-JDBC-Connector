@@ -1,6 +1,6 @@
 # Releasing
 
-A JDBC release is triggered by pushing a version tag to GitHub. The [Release](.github/workflows/release.yml) workflow then publishes artifacts to Maven Central and creates a GitHub Release.
+A JDBC release is triggered by pushing a version tag to GitHub. The [Release](.github/workflows/release.yml) workflow then publishes artifacts to Maven Central and creates a draft GitHub Release for manual review before publishing.
 
 ## Prerequisites
 
@@ -10,6 +10,15 @@ Repository secrets used by the release workflow:
 | --- | --- |
 | `ENCRYPTION_KEY` / `ENCRYPTION_IV` | Decrypt the GPG signing key in `ci/secring.asc.enc` |
 | `SONATYPE_USER` / `SONATYPE_PASSWORD` | Authenticate to Maven Central (Sonatype) |
+| `AZURE_CLIENT_ID` / `AZURE_TENANT_ID` / `AZURE_SUBSCRIPTION_ID` | Azure OIDC login for Trusted Signing |
+
+Repository variables used for Azure Trusted Signing:
+
+| Variable | Purpose |
+| --- | --- |
+| `AZURE_SIGNING_ENDPOINT` | Trusted Signing endpoint URL (Jsign `--keystore`) |
+| `AZURE_SIGNING_ACCOUNT`  | Trusted Signing account name |
+| `AZURE_SIGNING_PROFILE`  | Trusted Signing certificate profile name |
 
 ## Using AI release skills
 
@@ -62,14 +71,26 @@ Tag format: `v` followed by the exact `pom.xml` version (for example `v1.2.13` o
 
 Pushing the tag starts the Release workflow, which:
 
-1. Builds and deploys signed artifacts to Maven Central.
-2. Creates a GitHub Release named `SingleStore JDBC Driver <version>`.
-3. Attaches:
+1. Builds and deploys GPG-signed artifacts to Maven Central.
+2. Signs the release JARs with Azure Trusted Signing via `jarsigner` and Jsign's JCA provider.
+3. Imports the Microsoft Identity Verification Root Certificate Authority 2020 into the JDK truststore. Trusted Signing chains to this root, and the JDK does not ship it, so `jarsigner` cannot validate the signer or timestamp chains without it. Anyone verifying the published JARs on a stock JDK will see `PKIX path building failed` warnings unless they import the same root.
+4. Verifies the JAR signatures with `jarsigner -verify`.
+5. Creates a **draft** GitHub Release named `SingleStore JDBC Driver <version>` with generated release notes.
+6. Attaches the signed JARs:
    - `singlestore-jdbc-client-<version>.jar`
    - `singlestore-jdbc-client-<version>-browser-sso-uber.jar`
 
-## 3. Verify
+## 3. Publish the GitHub Release
+
+After the workflow succeeds:
+
+1. Open the draft [GitHub Release](https://github.com/memsql/S2-JDBC-Connector/releases) for the new tag.
+2. Review and edit the auto-generated release notes (align with `CHANGELOG.md` as needed).
+3. Confirm the expected JARs are attached.
+4. Publish the release and mark it as the latest release.
+
+## 4. Verify
 
 1. Confirm the [Release](https://github.com/memsql/S2-JDBC-Connector/actions/workflows/release.yml) workflow succeeded.
-2. Confirm the [GitHub Release](https://github.com/memsql/S2-JDBC-Connector/releases) exists with the expected JARs.
+2. Confirm the published [GitHub Release](https://github.com/memsql/S2-JDBC-Connector/releases) is marked as latest with the expected JARs and finalized notes.
 3. Confirm the artifact appears on [Maven Central](https://central.sonatype.com/artifact/com.singlestore/singlestore-jdbc-client) (propagation can take some time).
