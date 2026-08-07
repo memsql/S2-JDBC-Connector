@@ -1,9 +1,12 @@
 # SingleStore Change Log
 
-## [1.2.12-beta](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.12-beta)
+## [1.2.12](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.12)
 * Kerberos constrained delegation: `gssCredential` connection property and `requestCredentialDelegation` option for GSSAPI authentication
+* Add `preserveInstants` option for OffsetDateTime UTC instant preservation (#78)
+* Fix pool `totalConnection` accounting: prevent double-decrement when a killed connection is closed (#72)
+* Update dependencies to fix Dependabot security alerts (#85)
 * Add Docker-based Kerberos/GSSAPI end-to-end test scripts (#67)
-* Stabilize flaky integration tests (#69, #71, #73)
+* Stabilize flaky integration tests (#69, #71, #73, #82, #86)
 
 ## [1.2.11](https://github.com/memsql/S2-JDBC-Connector/releases/tag/v1.2.11)
 * [PLAT-7862] Added hostNameInCertificate option
