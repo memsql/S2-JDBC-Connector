@@ -125,16 +125,15 @@ jobs:
             "target/singlestore-jdbc-client-${{ env.RELEASE_VERSION }}.jar"
           jarsigner -verify \
             "target/singlestore-jdbc-client-${{ env.RELEASE_VERSION }}-browser-sso-uber.jar"
-      # TEMPORARY: skipped during dry-run testing
-      # - name: Create GitHub Release
-      #   if: ${{ success() }}
-      #   uses: softprops/action-gh-release@v2
-      #   with:
-      #     name: SingleStore JDBC Driver ${{ env.RELEASE_VERSION }}
-      #     draft: true
-      #     prerelease: false
-      #     generate_release_notes: true
-      #     fail_on_unmatched_files: true
-      #     files: |
-      #       target/singlestore-jdbc-client-${{ env.RELEASE_VERSION }}-browser-sso-uber.jar
-      #       target/singlestore-jdbc-client-${{ env.RELEASE_VERSION }}.jar
+      - name: Create GitHub Release
+        if: ${{ success() }}
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SingleStore JDBC Driver ${{ env.RELEASE_VERSION }}
+          draft: true
+          prerelease: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            target/singlestore-jdbc-client-${{ env.RELEASE_VERSION }}-browser-sso-uber.jar
+            target/singlestore-jdbc-client-${{ env.RELEASE_VERSION }}.jar
