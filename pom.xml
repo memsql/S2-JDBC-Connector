@@ -28,7 +28,7 @@
         <spotless.version>2.40.0</spotless.version>
         <jna.version>5.13.0</jna.version>
         <mysql-connector-java.version>8.4.0</mysql-connector-java.version>
-        <mariadb-connector-java.version>3.3.0</mariadb-connector-java.version>
+        <mariadb-connector-java.version>3.3.5</mariadb-connector-java.version>
     </properties>
     <licenses>
         <license>
