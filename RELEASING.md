@@ -94,3 +94,36 @@ After the workflow succeeds:
 1. Confirm the [Release](https://github.com/memsql/S2-JDBC-Connector/actions/workflows/release.yml) workflow succeeded.
 2. Confirm the published [GitHub Release](https://github.com/memsql/S2-JDBC-Connector/releases) is marked as latest with the expected JARs and finalized notes.
 3. Confirm the artifact appears on [Maven Central](https://central.sonatype.com/artifact/com.singlestore/singlestore-jdbc-client) (propagation can take some time).
+
+## Driver-Server Version Compatibility Matrix
+
+After each release, add a row for the new version rather than copying an older row's engine list. CircleCI pinned engine images (and later explicit `singlestore_version` values) through `v1.2.7`. From `v1.2.8`, GitHub Actions is unpinned (`singlestore-labs/singlestore-supported-versions` at workflow time plus `singlestoredb-dev:latest`); take those lists from the [EOL policy](https://docs.singlestore.com/db/v9.1/support/singlestore-software-end-of-life-eol-policy/) as of the new tag's date, plus any engine RC that existed by that date. Take tested Java versions from the live CI configuration at the release tag.
+
+| Driver Version | Release date | Supported engine versions | Tested Java versions |
+| -------------- | ------------ | ------------------------- | -------------------- |
+| 1.2.12         | 2026-08-07   | 8.9, 9.0, 9.1 RC          | 11                   |
+| 1.2.11         | 2026-04-14   | 8.7, 8.9, 9.0, 9.1 RC     | 11                   |
+| 1.2.10         | 2026-03-25   | 8.7, 8.9, 9.0, 9.1 RC     | 11                   |
+| 1.2.9          | 2025-11-12   | 8.5, 8.7, 8.9, 9.0        | 11                   |
+| 1.2.8          | 2025-05-09   | 8.5, 8.7, 8.9             | 11                   |
+| 1.2.7          | 2025-01-08   | 8.1, 8.5, 8.7, 8.9        | 8, 11, 17, 21        |
+| 1.2.6          | 2024-11-07   | 8.0, 8.1, 8.5, 8.7        | 8, 11, 17, 21        |
+| 1.2.5          | 2024-09-23   | 8.0, 8.1, 8.5, 8.7        | 8, 11, 17, 21        |
+| 1.2.4          | 2024-09-06   | 8.0, 8.1, 8.5             | 8, 11, 17, 21        |
+| 1.2.3          | 2024-05-17   | 7.8, 8.0, 8.1, 8.5        | 8, 11, 17, 21        |
+| 1.2.2          | 2024-03-06   | 7.8, 8.0, 8.1, 8.5        | 8, 11, 17, 21        |
+| 1.2.1          | 2024-01-12   | 7.8, 8.0, 8.1             | 8, 11, 17            |
+| 1.2.0          | 2023-10-16   | 7.5, 7.6, 7.8, 8.0, 8.1   | 11                   |
+| 1.1.9          | 2023-08-03   | 7.5, 7.6, 7.8, 8.0, 8.1   | 11                   |
+| 1.1.8          | 2023-07-17   | 7.5, 7.6, 7.8, 8.0, 8.1   | 11                   |
+| 1.1.7          | 2023-07-10   | 7.5, 7.6, 7.8, 8.0        | 11                   |
+| 1.1.6          | 2023-07-04   | 7.5, 7.6, 7.8, 8.0        | 11                   |
+| 1.1.5          | 2023-03-29   | 7.5, 7.6, 7.8, 8.0        | 11                   |
+| 1.1.4          | 2022-07-26   | 7.1, 7.3, 7.5, 7.6, 7.8   | 11                   |
+| 1.1.3          | 2022-07-13   | 7.1, 7.3, 7.5, 7.6, 7.8   | 11                   |
+| 1.1.2          | 2022-07-06   | 7.1, 7.3, 7.5, 7.6, 7.8   | 11                   |
+| 1.1.1          | 2022-06-13   | 7.1, 7.3, 7.5, 7.6, 7.8   | 11                   |
+| 1.1.0          | 2022-06-02   | 7.1, 7.3, 7.5, 7.6        | 11                   |
+| 1.0.2          | 2022-05-04   | 7.1, 7.3, 7.5, 7.6        | 11                   |
+| 1.0.1          | 2021-12-17   | 7.1, 7.3, 7.5, 7.6        | 11                   |
+| 1.0.0          | 2021-12-06   | 7.1, 7.3, 7.5, 7.6        | 11                   |
