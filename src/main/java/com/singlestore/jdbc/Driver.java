@@ -140,9 +140,10 @@ public final class Driver implements java.sql.Driver {
     }
 
     Properties propDesc = new Properties();
-    try (InputStream inputStream =
-        Driver.class.getClassLoader().getResourceAsStream("driver.properties")) {
-      propDesc.load(inputStream);
+    try (InputStream inputStream = Driver.class.getResourceAsStream("driver.properties")) {
+      if (inputStream != null) {
+        propDesc.load(inputStream);
+      }
     } catch (IOException io) {
       // eat
     }
