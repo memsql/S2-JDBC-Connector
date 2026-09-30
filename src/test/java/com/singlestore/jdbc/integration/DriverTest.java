@@ -18,13 +18,22 @@ import org.junit.jupiter.api.*;
 
 public class DriverTest extends Common {
 
+  /** Resource path must stay package-scoped so generic classpath scanners skip it. */
+  private static final String DRIVER_PROPERTIES = "com/singlestore/jdbc/driver.properties";
+
   @Test
   public void ensureDescriptionFilled() throws IOException, NoSuchFieldException {
     Properties descr = new Properties();
     try (InputStream inputStream =
-        Common.class.getClassLoader().getResourceAsStream("driver.properties")) {
+        Common.class.getClassLoader().getResourceAsStream(DRIVER_PROPERTIES)) {
+      assertNotNull(inputStream, "missing " + DRIVER_PROPERTIES);
       descr.load(inputStream);
     }
+
+    // root-level driver.properties must not be packaged (TIBCO DataSynapse / Zendesk 54638)
+    assertNull(
+        Common.class.getClassLoader().getResource("driver.properties"),
+        "driver.properties must not be at JAR/classpath root");
 
     // check that description is present
     for (Field field : Configuration.Builder.class.getDeclaredFields()) {
@@ -34,10 +43,17 @@ public class DriverTest extends Common {
       }
     }
 
-    // check that no description without option
+    // check that no description without option, and values avoid XML/SGML-restricted chars
     for (Map.Entry<Object, Object> entry : descr.entrySet()) {
       // NoSuchFieldException will be thrown if not present
       Configuration.Builder.class.getDeclaredField(entry.getKey().toString());
+      String value = entry.getValue().toString();
+      assertFalse(
+          value.chars().anyMatch(c -> c == '<' || c == '>' || c == '"' || c == '&'),
+          () ->
+              String.format(
+                  "Property: %s , value: %s cannot contain any of these characters: <>\"&",
+                  entry.getKey(), value));
     }
   }
 
