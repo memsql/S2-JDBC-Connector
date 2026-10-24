@@ -61,7 +61,6 @@ public class Connection implements java.sql.Connection {
   private final Client client;
   private final Properties clientInfo = new Properties();
   private Boolean tableNameCaseSensitivity;
-  private boolean readOnly;
   private final boolean canCachePrepStmts;
   private final int defaultFetchSize;
   private SingleStorePoolConnection poolConnection;
@@ -303,18 +302,17 @@ public class Connection implements java.sql.Connection {
 
   @Override
   public boolean isReadOnly() {
-    return this.readOnly;
+    return false;
   }
 
   @Override
   @SuppressWarnings("try")
   public void setReadOnly(boolean readOnly) throws SQLException {
     try (ClosableLock ignore = lock.closeableLock()) {
-      if (this.readOnly != readOnly) {
-        client.setReadOnly(readOnly);
+      checkNotClosed();
+      if (readOnly) {
+        throw exceptionFactory.notSupported("Read-only connections are not supported");
       }
-      this.readOnly = readOnly;
-      getContext().addStateFlag(ConnectionState.STATE_READ_ONLY);
     }
   }
 
@@ -760,9 +758,6 @@ public class Connection implements java.sql.Connection {
         }
         if ((stateFlag & ConnectionState.STATE_DATABASE) != 0) {
           setCatalog(conf.database());
-        }
-        if ((stateFlag & ConnectionState.STATE_READ_ONLY) != 0) {
-          setReadOnly(false); // default to master connection
         }
       } catch (SQLException sqle) {
         throw exceptionFactory.create("error resetting connection");

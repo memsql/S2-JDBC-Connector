@@ -1048,11 +1048,8 @@ public class DatabaseMetaData implements java.sql.DatabaseMetaData {
     return conf.user();
   }
 
-  public boolean isReadOnly() throws SQLException {
-    java.sql.Statement st = connection.createStatement();
-    ResultSet rs = st.executeQuery("SELECT @@READ_ONLY");
-    rs.next();
-    return rs.getInt(1) == 1;
+  public boolean isReadOnly() {
+    return false;
   }
 
   public boolean nullsAreSortedHigh() {

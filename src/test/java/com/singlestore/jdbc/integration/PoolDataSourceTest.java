@@ -299,22 +299,6 @@ public class PoolDataSourceTest extends Common {
   }
 
   @Test
-  public void testResetReadOnly() throws SQLException {
-    try (SingleStorePoolDataSource pool =
-        new SingleStorePoolDataSource(mDefUrl + "&maxPoolSize=1")) {
-      try (Connection connection = pool.getConnection()) {
-        assertFalse(connection.isReadOnly());
-        connection.setReadOnly(true);
-        assertTrue(connection.isReadOnly());
-      }
-
-      try (Connection connection = pool.getConnection()) {
-        assertFalse(connection.isReadOnly());
-      }
-    }
-  }
-
-  @Test
   public void testResetAutoCommit() throws SQLException {
     try (SingleStorePoolDataSource pool =
         new SingleStorePoolDataSource(mDefUrl + "&maxPoolSize=1")) {

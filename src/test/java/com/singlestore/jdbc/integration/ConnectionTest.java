@@ -942,14 +942,16 @@ public class ConnectionTest extends Common {
   }
 
   @Test
-  public void setReadOnly() throws SQLException {
-    Connection con = createCon();
-    con.setReadOnly(true);
-    con.close();
-    Common.assertThrowsContains(
-        SQLNonTransientConnectionException.class,
-        () -> con.setReadOnly(false),
-        "Connection is closed");
+  public void setReadOnlyNotSupported() throws SQLException {
+    try (Connection con = createCon()) {
+      assertFalse(con.isReadOnly());
+      Common.assertThrowsContains(
+          SQLFeatureNotSupportedException.class,
+          () -> con.setReadOnly(true),
+          "Read-only connections are not supported");
+      assertFalse(con.isReadOnly());
+      con.setReadOnly(false);
+    }
   }
 
   @Test

@@ -13,9 +13,6 @@ public final class ConnectionState {
   /** flag indicating that default database has been changed */
   public static final int STATE_DATABASE = 2;
 
-  /** flag indicating that connection read only has been changed */
-  public static final int STATE_READ_ONLY = 4;
-
   /** flag indicating that autocommit has been changed */
   public static final int STATE_AUTOCOMMIT = 8;
 
