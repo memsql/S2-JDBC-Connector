@@ -422,13 +422,6 @@ public class StandardClient implements Client, AutoCloseable {
     }
   }
 
-  @Override
-  public void setReadOnly(boolean readOnly) throws SQLException {
-    if (closed) {
-      throw new SQLNonTransientConnectionException("Connection is closed", "08000", 1220);
-    }
-  }
-
   /**
    * Send client message to server
    *

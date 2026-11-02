@@ -134,14 +134,6 @@ public interface Client extends AutoCloseable {
   void close() throws SQLException;
 
   /**
-   * Switch to a writer/read-only connection, no effet on mono-connection
-   *
-   * @param readOnly must use read-only connection
-   * @throws SQLException if any error occurs
-   */
-  void setReadOnly(boolean readOnly) throws SQLException;
-
-  /**
    * get socket timeout
    *
    * @return socket timeout

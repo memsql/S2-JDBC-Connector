@@ -71,8 +71,8 @@ public class FailoverClient implements Client {
   /**
    * Trying connecting server.
    *
-   * <p>searching each connecting primary / replica connection not temporary denied until found one.
-   * searching in temporary denied host if not succeed, until reaching `retriesAllDown` attempts.
+   * <p>searching each host that is not temporarily denied until one connects. searching in
+   * temporary denied host if not succeed, until reaching `retriesAllDown` attempts.
    *
    * @return a valid connection client
    * @throws SQLException if not succeed to create a connection.
@@ -217,7 +217,7 @@ public class FailoverClient implements Client {
    */
   protected void replayIfPossible(Client oldClient, boolean canRedo, SQLException cause)
       throws SQLException {
-    // oldClient is only valued if this occurs on master.
+    // oldClient is only set when reconnecting away from the previous host.
     if (oldClient != null) {
       if ((oldClient.getContext().getServerStatus() & ServerStatus.IN_TRANSACTION) > 0) {
         if (conf.transactionReplay()) {
@@ -492,13 +492,6 @@ public class FailoverClient implements Client {
   public void close() throws SQLException {
     closed = true;
     if (currentClient != null) currentClient.close();
-  }
-
-  @Override
-  public void setReadOnly(boolean readOnly) throws SQLException {
-    if (closed) {
-      throw new SQLNonTransientConnectionException("Connection is closed", "08000", 1220);
-    }
   }
 
   @Override

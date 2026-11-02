@@ -110,7 +110,7 @@ public class MultiHostTest extends Common {
         mDefUrl.replaceAll(
             "//(" + hostname + "|" + hostname + ":" + port + ")/" + database,
             String.format(
-                "//address=(host=localhost)(port=9999)(type=master),address=(host=localhost)(port=%s)(type=master),address=(host=%s)(port=%s)(type=master)/"
+                "//address=(host=localhost)(port=9999),address=(host=localhost)(port=%s),address=(host=%s)(port=%s)/"
                     + database,
                 proxy.getLocalPort(),
                 hostAddress.host,
@@ -262,12 +262,6 @@ public class MultiHostTest extends Common {
     con.setNetworkTimeout(Runnable::run, 10);
     assertEquals(10, con.getNetworkTimeout());
 
-    con.setReadOnly(true);
-    con.close();
-    Common.assertThrowsContains(
-        SQLNonTransientConnectionException.class,
-        () -> con.setReadOnly(false),
-        "Connection is closed");
     con.abort(Runnable::run); // no-op
 
     Connection con2 =
