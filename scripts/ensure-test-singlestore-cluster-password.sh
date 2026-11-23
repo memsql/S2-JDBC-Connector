@@ -82,15 +82,17 @@ if [[ "${EXISTS}" -eq 0 ]]; then
 fi
 
 singlestore-wait-start() {
-  echo -n "Waiting for SingleStore to start..."
-  while true; do
-      if mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e "select 1" >/dev/null 2>/dev/null; then
-          break
+  echo "Waiting for SingleStore to start..."
+  local deadline=$((SECONDS + 300))
+  until mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e "select 1" >/dev/null 2>/dev/null; do
+      if [[ "$(docker inspect -f '{{.State.Running}}' ${CONTAINER_NAME} 2>/dev/null)" != "true" ]] || (( SECONDS > deadline )); then
+          echo "SingleStore failed to start within 300s; container logs:"
+          docker logs --tail 200 ${CONTAINER_NAME} || true
+          exit 1
       fi
-      echo -n "."
-      sleep 0.2
+      sleep 1
   done
-  echo ". Success!"
+  echo "SingleStore started"
 }
 
 singlestore-wait-start

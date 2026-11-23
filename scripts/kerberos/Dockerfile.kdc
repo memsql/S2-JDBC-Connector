@@ -8,8 +8,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 # with UNSUPPORTED_S4U2PROXY_REQUEST. Heimdal supports S4U2Self + S4U2Proxy
 # natively through its built-in HDB backend and the
 # `--constrained-delegation=...` kadmin flag.
-RUN apt-get update && \
-    apt-get install -y heimdal-kdc heimdal-servers heimdal-clients && \
+RUN apt-get -o Acquire::Retries=5 update && \
+    apt-get -o Acquire::Retries=5 install -y heimdal-kdc heimdal-servers heimdal-clients && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY krb5.conf /etc/krb5.conf
