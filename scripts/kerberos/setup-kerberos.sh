@@ -70,7 +70,7 @@ docker network inspect "$NETWORK_NAME" >/dev/null 2>&1 || \
 log "STEP 2: Build and start KDC container"
 docker rm -f "$KDC_CONTAINER" 2>/dev/null || true
 
-docker build -t kdc-image -f "${SCRIPT_DIR}/Dockerfile.kdc" "${SCRIPT_DIR}"
+docker build --build-arg "APT_MIRROR=${APT_MIRROR:-}" -t kdc-image -f "${SCRIPT_DIR}/Dockerfile.kdc" "${SCRIPT_DIR}"
 
 docker run -d \
     --name "$KDC_CONTAINER" \
@@ -166,7 +166,7 @@ log "Users '${KRB_CLIENT_PRINCIPAL}' and '${KRB_IMPERSONATED_PRINCIPAL}' created
 log "STEP 6: Build and start Kerberos client container"
 docker rm -f "$CLIENT_CONTAINER" 2>/dev/null || true
 
-docker build -t krb-client-image -f "${SCRIPT_DIR}/Dockerfile.client" "${SCRIPT_DIR}"
+docker build --build-arg "APT_MIRROR=${APT_MIRROR:-}" -t krb-client-image -f "${SCRIPT_DIR}/Dockerfile.client" "${SCRIPT_DIR}"
 
 docker run -d \
     --name "$CLIENT_CONTAINER" \

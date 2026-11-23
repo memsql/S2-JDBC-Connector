@@ -1,5 +1,13 @@
 FROM eclipse-temurin:21-jdk
 
+# Optional apt mirror (hostname), e.g. azure.archive.ubuntu.com on GitHub runners
+# where archive.ubuntu.com is slow or unreachable from inside Docker builds.
+ARG APT_MIRROR=""
+RUN if [ -n "${APT_MIRROR}" ]; then \
+      sed -i -E "s#https?://(archive|security)\.ubuntu\.com#http://${APT_MIRROR}#g" \
+        /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true; \
+    fi
+
 RUN apt-get -o Acquire::Retries=5 update && \
     apt-get -o Acquire::Retries=5 install -y krb5-user mariadb-client maven software-properties-common && \
     apt-get -o Acquire::Retries=5 update && \

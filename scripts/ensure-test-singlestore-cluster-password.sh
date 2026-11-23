@@ -81,12 +81,27 @@ if [[ "${EXISTS}" -eq 0 ]]; then
         ${IMAGE_NAME}
 fi
 
+# MariaDB client 11.x (shipped by newer Ubuntu releases) enables TLS with server
+# certificate verification by default and may only provide a `mariadb` binary,
+# not `mysql`. The test cluster uses a self-signed certificate, so pick
+# whichever binary exists and disable TLS for these local connections.
+if command -v mariadb >/dev/null 2>&1; then
+  SQL_CLIENT=mariadb
+else
+  SQL_CLIENT=mysql
+fi
+s2sql() {
+  "${SQL_CLIENT}" --skip-ssl "$@"
+}
+
 singlestore-wait-start() {
   echo "Waiting for SingleStore to start..."
   local deadline=$((SECONDS + 300))
-  until mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e "select 1" >/dev/null 2>/dev/null; do
+  local last_error
+  until last_error=$(s2sql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e "select 1" 2>&1 >/dev/null); do
       if [[ "$(docker inspect -f '{{.State.Running}}' ${CONTAINER_NAME} 2>/dev/null)" != "true" ]] || (( SECONDS > deadline )); then
-          echo "SingleStore failed to start within 300s; container logs:"
+          echo "SingleStore failed to start within 300s. Last client error: ${last_error}"
+          echo "Container logs:"
           docker logs --tail 200 ${CONTAINER_NAME} || true
           exit 1
       fi
@@ -121,34 +136,34 @@ echo "Restarting cluster"
 docker restart ${CONTAINER_NAME}
 singlestore-wait-start
 echo "Setting up root-ssl user"
-mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e 'create user "root-ssl"@"%" require ssl'
-mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
-mysql -u root -h 127.0.0.1 -P 5507 -p"${ROOT_PASSWORD}" -e 'create user "root-ssl"@"%" require ssl'
-mysql -u root -h 127.0.0.1 -P 5507 -p"${ROOT_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
-mysql -u root -h 127.0.0.1 -P 5508 -p"${ROOT_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
+s2sql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e 'create user "root-ssl"@"%" require ssl'
+s2sql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
+s2sql -u root -h 127.0.0.1 -P 5507 -p"${ROOT_PASSWORD}" -e 'create user "root-ssl"@"%" require ssl'
+s2sql -u root -h 127.0.0.1 -P 5507 -p"${ROOT_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
+s2sql -u root -h 127.0.0.1 -P 5508 -p"${ROOT_PASSWORD}" -e 'grant all privileges on *.* to "root-ssl"@"%" require ssl with grant option'
 echo "Done!"
 
 sleep 0.5
 echo
 echo "Ensuring child nodes are connected using container IP"
 CONTAINER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${CONTAINER_NAME})
-CURRENT_LEAF_IP=$(mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e 'select host from information_schema.leaves')
+CURRENT_LEAF_IP=$(s2sql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e 'select host from information_schema.leaves')
 if [[ ${CONTAINER_IP} != "${CURRENT_LEAF_IP}" ]]; then
     # remove leaf with current ip
-    mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e "remove leaf '${CURRENT_LEAF_IP}':3307"
+    s2sql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e "remove leaf '${CURRENT_LEAF_IP}':3307"
     # add leaf with correct ip
-    mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e "add leaf root:'${ROOT_PASSWORD}'@'${CONTAINER_IP}':3307"
+    s2sql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e "add leaf root:'${ROOT_PASSWORD}'@'${CONTAINER_IP}':3307"
 fi
-CURRENT_AGG_IP=$(mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e 'select host from information_schema.aggregators where master_aggregator=0')
+CURRENT_AGG_IP=$(s2sql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e 'select host from information_schema.aggregators where master_aggregator=0')
 if [[ ${CONTAINER_IP} != "${CURRENT_AGG_IP}" ]]; then
     # remove aggregator with current ip
-    mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e "remove aggregator '${CURRENT_AGG_IP}':3308"
+    s2sql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e "remove aggregator '${CURRENT_AGG_IP}':3308"
     # add aggregator with correct ip
-    mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e "add aggregator root:'${ROOT_PASSWORD}'@'${CONTAINER_IP}':3308"
+    s2sql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" --batch -N -e "add aggregator root:'${ROOT_PASSWORD}'@'${CONTAINER_IP}':3308"
 fi
 
 # create the database used in tests
-mysql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e 'create database if not exists test'
+s2sql -u root -h 127.0.0.1 -P 5506 -p"${ROOT_PASSWORD}" -e 'create database if not exists test'
 
 # setup PAM for tests
 
