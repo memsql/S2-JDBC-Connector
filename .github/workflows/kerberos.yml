@@ -52,6 +52,7 @@ on:
 jobs:
   kerberos-e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v5
@@ -64,6 +65,7 @@ jobs:
         env:
           SINGLESTORE_LICENSE: ${{ secrets.SINGLESTORE_LICENSE }}
           ROOT_PASSWORD: ${{ secrets.SINGLESTORE_PASSWORD }}
+          APT_MIRROR: azure.archive.ubuntu.com
 
       - name: Run Kerberos E2E tests
         run: ./scripts/kerberos/test-kerberos.sh
